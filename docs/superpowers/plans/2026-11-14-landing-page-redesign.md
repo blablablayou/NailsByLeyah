@@ -33,7 +33,7 @@
 | D6 | Service descriptions: written in the website code (A), or editable by Leah in admin (B, database change) | **A** | ✅ **B** — editable in admin (2026-11-14); database change waits on your permission |
 | D7 | Service cards: photo on each card (brief) or small icons (reference) | **Small icons** | ✅ Small icons (2026-11-14) |
 | D8 | "View Full Gallery": new public `/gallery` page (none exists today) or expand in place | **New `/gallery` page** | ✅ New `/gallery` page; a still 3 × 3 grid that fades in once (no sliding rows); Leah's newest uploads first, topped up with built-in photos (2026-11-14) |
-| D9 | Meet Leyah content: Leah's profile bio and photo (editable today) with a marked placeholder until she writes it | **Profile bio and photo** | ⏳ Waiting |
+| D9 | Meet Leyah content: Leah's profile bio and photo (editable today) with a marked placeholder until she writes it | **Profile bio and photo** | ✅ Profile bio and her profile photo; until she writes a bio, the sample (no year) labelled "Sample story · details to be confirmed"; photo placeholder until she adds one (2026-11-14). **Changed 2026-11-15:** the photo is her own photo (`public/img/leyah.webp`, full photo filling the panel), not the profile photo |
 | D10 | Visit Us: heading text, and whether the phone and hours show as listed rows (reference "Get in Touch") | "Visit Us", rows with icons, no booking button | ⏳ Waiting |
 | D12 | Small uppercase label above section titles ("GALLERY", "SERVICES", "CONTACT", as in the references). Impeccable's craft floor bans these labels; the references use them | Leave them out (the title carries the section), or keep them to match the references | ✅ Agreed (2026-11-14): **leave them out** everywhere (the hero's "SOFT GEL · BIAB · NAIL ART" goes too) |
 | D11 | Motion: the opening letter animation, the typing headline, and how sections appear | Keep the opening animation; headline appears whole (no typing) so the D5 headline reads at once; sections fade in once; nothing moves with reduced motion | ✅ Agreed (2026-11-14): the **opening animation stays**; the headline **shows whole** (no typing); sections **fade in once** on scroll (12 px), off with reduced motion |
@@ -243,8 +243,8 @@ screens use the menu button.
 - [ ] **Step 6: Commit** (with your OK): `Landing page: Meet Leyah section`.
 
 ### ✅ Checkpoint 5 — meet leyah
-- [ ] Tests pass · checked at 4 widths · committed
-- [ ] Date / commit: ______
+- [x] Tests pass (204) · checked at 1440 and 375 px · committed
+- [x] Date: 2026-11-15 · laid out like the owner reference (pill, italic title, story from her Bio, three highlights, quote); her own photo in `public/img/leyah.webp`
 
 ---
 

@@ -43,3 +43,23 @@ export const policies = {
   maxVerificationAttempts: 5,
   termsVersion: '1.0',
 }
+
+/**
+ * Meet Leyah: the sample story from the design brief, shown (labelled "Sample story · details to be confirmed") until
+ * Leyah writes her own in admin → Salon settings → Bio (decision D9). The brief's start year is left out: it isn't confirmed.
+ */
+export const sampleStory = [
+  "Hi, I'm Leyah! I started offering nail services by creating simple sets for friends and family. What began as a creative hobby grew into Nails by Leyah, a space where I bring personal style to life through thoughtful details.",
+  'I offer soft gel, BIAB and nail extensions, with designs tailored to you. Whether you love everyday neutrals or playful nail art, I put care into every set I create.',
+  'My goal is simple: to give you a relaxed appointment, beautiful nails and a little confidence to take home.',
+]
+
+/** Meet Leyah: three things she offers, shown as small icons under her story. */
+export const aboutHighlights = [
+  { icon: 'polish', label: 'Personalized Nail Designs' },
+  { icon: 'heart', label: 'Quality & Care' },
+  { icon: 'sparkle', label: 'A Relaxing Experience' },
+]
+
+/** Meet Leyah: her goal, shown as a quote at the bottom of her card. */
+export const ownerQuote = 'My goal is to make every client feel confident, pampered, and beautiful, one nail set at a time.'

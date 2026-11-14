@@ -155,15 +155,15 @@ describe('Salon details on the home page', () => {
     saveDb()
     renderApp('/')
 
-    expect(await screen.findByText('Meet Leyah')).toBeInTheDocument()
-    expect(screen.getByText('Soft gel and BIAB, done with care.')).toBeInTheDocument()
+    const about = await screen.findByRole('region', { name: 'Meet Leyah' })
+    expect(await within(about).findByText('Soft gel and BIAB, done with care.')).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: /0917 111 2222/ }).every((a) => a.getAttribute('href') === 'tel:09171112222')).toBe(true)
   })
 
-  it('shows nothing about Leyah while the details are empty', async () => {
+  it('shows no phone while the details are empty, and the labelled sample story', async () => {
     renderApp('/')
     await screen.findAllByRole('link', { name: /^Facebook/ })
-    expect(screen.queryByText('Meet Leyah')).toBeNull()
+    expect(screen.getByText('Sample story · details to be confirmed')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Call or text/ })).toBeNull()
   })
 })

@@ -32,22 +32,8 @@ const PhoneIcon = () => (
   </svg>
 )
 
-/** Leyah's photo and bio from her profile; nothing is shown until she adds at least one of them. */
-function MeetLeyah({ photo, bio }) {
-  if (!photo && !bio) return null
-  return (
-    <div className="visit-meet">
-      {photo && <img className="visit-meet-photo" src={photo} alt="Leyah" width="72" height="72" />}
-      <div>
-        <p className="visit-meet-name">Meet Leyah</p>
-        {bio && <p className="visit-meet-bio">{bio}</p>}
-      </div>
-    </div>
-  )
-}
-
 export function Location({ hours }) {
-  const { phone, photo, bio } = useSalon()
+  const { phone } = useSalon()
   // The pin comes from the address search, centred on the salon's coordinates.
   const query = encodeURIComponent(salon.mapQuery)
   const center = `${salon.latitude},${salon.longitude}`
@@ -63,7 +49,6 @@ export function Location({ hours }) {
         <p className="visit-eyebrow">Visit us</p>
         <h2 id="find-us-title">Find Nails by Leyah</h2>
         <p className="visit-lead">Plan your design and book your appointment online, then visit Nails by Leyah.</p>
-        <MeetLeyah photo={photo} bio={bio} />
         <address className="visit-facts">
           <span className="visit-pill"><PinIcon /> {salon.addressLines.join(', ')}</span>
           <span className="visit-pill"><ClockIcon /> {hours}</span>

@@ -11,13 +11,13 @@ import { PhotoViewer, usePhotoViewer, WorksGallery } from './home/WorksGallery'
 import { PricingSection } from './home/PricingSection'
 import { FaqSection, RulesSection } from './home/RulesAndFaq'
 import { Location } from './home/InfoCards'
+import { MeetLeyah } from './home/MeetLeyah'
 import { canAnimate, peso, planIntro, scrollToSection } from './home/motion'
 import '../../styles/home.css'
 
 export { Location } from './home/InfoCards'
 
 // Header links that light up while their section is on screen (see Layout): Services, Gallery, About, Contact.
-// About (#about) starts working when Meet Leyah is built; a section that isn't on the page yet is skipped.
 const SPY_SECTIONS = ['services', 'gallery', 'about', 'visit']
 
 /**
@@ -91,6 +91,7 @@ export default function HomePage() {
       <Hero bookTo={bookTo} revealAfter={intro.play ? intro.lettersDone + 500 : 0} />
       <PricingSection catalog={catalog} bookTo={bookTo} />
       <WorksGallery onOpen={openPhoto} />
+      <MeetLeyah />
       <RulesSection deposit={deposit} />
       <FaqSection deposit={deposit} hours={hours} />
       <section className="hm-find hm-section" id="visit" tabIndex={-1} aria-labelledby="find-us-title">

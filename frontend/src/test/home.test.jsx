@@ -132,8 +132,7 @@ describe('Home page', () => {
     const { container } = renderApp('/')
     expect(container.querySelector('.hm-intro')).not.toBeNull() // the opening animation stays (D2, D11)
     const ids = [...container.querySelectorAll('.home > section[id]')].map((s) => s.id)
-    // Meet Leyah (about) joins between gallery and rules in Phase 5.
-    expect(ids).toEqual(['hero', 'services', 'gallery', 'rules', 'faq', 'visit'])
+    expect(ids).toEqual(['hero', 'services', 'gallery', 'about', 'rules', 'faq', 'visit'])
   })
 
   it('sends guests to sign up when they book, and the header links go to Services and Gallery', () => {
@@ -167,6 +166,51 @@ describe('Home page', () => {
     expect(within(nav).getByRole('link', { name: 'My profile' })).toBeInTheDocument()
     await user.click(within(nav).getByRole('link', { name: 'My bookings' }))
     expect(await screen.findByRole('heading', { name: 'My bookings' })).toBeInTheDocument()
+  })
+
+  describe('Meet Leyah', () => {
+    const setSalon = (values) => { Object.assign(getDb().salonSettings, values); saveDb() }
+
+    it("shows Leah's own story when her profile has one, a paragraph per blank line", async () => {
+      setSalon({ bio: 'I do soft gel and BIAB.\n\nCome say hi.' })
+      renderApp('/')
+      const about = screen.getByRole('region', { name: 'Meet Leyah' })
+      expect(await within(about).findByText('I do soft gel and BIAB.')).toBeInTheDocument()
+      expect(within(about).getByText('Come say hi.').tagName).toBe('P')
+      expect(within(about).queryByText(/Sample story/)).toBeNull()
+      expect(about).not.toHaveTextContent("Hi, I'm Leyah")
+    })
+
+    it('has the reference layout: the pill, three highlights and her goal as a quote', () => {
+      renderApp('/')
+      const about = screen.getByRole('region', { name: 'Meet Leyah' })
+      expect(within(about).getByText('About the owner')).toBeInTheDocument()
+      expect(within(about).getByRole('heading', { level: 2, name: 'Meet Leyah' })).toBeInTheDocument()
+      const highlights = within(about).getAllByRole('listitem').map((li) => li.textContent)
+      expect(highlights).toEqual(['Personalized Nail Designs', 'Quality & Care', 'A Relaxing Experience'])
+      expect(about.querySelector('blockquote')).toHaveTextContent('My goal is to make every client feel confident, pampered, and beautiful')
+    })
+
+    it('shows the labelled sample story until Leah writes hers, with no unconfirmed year', () => {
+      renderApp('/')
+      const about = screen.getByRole('region', { name: 'Meet Leyah' })
+      expect(within(about).getByText('Sample story · details to be confirmed')).toBeInTheDocument()
+      expect(about).toHaveTextContent("Hi, I'm Leyah!")
+      expect(about.textContent).not.toMatch(/20\d\d/)
+    })
+
+    it('shows her cut-out portrait', () => {
+      renderApp('/')
+      const about = screen.getByRole('region', { name: 'Meet Leyah' })
+      expect(within(about).getByRole('img', { name: 'Leyah, owner of Nails by Leyah' })).toHaveAttribute('src', '/img/leyah.webp')
+    })
+
+    it("is where the header's About link goes, between the gallery and the rules", () => {
+      const { container } = renderApp('/')
+      const ids = [...container.querySelectorAll('.home > section[id]')].map((s) => s.id)
+      expect(ids).toEqual(['hero', 'services', 'gallery', 'about', 'rules', 'faq', 'visit'])
+      expect(container.querySelector('.visit-meet')).toBeNull() // the small card under Visit Us is gone
+    })
   })
 
   describe('Our Works', () => {

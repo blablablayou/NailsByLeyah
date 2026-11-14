@@ -179,6 +179,52 @@ html { scroll-padding-top: var(--header-h); }
 .pc-dots { flex: 1; min-width: 20px; border-bottom: 2px dotted #c49aa6; transform: translateY(-4px); }
 .pc-foot { margin: 18px 0 0; color: #d0718f; font-size: 1.3rem; }
 
+/* ===== Meet Leyah (Phase 5): her story in a soft card on the left, her photo on the right, both the same height;
+   stacked, story first, below 1024 px. ===== */
+.hm-about { padding: 80px 20px; background: var(--cream); }
+.hm-about-inner { display: grid; gap: 24px; max-width: 1120px; margin: 0 auto; }
+@media (min-width: 1024px) { .hm-about-inner { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 28px; align-items: stretch; } }
+.hm-about-card { display: flex; flex-direction: column; justify-content: center; padding: clamp(28px, 4.5vw, 52px); border: 1px solid var(--nude-200);
+  border-radius: 22px; background: #fdf3f1; box-shadow: var(--shadow); }
+/* "About the owner": a soft pill between two thin lines. */
+.hm-about-pill { display: flex; align-items: center; gap: 14px; margin: 0 0 18px; }
+.hm-about-pill::before, .hm-about-pill::after { content: ''; flex: 0 1 90px; height: 1px; background: var(--nude-200); }
+.hm-about-pill span { padding: 7px 20px; border-radius: 999px; background: var(--blush); color: var(--burgundy); font-size: var(--fs-small); font-weight: 600;
+  letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
+.hm-about-title { display: flex; align-items: center; gap: .18em; margin: 0; font-family: var(--font-display); font-style: italic; font-weight: 600;
+  font-size: clamp(2.6rem, 6vw, 4.2rem); line-height: 1.05; color: var(--burgundy); }
+.hm-about-heart { flex: none; width: .62em; height: .62em; transform: rotate(-8deg) translateY(-.08em); }
+/* A soft brush stroke under the name. */
+.hm-about-stroke { display: block; width: min(300px, 70%); height: 12px; margin: 2px 0 0 .3em; color: var(--blush); }
+.hm-about-sample { margin: 16px 0 0; font-size: var(--fs-caption); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.hm-about-story { margin-top: 22px; }
+.hm-about-story p { max-width: 60ch; margin: 0 0 14px; font-size: 1.05rem; line-height: 1.6; color: var(--ink); text-wrap: pretty; }
+/* Three highlights in a row, each a round icon and a two-line label, with thin dividers between them. */
+.hm-about-highlights { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0 0; padding: 0; list-style: none; }
+.hm-about-highlights li { display: flex; align-items: center; gap: 12px; padding: 4px 14px; font-size: var(--fs-small); line-height: 1.35; color: var(--ink); }
+.hm-about-highlights li:first-child { padding-left: 0; }
+.hm-about-highlights li + li { border-left: 1px solid var(--nude-200); }
+.hm-about-icon { display: grid; place-items: center; flex: none; width: 56px; height: 56px; border-radius: 50%; background: var(--blush); color: var(--burgundy); }
+/* Her goal, as a quote in a tinted box with large quote marks. */
+.hm-about-quote { position: relative; margin: 26px 0 0; padding: 22px 52px; border-radius: 16px; background: var(--blush); }
+.hm-about-quote::before, .hm-about-quote::after { position: absolute; font-family: var(--font-display); font-weight: 700; font-size: 3rem; line-height: 1;
+  color: var(--burgundy); }
+.hm-about-quote::before { content: '\201C'; top: 12px; left: 16px; }
+.hm-about-quote::after { content: '\201D'; right: 16px; bottom: -6px; }
+.hm-about-quote p { margin: 0; text-align: center; font-family: var(--font-display); font-style: italic; font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+  line-height: 1.5; color: var(--burgundy); text-wrap: balance; }
+@media (max-width: 599px) {
+  .hm-about-highlights { grid-template-columns: 1fr; gap: 10px; }
+  .hm-about-highlights li, .hm-about-highlights li:first-child { padding: 0; }
+  .hm-about-highlights li + li { border-left: 0; }
+  .hm-about-quote { padding: 22px 40px; }
+}
+/* Her photo fills the panel (cropped, never stretched), framed on her face and upper body. */
+.hm-about-photo { position: relative; min-height: 460px; overflow: hidden; border: 1px solid var(--nude-200); border-radius: 22px; box-shadow: var(--shadow);
+  background: var(--nude-100); }
+.hm-about-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 62%; }
+@media (max-width: 1023px) { .hm-about-photo { min-height: 0; aspect-ratio: 4 / 5; max-height: 560px; } }
+
 /* ===== Nail rules ===== */
 .hm-rules { padding: 80px 20px; background: linear-gradient(var(--cream), var(--rose-50)); }
 .hm-rule-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); max-width: 1180px; margin: 0 auto; list-style: none; padding: 0; }
@@ -265,7 +311,3 @@ html[data-home-section="visit"] .nav-link[href="/#visit"] { background: var(--ro
 /* "Find us": the salon phone, and Leyah's photo and bio from her profile. */
 a.visit-pill { color: inherit; text-decoration: none; }
 a.visit-pill:hover { color: var(--rose-700); }
-.visit-meet { display: flex; align-items: center; gap: 14px; margin: 4px 0 14px; padding: 12px 14px; border-radius: 12px; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .22); }
-.visit-meet-photo { width: 64px; height: 64px; flex: none; border-radius: 50%; object-fit: cover; border: 2px solid rgb(255 255 255 / .85); }
-.visit-meet-name { font-family: var(--font-display); color: #fff; font-weight: 600; font-size: var(--fs-lead); }
-.visit-meet-bio { color: rgb(255 255 255 / .85); font-size: var(--fs-small); margin-top: 2px; }

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import '@fontsource-variable/inter'
 import '@fontsource-variable/playfair-display'
+import '@fontsource-variable/playfair-display/wght-italic.css' // real italics for Meet Leyah's title and quote
 // Script lettering for the "Nails by Leyah" wordmark in the header (Latin letters only, one weight).
 import '@fontsource/great-vibes/latin-400.css'
 import './styles/app.css'
