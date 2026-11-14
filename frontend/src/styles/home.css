@@ -3,7 +3,8 @@
 
 html { scroll-padding-top: var(--header-h); }
 .hm-section:focus { outline: none; box-shadow: none; }
-.page-home { max-width: none; padding: 0; gap: 0; overflow-x: clip; }
+/* One background, cream, from the hero to Visit Us: every section uses it, and only the cards on it carry colour. */
+.page-home { max-width: none; padding: 0; gap: 0; overflow-x: clip; background: var(--cream); }
 .page-home > .alert { margin: 16px; }
 
 /* ===== Intro: the logo is "written" left to right, sparkles twinkle, then the curtain lifts ===== */
@@ -67,7 +68,7 @@ html { scroll-padding-top: var(--header-h); }
 /* ===== Our Works (Phase 4): nine square photos, 3 × 3 on wide screens and 2 across below, then "View full gallery";
    the /gallery page uses the same grid for every photo. Tiles fade up once, one after another. ===== */
 .hm-head h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(1.8rem, 5vw, 3rem); text-transform: uppercase; letter-spacing: .04em; line-height: 1; }
-.hm-works { padding: 80px 20px 72px; text-align: center; background: linear-gradient(var(--cream), var(--rose-50) 50%, var(--cream)); }
+.hm-works { padding: 80px 20px 72px; text-align: center; background: var(--cream); }
 .works-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 980px; margin: 0 auto; padding: 0; list-style: none; }
 @media (min-width: 1024px) { .works-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; } }
 .works-grid li { opacity: 0; transform: translateY(12px);
@@ -86,7 +87,7 @@ html { scroll-padding-top: var(--header-h); }
 .works-more:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 6px; }
 
 /* /gallery: the same grid for every photo, under a page title and a way back. */
-.works-page { display: flex; flex-direction: column; gap: 20px; padding-bottom: 24px; }
+.works-page { display: flex; flex-direction: column; gap: 20px; padding-bottom: 24px; scroll-margin-top: 84px; }
 .works-back { align-self: flex-start; display: inline-flex; align-items: center; gap: .4em; min-height: 44px; color: var(--ink-soft); font-size: var(--fs-small);
   font-weight: 600; text-decoration: none; }
 .works-back:hover { color: var(--burgundy); }
@@ -95,6 +96,10 @@ html { scroll-padding-top: var(--header-h); }
   letter-spacing: .04em; line-height: 1; color: var(--ink); }
 .works-page-head p { margin: 12px auto 0; max-width: 46ch; color: var(--ink-soft); text-wrap: pretty; }
 .works-page .works-grid { width: 100%; }
+/* Changing page: the current photos fade out (and sink a little) while the page glides up; the new ones then fade up. */
+.works-swap { transition: opacity .3s ease, transform .3s ease; }
+.works-swap.is-leaving { opacity: 0; transform: translateY(8px); }
+@media (prefers-reduced-motion: reduce) { .works-swap { transition: none; } }
 
 /* Tap a photo to see it full size */
 .hm-viewer { position: fixed; inset: 0; z-index: 45; display: grid; place-items: center; padding: 20px; background: rgb(253 242 246 / .92); backdrop-filter: blur(8px);
@@ -158,10 +163,6 @@ html { scroll-padding-top: var(--header-h); }
 @media (max-width: 599px) { .hm-svcs { --svc-gap: 16px; } .hm-svc { flex-basis: 100%; } }
 .hm-price-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
 .hm-price-actions .btn { text-transform: uppercase; letter-spacing: .05em; font-size: .85rem; }
-.hm-unfold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .6s cubic-bezier(.2,.8,.2,1), opacity .4s ease; }
-.hm-unfold.open { grid-template-rows: 1fr; opacity: 1; }
-.hm-unfold > div { overflow: hidden; }
-.hm-full-list { max-width: 420px; margin: 34px auto 0; }
 /* The full price list, in the style of Leyah's printed price card. */
 .pc { padding: 30px 30px 18px; border-radius: 18px; border: 5px solid #fff; background: #fdf1f4; box-shadow: 0 16px 40px rgb(143 44 77 / .18); text-align: center; color: #4a1f2e; }
 .pc-logo { display: block; width: 72%; max-width: 260px; height: auto; margin: 0 auto 6px; }
@@ -226,7 +227,7 @@ html { scroll-padding-top: var(--header-h); }
 @media (max-width: 1023px) { .hm-about-photo { min-height: 0; aspect-ratio: 4 / 5; max-height: 560px; } }
 
 /* ===== Nail rules ===== */
-.hm-rules { padding: 80px 20px; background: linear-gradient(var(--cream), var(--rose-50)); }
+.hm-rules { padding: 80px 20px; background: var(--cream); }
 .hm-rule-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); max-width: 1180px; margin: 0 auto; list-style: none; padding: 0; }
 .hm-rule { display: flex; gap: 16px; align-items: flex-start; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 22px; }
 .hm-rule-num { flex: none; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--rose-100); color: var(--rose-700); font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; }
@@ -242,7 +243,7 @@ html { scroll-padding-top: var(--header-h); }
 .hm-note .hm-sign { margin-top: 10px; font-family: var(--font-display); font-style: italic; color: var(--rose-600); }
 
 /* ===== FAQ accordion ===== */
-.hm-faq { padding: 56px 20px 64px; background: var(--rose-50); }
+.hm-faq { padding: 56px 20px 64px; background: var(--cream); }
 /* Compact: two independent columns on wide screens, so opening one only moves the questions below it. */
 .hm-faq-list { max-width: 920px; margin: 0 auto; display: grid; gap: 10px; align-items: start; }
 .hm-faq-col { display: grid; gap: 10px; }

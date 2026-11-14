@@ -6,8 +6,10 @@ import { Button } from './ui'
 /**
  * Accessible dialog: focus moves inside, Escape and the backdrop close it, focus returns afterwards. It is drawn at
  * the end of the page body, so no card or animation it is opened from can tuck it under the sticky header.
+ * `bare`: no title bar or footer, only the content (e.g. a card) on the dimmed page, with a small round × on its corner;
+ * `title` then names the dialog for screen readers.
  */
-export function Modal({ title, onClose, children, footer, wide = false }) {
+export function Modal({ title, onClose, children, footer, wide = false, bare = false }) {
   const titleId = useId()
   const dialogRef = useRef(null)
   const onCloseRef = useRef(onClose)
@@ -28,6 +30,18 @@ export function Modal({ title, onClose, children, footer, wide = false }) {
       previouslyFocused?.focus?.()
     }
   }, [])
+
+  if (bare) {
+    return createPortal(
+      <div className="modal-backdrop modal-backdrop-bare" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+        <div className="modal-bare" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} ref={dialogRef}>
+          <button type="button" className="modal-bare-close" onClick={onClose} aria-label="Close">×</button>
+          {children}
+        </div>
+      </div>,
+      document.body,
+    )
+  }
 
   return createPortal(
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>

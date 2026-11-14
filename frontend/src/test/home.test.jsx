@@ -92,20 +92,31 @@ describe('Home page', () => {
     })
   })
 
-  it('unfolds the full price list from the live prices, with the design versions and Rhinestone', async () => {
+  it('opens the full price list in a pop-up, from the live prices, with the design versions and Rhinestone', async () => {
     const user = userEvent.setup()
     renderApp('/')
     const pricing = screen.getByRole('region', { name: 'Services & Pricing' })
     await within(pricing).findAllByRole('article')
-    await user.click(within(pricing).getByRole('button', { name: 'View full price list' }))
+    const open = within(pricing).getByRole('button', { name: 'View full price list' })
+    await user.click(open)
 
-    const card = within(pricing).getByRole('article', { name: 'Nails price list' })
+    const dialog = screen.getByRole('dialog', { name: 'Full price list' })
+    const card = within(dialog).getByRole('article', { name: 'Nails price list' })
     const row = (name) => within(card).getByText(name).closest('.pc-row')
     expect(row('Soft Gel Extension')).toHaveTextContent('₱399')
     expect(row('Soft Gel Extension with design')).toHaveTextContent('+₱100') // what the design adds, not the total
     expect(within(card).queryByText('Plain with design')).toBeNull() // Plain takes no design
     expect(row('BIAB with design')).toHaveTextContent('+₱100')
     expect(row('Rhinestone')).toHaveTextContent('₱15')
+    // Only the card pops up: no title bar, no Book now; its × (or Escape) shuts it, and focus goes back to the button.
+    expect(within(dialog).queryByRole('link', { name: 'Book now' })).toBeNull()
+    expect(within(dialog).queryByRole('heading', { name: 'Full price list' })).toBeNull()
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog', { name: 'Full price list' })).toBeNull()
+    expect(open).toHaveFocus()
+    await user.click(open)
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'Full price list' })).toBeNull()
   })
 
   it('hero: headline, text and Book an Appointment on the left, the photo panel on the right', async () => {
@@ -252,13 +263,27 @@ describe('Home page', () => {
       expect(first).toHaveFocus()
     })
 
-    it('the full gallery page lists every photo', async () => {
+    it('the full gallery page shows every photo, four rows of three to a page', async () => {
+      const user = userEvent.setup()
       addUploads('Newest set')
       renderApp('/gallery')
       const page = await screen.findByRole('region', { name: 'Our Works' })
       await within(page).findByRole('button', { name: 'View Newest set' })
-      expect(tiles(page)).toHaveLength(1 + 13) // the upload and every built-in photo
       expect(screen.getByRole('link', { name: /Back to home/ })).toHaveAttribute('href', '/')
+
+      // 14 photos (the upload and the 13 built-in ones): 12 on page 1, the other 2 on page 2.
+      expect(tiles(page)).toHaveLength(12)
+      expect(page).toHaveTextContent('Showing 1–12 of 14')
+      await user.click(within(page).getByRole('button', { name: 'Page 2' }))
+      expect(tiles(page).map((b) => b.getAttribute('aria-label'))).toEqual(['View Nail set 12', 'View Nail set 13'])
+      expect(page).toHaveTextContent('Showing 13–14 of 14')
+    })
+
+    it('shows the last page for a page number past the end (e.g. photos removed since)', () => {
+      renderApp('/gallery?page=5')
+      const page = screen.getByRole('region', { name: 'Our Works' })
+      expect(tiles(page).map((b) => b.getAttribute('aria-label'))).toEqual(['View Nail set 13'])
+      expect(within(page).getByRole('button', { name: 'Page 2' })).toHaveAttribute('aria-current', 'page')
     })
   })
 

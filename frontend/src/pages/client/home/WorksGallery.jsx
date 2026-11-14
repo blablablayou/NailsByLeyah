@@ -44,7 +44,7 @@ export function WorksGrid({ items, loaded, onOpen }) {
   return (
     <ul className={seen && loaded ? 'works-grid is-in' : 'works-grid'} ref={ref}>
       {items.map((item, i) => (
-        <li key={item.key} style={{ '--i': i % HOME_WORKS }}>
+        <li key={item.key} style={{ '--i': Math.min(i, 11) }}>
           <button type="button" className="works-tile" aria-label={`View ${item.alt}`}
             onClick={(e) => onOpen({ src: item.src, alt: item.alt }, e.currentTarget)}>
             <img src={item.src} alt="" loading="lazy" decoding="async" width="600" height="600" />

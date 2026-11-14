@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { PageLoader } from '../../../components/ui'
-import { canAnimate, peso, prefersReducedMotion } from './motion'
+import { Modal } from '../../../components/Modal'
+import { canAnimate, peso } from './motion'
 import { softGelSets, withDesignName } from '../../../lib/services'
 import { SectionHeading } from './SectionHeading'
 
@@ -108,12 +109,11 @@ function ServiceCard({ card, index }) {
 
 /**
  * Services & Pricing (Phase 3): a card per service with its icon, line, price and time, all from the live price list,
- * then "View full price list" (unfolds Leyah's price card) and "Book now". If the prices can't load, the cards still
+ * then "View full price list" (opens Leyah's price card in a pop-up) and "Book now". If the prices can't load, the cards still
  * show, without prices.
  */
 export function PricingSection({ catalog, bookTo }) {
   const cardsRef = useRef(null)
-  const listRef = useRef(null)
   const [cardsIn, setCardsIn] = useState(!canAnimate)
   const [listOpen, setListOpen] = useState(false)
   const loaded = Boolean(catalog.data)
@@ -128,11 +128,6 @@ export function PricingSection({ catalog, bookTo }) {
     return () => io.disconnect()
   }, [cardsIn, hasCards])
 
-  const toggleList = () => {
-    setListOpen((open) => !open)
-    if (!listOpen) setTimeout(() => listRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'nearest' }), 350)
-  }
-
   return (
     <section className="hm-prices hm-section" id="services" tabIndex={-1} aria-labelledby="services-title">
       <SectionHeading id="services-title" title="Services & Pricing" intro="Final pricing depends on your service, design and add-ons." />
@@ -145,19 +140,18 @@ export function PricingSection({ catalog, bookTo }) {
       {catalog.error && !loaded && <p className="hm-svc-offline">Prices couldn&rsquo;t load just now. You&rsquo;ll see them when you book.</p>}
       <div className="hm-price-actions">
         {loaded && (
-          <button type="button" className="btn btn-secondary" aria-expanded={listOpen} aria-controls="full-price-list" onClick={toggleList}>
-            {listOpen ? 'Hide price list' : 'View full price list'}
+          <button type="button" className="btn btn-secondary" aria-haspopup="dialog" onClick={() => setListOpen(true)}>
+            View full price list
           </button>
         )}
         <Link to={bookTo} className="btn btn-primary">Book now</Link>
       </div>
-      <div className={listOpen ? 'hm-unfold open' : 'hm-unfold'} id="full-price-list" aria-hidden={!listOpen} inert={!listOpen}>
-        <div>
-          <div className="hm-full-list" ref={listRef}>
-            {loaded && <PriceCard catalog={catalog.data} />}
-          </div>
-        </div>
-      </div>
+      {/* Only the price card pops up: its ×, Escape or a click outside shuts it, and focus goes back to the button. */}
+      {listOpen && loaded && (
+        <Modal bare title="Full price list" onClose={() => setListOpen(false)}>
+          <PriceCard catalog={catalog.data} />
+        </Modal>
+      )}
     </section>
   )
 }
