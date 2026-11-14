@@ -2,7 +2,10 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { api } from '../api'
 import { mockRequest } from './mockBackend/mockApi'
+import { getDb, saveDb } from './mockBackend/db'
 import { ADMIN, CLIENT, renderApp, signIn } from './helpers'
+
+const TINY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
 
 describe('Home page', () => {
   it('shows every section', () => {
@@ -164,6 +167,55 @@ describe('Home page', () => {
     expect(within(nav).getByRole('link', { name: 'My profile' })).toBeInTheDocument()
     await user.click(within(nav).getByRole('link', { name: 'My bookings' }))
     expect(await screen.findByRole('heading', { name: 'My bookings' })).toBeInTheDocument()
+  })
+
+  describe('Our Works', () => {
+    const tiles = (root) => within(root).getAllByRole('button', { name: /^View / })
+    const addUploads = (...captions) => {
+      const db = getDb()
+      db.galleryPhotos = captions.map((caption, i) => ({ id: 900 + i, caption, createdAt: `2026-11-1${i}T00:00:00Z`, dataUrl: TINY_PNG }))
+      saveDb()
+    }
+
+    it('shows nine works and a link to the full gallery', () => {
+      const { container } = renderApp('/')
+      const gallery = container.querySelector('#gallery')
+      expect(within(gallery).getByRole('heading', { name: 'Our Works' })).toBeInTheDocument()
+      expect(gallery).toHaveTextContent('Soft gel, BIAB and nail art, crafted by Leyah.')
+      expect(tiles(gallery)).toHaveLength(9)
+      expect(within(gallery).getByRole('link', { name: /View full gallery/ })).toHaveAttribute('href', '/gallery')
+    })
+
+    it("puts Leah's newest uploads first and fills the rest from the built-in photos", async () => {
+      addUploads('Older set', 'Newest set') // the newest is added last; the gallery lists it first
+      const { container } = renderApp('/')
+      const gallery = container.querySelector('#gallery')
+      await within(gallery).findByRole('button', { name: 'View Newest set' })
+      const names = tiles(gallery).map((b) => b.getAttribute('aria-label'))
+      expect(names).toHaveLength(9)
+      expect(names.slice(0, 3)).toEqual(['View Newest set', 'View Older set', 'View Nail set 1'])
+    })
+
+    it('opens a photo larger and closes it with Escape, back on the photo', async () => {
+      const user = userEvent.setup()
+      const { container } = renderApp('/')
+      const first = tiles(container.querySelector('#gallery'))[0]
+      await user.click(first)
+      const viewer = screen.getByRole('dialog', { name: 'Nail set photo' })
+      expect(viewer).toHaveClass('open')
+      await user.keyboard('{Escape}')
+      expect(viewer).not.toHaveClass('open')
+      expect(first).toHaveFocus()
+    })
+
+    it('the full gallery page lists every photo', async () => {
+      addUploads('Newest set')
+      renderApp('/gallery')
+      const page = await screen.findByRole('region', { name: 'Our Works' })
+      await within(page).findByRole('button', { name: 'View Newest set' })
+      expect(tiles(page)).toHaveLength(1 + 13) // the upload and every built-in photo
+      expect(screen.getByRole('link', { name: /Back to home/ })).toHaveAttribute('href', '/')
+    })
   })
 
   it('opens and closes FAQ answers', async () => {

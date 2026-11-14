@@ -8,6 +8,7 @@ import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from './pages/auth/PasswordPages'
 import HomePage from './pages/client/HomePage'
+import WorksPage from './pages/client/WorksPage'
 import GalleryPage from './pages/admin/GalleryPage'
 import BookPage from './pages/client/BookPage'
 import MyBookingsPage from './pages/client/MyBookingsPage'
@@ -33,6 +34,7 @@ export function AppRoutes() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<HomePage />} />
+        <Route path="gallery" element={<WorksPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={guest(<RegisterPage />)} />
         <Route path="verify-email" element={guest(<VerifyEmailPage />)} />

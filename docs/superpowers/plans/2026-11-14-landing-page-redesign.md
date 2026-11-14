@@ -32,7 +32,7 @@
 | D5 | Hero headline | Brief's *Beautiful Nails, Beautiful You.* (reference shows *Let's be nail friends*) | ✅ Agreed (2026-11-14): **Beautiful Nails, Beautiful You.** with the brief's supporting text |
 | D6 | Service descriptions: written in the website code (A), or editable by Leah in admin (B, database change) | **A** | ✅ **B** — editable in admin (2026-11-14); database change waits on your permission |
 | D7 | Service cards: photo on each card (brief) or small icons (reference) | **Small icons** | ✅ Small icons (2026-11-14) |
-| D8 | "View Full Gallery": new public `/gallery` page (none exists today) or expand in place | **New `/gallery` page** | ⏳ Waiting |
+| D8 | "View Full Gallery": new public `/gallery` page (none exists today) or expand in place | **New `/gallery` page** | ✅ New `/gallery` page; a still 3 × 3 grid that fades in once (no sliding rows); Leah's newest uploads first, topped up with built-in photos (2026-11-14) |
 | D9 | Meet Leyah content: Leah's profile bio and photo (editable today) with a marked placeholder until she writes it | **Profile bio and photo** | ⏳ Waiting |
 | D10 | Visit Us: heading text, and whether the phone and hours show as listed rows (reference "Get in Touch") | "Visit Us", rows with icons, no booking button | ⏳ Waiting |
 | D12 | Small uppercase label above section titles ("GALLERY", "SERVICES", "CONTACT", as in the references). Impeccable's craft floor bans these labels; the references use them | Leave them out (the title carries the section), or keep them to match the references | ✅ Agreed (2026-11-14): **leave them out** everywhere (the hero's "SOFT GEL · BIAB · NAIL ART" goes too) |
@@ -213,8 +213,8 @@ screens use the menu button.
 - [ ] **Step 6: Commit** (with your OK): `Landing page: 3 by 3 works and a full gallery page`.
 
 ### ✅ Checkpoint 4 — our works
-- [ ] Tests pass · checked at 4 widths · committed
-- [ ] Date / commit: ______
+- [x] Tests pass (199) · checked at 1440, 768 and 375 px and by keyboard · committed
+- [x] Date: 2026-11-14 · the page is `WorksPage.jsx` (route `/gallery`; the admin page keeps the name `GalleryPage`)
 
 ---
 

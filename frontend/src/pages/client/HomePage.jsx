@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { api } from '../../api'
 import { useAuth } from '../../auth/AuthContext'
@@ -7,7 +7,7 @@ import { policies, schedule } from '../../content/salon'
 import { formatHours } from '../../lib/format'
 import { Intro } from './home/Intro'
 import { Hero } from './home/Hero'
-import { PhotoViewer, WorksGallery } from './home/WorksGallery'
+import { PhotoViewer, usePhotoViewer, WorksGallery } from './home/WorksGallery'
 import { PricingSection } from './home/PricingSection'
 import { FaqSection, RulesSection } from './home/RulesAndFaq'
 import { Location } from './home/InfoCards'
@@ -42,14 +42,7 @@ export default function HomePage() {
   const dismissWelcome = () => navigate(location.pathname + location.hash, { replace: true, state: null })
 
   // Photo viewer (Our Works photos); focus goes back to whatever opened it.
-  const [viewer, setViewer] = useState({ open: false, photo: null })
-  const opener = useRef(null)
-  const openPhoto = useCallback((photo, from) => { opener.current = from; setViewer({ open: true, photo }) }, [])
-  const closePhoto = useCallback(() => {
-    setViewer((v) => ({ ...v, open: false }))
-    opener.current?.focus({ preventScroll: true })
-    opener.current = null
-  }, [])
+  const { open: viewerOpen, photo: viewerPhoto, openPhoto, closePhoto } = usePhotoViewer()
 
 
   // Header links (/#services, /#gallery) and links from other pages land here with a hash: glide to that section.
@@ -103,7 +96,7 @@ export default function HomePage() {
       <section className="hm-find hm-section" id="visit" tabIndex={-1} aria-labelledby="find-us-title">
         <Location hours={hours} />
       </section>
-      <PhotoViewer photo={viewer.photo} open={viewer.open} onClose={closePhoto} />
+      <PhotoViewer photo={viewerPhoto} open={viewerOpen} onClose={closePhoto} />
       <button type="button" className="hm-to-top" ref={toTopRef} aria-label="Back to top" onClick={() => scrollToSection('hero')}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M12 19V5M5 12l7-7 7 7" />
