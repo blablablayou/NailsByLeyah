@@ -49,7 +49,7 @@ describe('Design reference photos', () => {
     await goToSummary(user)
     expect(within(screen.getByRole('list', { name: 'Design reference photos' })).getAllByRole('img')).toHaveLength(1)
     await readTermsAndAgree(user)
-    await user.click(screen.getByRole('button', { name: /Pay/ }))
+    await user.click(screen.getByRole('button', { name: /^Pay/ }))
 
     expect(await screen.findByRole('heading', { name: 'Booking received!' })).toBeInTheDocument()
     const booking = getDb().bookings.at(-1)

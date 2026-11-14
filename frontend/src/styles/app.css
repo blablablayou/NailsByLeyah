@@ -1402,48 +1402,7 @@ select.input { appearance: auto; }
 .slot-last-note strong { font-weight: 600; }
 .slot-open.slot-selected .slot-status { color: var(--rose-100); }
 
-/* ---- Payment: booking policy and agreement ---- */
-.agree-box { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 16px; background: #fdf6f3; border: 1px solid var(--nude-200); }
-/* The deposit warning: amber like the Terms reminders, and the same shape as the Terms box under it. */
-.agree-deposit { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border-radius: 14px; background: #fff7e6; border: 1px solid #f5dfb0; }
-.agree-deposit-icon { width: 22px; height: 22px; flex: none; margin-top: 1px; color: #b7790f; }
-.agree-deposit-label { margin: 0; font-size: var(--fs-small); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #a8730f; }
-.agree-deposit-title { margin: 2px 0; font-weight: 700; color: #6b4a12; }
-.agree-deposit-text { margin: 0; font-size: var(--fs-small); line-height: 1.45; color: #6b4a12; }
-.agree-review { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--nude-200); background: var(--white); text-align: left; cursor: pointer; transition: border-color .15s, transform .15s var(--ease); }
-.agree-review:hover { border-color: var(--rose-500); transform: translateY(-1px); }
-.agree-review:focus-visible { outline: none; box-shadow: var(--focus); }
-.agree-review-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 10px; background: var(--rose-100); color: var(--burgundy); }
-.agree-icon { width: 22px; height: 22px; }
-.agree-review-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
-.agree-review-title { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-lead); color: var(--burgundy); }
-.agree-review-sub { font-size: var(--fs-small); color: var(--muted); }
-.agree-review.is-read .agree-review-sub { color: var(--green-700, #2f7a4b); }
-.agree-chevron { width: 20px; height: 20px; flex: none; color: var(--rose-600); }
-.agree-check { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--nude-200); background: var(--white); font-size: var(--fs-body); line-height: 1.4; color: var(--ink); cursor: pointer; }
-.agree-check strong { font-weight: 600; }
-.agree-check input { width: 24px; height: 24px; margin: 0 0 0 auto; flex: none; accent-color: var(--rose-600); cursor: pointer; }
-.agree-check.is-locked { background: #faf6f4; color: var(--muted); cursor: not-allowed; }
-.agree-check.is-locked input { cursor: not-allowed; }
-.agree-hint { display: flex; align-items: center; gap: 8px; margin: 0 2px; font-size: var(--fs-small); font-style: italic; color: var(--muted); }
-.agree-info { width: 18px; height: 18px; flex: none; color: var(--rose-500); }
-.agree-hint.field-error { font-style: normal; }
-.agree-hint.field-error .agree-info { color: currentColor; }
-.agree-box.agreed .agree-check { border-color: #cde8d6; background: var(--green-100); }
-.agree-box.agreed .agree-hint { color: var(--green-700, #2f7a4b); font-style: normal; }
-.agree-box.agreed .agree-info { color: currentColor; }
-.agree-check input { appearance: none; -webkit-appearance: none; display: grid; place-items: center; border-radius: 50%; border: 1.5px solid var(--rose-500); background: var(--white); transition: background .15s, border-color .15s; }
-.agree-check input::after { content: ''; width: 6px; height: 11px; margin-top: -3px; border: solid var(--white); border-width: 0 2px 2px 0; transform: rotate(45deg) scale(0); transition: transform .15s var(--ease); }
-.agree-check input:checked { background: var(--rose-600); border-color: var(--rose-600); }
-.agree-check input:checked::after { transform: rotate(45deg) scale(1); }
-.agree-check input:focus-visible { outline: none; box-shadow: var(--focus); }
-.agree-check input:disabled { border-color: var(--nude-200); background: #faf6f4; }
-@media (max-width: 480px) {
-  .agree-box { padding: 0; background: none; border: 0; }
-  .agree-review { gap: 10px; padding: 10px; }
-  .agree-review-icon { width: 34px; height: 34px; }
-  .agree-check { padding: 10px 12px; }
-}
+/* ---- Payment: booking policy and agreement: see .pay-review ---- */
 
 /* ---- Admin: Find bookings ---- */
 .fb-title { margin: 0; }
@@ -2044,21 +2003,6 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 }
 .cc-action > span { margin-left: 6px; font-size: 1.15em; line-height: 1; }
 
-/* Review and agree: two numbered steps, the next one to do highlighted. */
-.agree-steps-intro { margin: 2px 2px -2px; font-size: var(--fs-small); font-weight: 600; color: var(--burgundy); }
-.agree-step { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 50%; background: var(--burgundy); color: var(--white);
-  font-weight: 700; font-size: var(--fs-small); }
-.agree-step.locked { background: #e9dfe2; color: var(--muted); }
-.agree-step.done { background: var(--green-700, #2f7a4b); }
-.agree-review.is-next { border: 2px solid var(--rose-500); box-shadow: 0 0 0 4px rgb(214 120 150 / .12); animation: agree-glow 2.4s ease-in-out infinite; }
-@keyframes agree-glow { 50% { box-shadow: 0 0 0 7px rgb(214 120 150 / .06); } }
-@media (prefers-reduced-motion: reduce) { .agree-review.is-next { animation: none; } }
-.agree-review-action { flex: none; display: inline-flex; align-items: center; gap: 2px; padding: 6px 8px 6px 12px; border-radius: 99px; background: var(--burgundy);
-  color: var(--white); font-size: var(--fs-small); font-weight: 600; white-space: nowrap; }
-.agree-review-action .agree-chevron { width: 16px; height: 16px; color: currentColor; }
-.agree-review-action.is-done { background: var(--white); color: var(--rose-700); border: 1px solid var(--nude-200); }
-.agree-check { gap: 12px; }
-
 /* Legal documents: version line, important reminders, then the full text in its own scroll box. */
 .legal-lead { margin: -4px 0 2px; color: var(--ink-soft); }
 .legal-meta { margin: 0 0 12px; font-size: var(--fs-small); color: var(--muted); }
@@ -2082,19 +2026,49 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 .legal-agree.is-locked { color: var(--ink-soft); background: #faf6f4; cursor: not-allowed; }
 .legal-agree.is-locked input { cursor: not-allowed; }
 
-/* Sign up: one line with the two documents, and the review status under it. */
-.su-terms { padding: 14px 18px; border-radius: 14px; border: 1px solid var(--nude-200); background: var(--white); }
-.su-terms-text { margin: 0; color: var(--ink-soft); line-height: 1.5; }
-/* Always underlined, so it reads as a link to open (sign-up and payment). */
-.su-terms-link { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--rose-700); cursor: pointer;
-  text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
-.su-terms-link:hover { color: var(--burgundy); }
-.su-terms-link:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
-.su-terms-status { margin: 6px 0 0; font-size: var(--fs-small); font-weight: 700; color: #a8730f; }
-.su-terms.is-done { border-color: #cde8d6; background: var(--green-100); }
-.su-terms.is-done .su-terms-status { color: var(--green-700, #2f7a4b); }
-.su-terms.is-error { border-color: var(--red-700); }
-.su-terms .field-error { margin: 4px 0 0; }
+/* The payment step's review: "Before proceeding, please review:", three points with green circled ticks, a divider,
+   "Read Booking & Payment Policy", then a round agreement checkbox that unlocks once the policy has been read to the end,
+   and a status line under it. The box turns green once it is ticked. */
+.pay-review { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px; border-radius: 14px; border: 1px solid var(--nude-200); background: var(--white);
+  transition: background .2s ease, border-color .2s ease; }
+.pay-review.is-done { border-color: #cde8d6; background: #f3faf5; }
+.pay-review-title { margin: 0; font-weight: 700; color: var(--ink); }
+.pay-review-list { display: grid; gap: 10px; margin: 0; padding: 0 0 14px; list-style: none; border-bottom: 1px solid var(--line); }
+.pay-review-list li { display: flex; align-items: flex-start; gap: 10px; font-size: var(--fs-small); line-height: 1.45; color: var(--ink-soft); }
+.pay-review-check { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--green-700); }
+/* "Read Booking & Payment Policy": a full-width outlined button with an open-book icon. */
+.pay-read { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin: 0; padding: 0 16px;
+  border: 1px solid var(--nude-200); border-radius: 12px; background: var(--white); color: var(--ink-soft); font: inherit; font-size: var(--fs-small);
+  font-weight: 600; cursor: pointer; transition: border-color .15s ease, color .15s ease, background .15s ease; }
+.pay-read:hover { border-color: var(--rose-500); color: var(--burgundy); background: var(--rose-50); }
+.pay-read:focus-visible { outline: none; box-shadow: var(--focus); }
+.pay-read:disabled { cursor: default; opacity: .6; }
+.pay-read-icon { width: 18px; height: 18px; }
+.pay-ack-group { display: grid; gap: 6px; }
+.pay-ack { display: flex; align-items: flex-start; gap: 12px; }
+.pay-ack strong { font-weight: 700; color: var(--ink); }
+/* Locked until the policy has been read to the end. */
+.pay-ack.is-locked label { color: var(--muted); cursor: not-allowed; }
+.pay-ack.is-locked strong { color: var(--muted); }
+.pay-ack-status { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 0 34px; font-size: var(--fs-caption); line-height: 1.4; color: var(--muted); }
+.pay-ack-status.is-read { color: var(--green-700); }
+.pay-ack-status-icon { flex: none; width: 15px; height: 15px; margin-top: 1px; }
+.pay-ack label { line-height: 1.45; color: var(--ink); cursor: pointer; }
+/* A round checkbox: an empty circle, filled burgundy with a white tick once agreed. */
+.pay-ack input { flex: none; appearance: none; width: 22px; height: 22px; margin: 0; border: 2px solid var(--muted); border-radius: 50%; background: var(--white);
+  display: grid; place-items: center; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.pay-ack input::after { content: ''; width: 6px; height: 11px; border: solid var(--white); border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg) scale(0);
+  transition: transform .15s ease; }
+.pay-ack input:checked { background: var(--burgundy); border-color: var(--burgundy); }
+.pay-ack input:checked::after { transform: translateY(-1px) rotate(45deg) scale(1); }
+.pay-ack input:focus-visible { outline: none; box-shadow: var(--focus); }
+.pay-ack input:disabled { cursor: not-allowed; opacity: .55; }
+/* Sign up: one small line under Create account (agreement by continuing), its two documents as underlined links. */
+.su-agree { margin: 2px 0 0; font-size: var(--fs-small); line-height: 1.55; color: var(--ink-soft); }
+.su-agree-link { border: 0; background: none; padding: 0; font: inherit; color: var(--rose-700); cursor: pointer;
+  text-decoration: underline; text-underline-offset: 2px; }
+.su-agree-link:hover { color: var(--burgundy); }
+.su-agree-link:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 3px; }
 
 /* Services: a design version's price and time follow its set, so they are shown but not typed in. */
 .catalog-row .input[readonly] { background: #faf6f4; color: var(--ink-soft); cursor: default; }

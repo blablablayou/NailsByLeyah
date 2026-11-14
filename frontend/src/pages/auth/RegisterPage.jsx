@@ -7,7 +7,7 @@ import { Alert, Button, Card, TextField } from '../../components/ui'
 import { errorMessage, fieldErrors } from '../../api/errors'
 import { hasErrors, validatePhone, validateRegistration } from '../../validation/rules'
 
-const empty = { firstName: '', lastName: '', username: '', email: '', phoneNumber: '', password: '', confirmPassword: '', acceptTerms: false }
+const empty = { firstName: '', lastName: '', username: '', email: '', phoneNumber: '', password: '', confirmPassword: '' }
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -16,9 +16,8 @@ export default function RegisterPage() {
   const [failure, setFailure] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [usernameAvailable, setUsernameAvailable] = useState(null)
-  // The Terms & Conditions and the Privacy Policy are read together in one window and agreed to once.
-  const [showTerms, setShowTerms] = useState(false)
-  const [read, setRead] = useState(false)
+  // The Terms & Conditions or the Privacy Policy, opened from the line under Create account (to read; no ticking).
+  const [legalDocument, setLegalDocument] = useState(null)
 
   const set = (field) => (value) => {
     setValues((v) => ({ ...v, [field]: value }))
@@ -27,7 +26,9 @@ export default function RegisterPage() {
 
   const submit = async (e) => {
     e.preventDefault()
-    const found = validateRegistration(values)
+    // Creating the account is the agreement ("By creating an account, you agree to…"); the backend records the Terms version.
+    const request = { ...values, acceptTerms: true }
+    const found = validateRegistration(request)
     if (usernameAvailable === false) found.username = 'Username is already taken.'
     setErrors(found)
     setFailure(null)
@@ -35,7 +36,7 @@ export default function RegisterPage() {
 
     setSubmitting(true)
     try {
-      await api.auth.register(values)
+      await api.auth.register(request)
       navigate(`/verify-email?email=${encodeURIComponent(values.email.trim().toLowerCase())}`, { state: { registered: true } })
     } catch (err) {
       setErrors(fieldErrors(err))
@@ -82,21 +83,14 @@ export default function RegisterPage() {
           {/* The password rules span both columns so they stay readable. */}
           <PasswordRules password={values.password} />
 
-          {/* One line: open each document, read it to the end and agree inside its window. */}
-          <div className={values.acceptTerms ? 'su-terms is-done' : errors.acceptTerms ? 'su-terms is-error' : 'su-terms'}>
-            <p className="su-terms-text">
-              Review and accept the{' '}
-              <button type="button" className="su-terms-link" onClick={() => setShowTerms(true)}>Terms &amp; Privacy Policy</button>
-              {' '}to continue.
-            </p>
-            <p className="su-terms-status" aria-live="polite">
-              {values.acceptTerms ? '✓ Accepted' : 'Review required'}
-            </p>
-            {errors.acceptTerms && <p className="field-error">{errors.acceptTerms}</p>}
-          </div>
-
-          {/* Disabled until the Terms & Conditions are accepted (Ref 1.6). */}
-          <Button type="submit" loading={submitting} disabled={!values.acceptTerms} className="btn-block">Create account</Button>
+          <Button type="submit" loading={submitting} className="btn-block">Create account</Button>
+          {/* Agreement by continuing, as on Amazon: no checkbox (chosen 2026-11-15 over requirement 1.8's checkbox). */}
+          <p className="su-agree" id="su-agree">
+            By creating an account, you agree to Nails by Leyah&rsquo;s{' '}
+            <button type="button" className="su-agree-link" onClick={() => setLegalDocument('terms')}>Terms &amp; Conditions</button>
+            {' '}and{' '}
+            <button type="button" className="su-agree-link" onClick={() => setLegalDocument('privacy')}>Privacy Policy</button>.
+          </p>
         </form>
 
         <p className="auth-switch">
@@ -105,10 +99,7 @@ export default function RegisterPage() {
       </Card>
       </div>
 
-      {showTerms && (
-        <LegalDocumentModal document="both" onClose={() => setShowTerms(false)} onReadToEnd={() => setRead(true)}
-          agree={{ checked: values.acceptTerms, read, onChange: set('acceptTerms') }} />
-      )}
+      {legalDocument && <LegalDocumentModal document={legalDocument} onClose={() => setLegalDocument(null)} />}
     </div>
   )
 }

@@ -28,34 +28,52 @@ describe('Payment step', () => {
     const onPay = vi.fn()
     render(panel({ onPay }))
 
-    expect(screen.getByRole('note')).toHaveTextContent('₱150.00 booking depositNon-refundable for cancellations and no-shows. This amount is deducted from your total service cost.')
+    expect(screen.queryByText('Please note')).toBeNull() // the separate deposit warning is gone; the first point covers it
     expect(screen.getByText('Choose GCash or Maya (step 2) to continue.')).toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: 'GCash' }))
-    expect(screen.getByText('Review and accept the Terms & Conditions to continue.')).toBeInTheDocument()
-    expect(screen.getByText('Review required')).toBeInTheDocument()
-    const pay = screen.getByRole('button', { name: /Pay/ })
+    expect(screen.getByText('Read the Booking & Payment Policy (step 3) to continue.')).toBeInTheDocument()
+    // Three points to review, then the agreement.
+    const review = screen.getByText('Before proceeding, please review:').closest('.pay-review')
+    expect([...review.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+      'A ₱150.00 deposit is required to secure the appointment request.',
+      'Your appointment is subject to payment verification and salon confirmation.',
+      'Cancellation, refund, and rescheduling rules apply.',
+    ])
+    const ack = screen.getByRole('checkbox', { name: /^I have read and agree to the Booking Terms, Payment Policy, and Cancellation & Refund Policy/ })
+    expect(ack).not.toBeChecked() // never ticked for the client
+    expect(ack).toBeDisabled() // locked until the policy has been read
+    expect(screen.getByText('Read the policy to the end to unlock the agreement.')).toBeInTheDocument()
+    const pay = screen.getByRole('button', { name: /^Pay/ })
     expect(pay).toBeDisabled()
     await user.click(pay)
     expect(onPay).not.toHaveBeenCalled()
 
     await readTermsAndAgree(user)
-    expect(screen.getByText('✓ Accepted')).toBeInTheDocument()
+    expect(ack).toBeChecked()
+    expect(screen.getByText('Policy reviewed and agreed.')).toBeInTheDocument()
     expect(pay).toBeEnabled()
+    await user.click(ack) // unticking locks Pay again
+    expect(pay).toBeDisabled()
   })
 
-  it('opens the Terms & Conditions without agreeing for the client or leaving the page', async () => {
+  it('reading the policy unlocks the agreement box, without ticking it for the client', async () => {
     const user = userEvent.setup()
     render(panel({ onPay: vi.fn() }))
 
     await openPaymentTerms(user)
-    const dialog = screen.getByRole('dialog', { name: 'Terms & Conditions' })
-    const agree = within(dialog).getByRole('checkbox', { name: 'I have read and agree to the Terms & Conditions.' })
-    expect(agree).not.toBeChecked() // reading never ticks it
-    expect(within(dialog).getByRole('button', { name: 'Agree and continue' })).toBeDisabled()
-    await user.click(within(dialog).getAllByRole('button', { name: 'Close' }).at(-1))
+    const dialog = screen.getByRole('dialog', { name: 'Booking & Payment Policy' })
+    // The booking sections of the Terms & Conditions (3–9), with the same version the booking records.
+    expect(dialog).toHaveTextContent('Version 2.4')
+    expect(within(dialog).getByRole('heading', { name: '5. Payment and the booking deposit' })).toBeInTheDocument()
+    expect(within(dialog).queryByRole('heading', { name: '2. Your account' })).toBeNull()
+    expect(within(dialog).queryByRole('button', { name: 'Agree and continue' })).toBeNull() // only to read
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }))
 
-    expect(screen.getByText('Review required')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Pay/ })).toBeDisabled()
+    const ack = screen.getByRole('checkbox', { name: /^I have read and agree to the Booking Terms/ })
+    expect(ack).toBeEnabled()
+    expect(ack).not.toBeChecked()
+    expect(screen.getByText('Policy reviewed. Please check the agreement box to continue.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Pay/ })).toBeDisabled()
   })
 
   it('sends only one payment when Pay is clicked several times quickly (7.7)', async () => {
@@ -63,7 +81,7 @@ describe('Payment step', () => {
     const onPay = vi.fn(() => new Promise((resolve) => { finish = resolve }))
     render(panel({ onPay }))
     await readTermsAndAgree(userEvent.setup())
-    const pay = screen.getByRole('button', { name: /Pay/ })
+    const pay = screen.getByRole('button', { name: /^Pay/ })
 
     fireEvent.click(pay)
     fireEvent.click(pay)
@@ -89,8 +107,6 @@ describe('Payment step', () => {
     expect(onOptionChange).toHaveBeenCalledWith('Full')
     rerender(panel({ onPay: vi.fn(), onOptionChange, option: 'Full' }))
     expect(screen.getByRole('button', { name: /Pay ₱519.00 in full/ })).toBeInTheDocument()
-    // The deposit notice applies to a full payment too.
-    expect(screen.getByRole('note')).toHaveTextContent('included in your full payment')
   })
 })
 

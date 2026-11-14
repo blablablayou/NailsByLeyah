@@ -73,10 +73,14 @@ export function PhotoViewer({ photo: current, open, onClose }) {
 
   useEffect(() => {
     if (!open) return undefined
-    requestAnimationFrame(() => closeRef.current?.focus())
+    // Focus moves to Close a frame later (once the viewer shows); cancelled if it closes first, so focus stays on the photo.
+    const frame = requestAnimationFrame(() => closeRef.current?.focus())
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('keydown', onKey)
+    }
   }, [open, onClose])
 
   return (

@@ -58,18 +58,24 @@ export function Modal({ title, onClose, children, footer, wide = false, bare = f
   )
 }
 
+// The payment step's booking policies (Booking Terms, Payment Policy, Cancellation & Refund Policy): the booking, price, payment, rescheduling, cancellation, on-the-day and
+// repair sections of the Terms & Conditions (3–9), under that name. Same text and version, so the Terms version saved
+// on the booking still matches.
+const BOOKING_SECTIONS = /^[3-9]\. /
+const bookingPolicy = {
+  ...termsAndConditions,
+  title: 'Booking & Payment Policy',
+  sections: termsAndConditions.sections.filter((s) => BOOKING_SECTIONS.test(s.heading)),
+}
+
 const documents = {
   terms: termsAndConditions,
   privacy: privacyPolicy,
-  // Sign-up: both documents in one window, read and agreed to once.
-  both: {
-    title: 'Terms & Privacy Policy',
-    parts: [termsAndConditions, privacyPolicy],
-  },
+  booking: bookingPolicy,
 }
 
 /**
- * A legal document (or, with "both", the Terms & Conditions and the Privacy Policy together) in a window: its version and date, the important reminders, then the full text in its own scroll box.
+ * A legal document (the Terms & Conditions, the Privacy Policy, or the Booking & Payment Policy) in a window: its version and date, the important reminders, then the full text in its own scroll box.
  * `onReadToEnd` is called once the text has been scrolled to the end. With `agree` ({ checked, read, onChange }) the window
  * ends with its own "I have read and agree" box, which unlocks once the text has been read to the end.
  */

@@ -3,13 +3,14 @@ import { LegalDocumentModal } from './Modal'
 import { Alert, Button, Money, StatusBadge } from './ui'
 import { useSalon } from './SalonProfile'
 
-const Icon = ({ children, className = 'agree-icon' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"
+const Icon = ({ children, className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
     strokeLinejoin="round" aria-hidden="true" focusable="false">{children}</svg>
 )
-const WarningIcon = () => (
-  <Icon className="agree-deposit-icon"><path d="M12 3.5 2.8 19.5h18.4z" /><path d="M12 10v4.5M12 17.3h.01" /></Icon>
-)
+/** A green circled tick (the review points and the "Policy reviewed" line). */
+const CheckIcon = ({ className = 'pay-review-check' }) => <Icon className={className}><circle cx="12" cy="12" r="9" /><path d="m8.5 12.2 2.4 2.4 4.6-5" /></Icon>
+/** An open book, on "Read Booking & Payment Policy". */
+const BookIcon = () => <Icon className="pay-read-icon"><path d="M12 6.5C10.3 5.2 7.8 4.6 4 4.6v13.2c3.8 0 6.3.6 8 1.9 1.7-1.3 4.2-1.9 8-1.9V4.6c-3.8 0-6.3.6-8 1.9z" /><path d="M12 6.5v13.2" /></Icon>
 
 // The wallets' own logos (frontend/public/img), so clients recognise them at a glance.
 const WALLET_LOGOS = { GCash: '/img/wallet-gcash.png', Maya: '/img/wallet-maya.jpg' }
@@ -24,19 +25,20 @@ export const amountNow = (quote, option) => (option === 'Full' ? quote.fullAmoun
 export const balanceAfter = (quote, option) => Math.max(0, quote.total - amountNow(quote, option))
 
 /**
- * Payment step: deposit or full payment, then GCash or Maya. As at sign-up, the client opens the Terms & Conditions,
- * reads to the end and agrees in that window; it is never agreed for them. The Pay button
- * stays disabled until it is ticked (Ref 2.3), for either option, and the server refuses a booking without the
- * current Terms version. Pay is disabled with a loading state from the first click until the
- * server answers, so only one request is ever sent (Ref 12.4). The booking then waits for Leyah's confirmation.
+ * Payment step: deposit or full payment, then GCash or Maya, then three points to review. "Read Booking & Payment
+ * Policy" opens the whole policy; once it has been read to the end, the agreement checkbox unlocks, and the client ticks
+ * it themself (never ticked for them). The Pay button stays disabled until it is ticked (Ref 2.3), for either option,
+ * and the server refuses a booking without the current Terms version. Pay is disabled with a loading state from the
+ * first click until the server answers, so only one request is ever sent (Ref 12.4). The booking then waits for
+ * Leyah's confirmation.
  */
 export function PaymentPanel({ quote, option, onOptionChange, onPay, error }) {
   const [method, setMethod] = useState(null) // nothing is picked for the client: they choose
   const { paymentAccountName } = useSalon()
-  const [understood, setUnderstood] = useState(false)
-  const [read, setRead] = useState(false) // opened the Terms and reached the end
+  const [understood, setUnderstood] = useState(false) // the agreement checkbox
+  const [policyRead, setPolicyRead] = useState(false) // the policy was opened and read to the end: unlocks the checkbox
   const [paying, setPaying] = useState(false)
-  const [showTerms, setShowTerms] = useState(false)
+  const [showPolicy, setShowPolicy] = useState(false)
   const inFlight = useRef(false)
 
   const ready = Boolean(option && method && understood)
@@ -95,28 +97,30 @@ export function PaymentPanel({ quote, option, onOptionChange, onPay, error }) {
 
       <div>
         <div className="pay-step-title"><i aria-hidden="true">3</i> Review and agree</div>
-        <div className={understood ? 'agree-box agreed' : 'agree-box'}>
-          {/* A warning, so the non-refundable deposit isn't missed before paying. */}
-          <div className="agree-deposit" role="note" aria-label="Deposit warning">
-            <WarningIcon />
-            <div>
-              <p className="agree-deposit-label">Please note</p>
-              <p className="agree-deposit-title"><Money amount={quote.deposit} /> booking deposit</p>
-              <p className="agree-deposit-text">
-                Non-refundable for cancellations and no-shows.{' '}
-                {option === 'Full' ? 'It is included in your full payment, not charged on top.' : 'This amount is deducted from your total service cost.'}
-              </p>
+        {/* Three points to review, the full policy to read, then the client's own agreement. */}
+        <div className={understood ? 'pay-review is-done' : 'pay-review'}>
+          <p className="pay-review-title">Before proceeding, please review:</p>
+          <ul className="pay-review-list">
+            <li><CheckIcon /><span>A <Money amount={quote.deposit} /> deposit is required to secure the appointment request.</span></li>
+            <li><CheckIcon /><span>Your appointment is subject to payment verification and salon confirmation.</span></li>
+            <li><CheckIcon /><span>Cancellation, refund, and rescheduling rules apply.</span></li>
+          </ul>
+          <button type="button" className="pay-read" onClick={() => setShowPolicy(true)} disabled={paying}>
+            <BookIcon /> Read Booking &amp; Payment Policy
+          </button>
+          {/* The agreement and its status line, kept together. */}
+          <div className="pay-ack-group">
+            <div className={policyRead ? 'pay-ack' : 'pay-ack is-locked'}>
+              <input type="checkbox" id="pay-ack" checked={understood} onChange={(e) => setUnderstood(e.target.checked)}
+                disabled={paying || !policyRead} aria-describedby="pay-ack-status" />
+              <label htmlFor="pay-ack">
+                I have read and agree to the <strong>Booking Terms, Payment Policy, and Cancellation &amp; Refund Policy</strong>.
+              </label>
             </div>
-          </div>
-
-          {/* Like sign-up: one line opens the Terms window, which is read to the end and agreed to there. */}
-          <div className={understood ? 'su-terms is-done' : 'su-terms'}>
-            <p className="su-terms-text">
-              Review and accept the{' '}
-              <button type="button" className="su-terms-link" onClick={() => setShowTerms(true)} disabled={paying}>Terms &amp; Conditions</button>
-              {' '}to continue.
+            <p className={policyRead ? 'pay-ack-status is-read' : 'pay-ack-status'} id="pay-ack-status" aria-live="polite">
+              {policyRead ? <><CheckIcon className="pay-ack-status-icon" />{understood ? 'Policy reviewed and agreed.' : 'Policy reviewed. Please check the agreement box to continue.'}</>
+                : 'Read the policy to the end to unlock the agreement.'}
             </p>
-            <p className="su-terms-status" aria-live="polite">{understood ? '✓ Accepted' : 'Review required'}</p>
           </div>
         </div>
       </div>
@@ -135,14 +139,12 @@ export function PaymentPanel({ quote, option, onOptionChange, onPay, error }) {
       <p className="pay-note muted small">
         {!option ? 'Choose how much to pay now (step 1) to continue.'
           : !method ? 'Choose GCash or Maya (step 2) to continue.'
-            : !understood ? 'Review and accept the Terms & Conditions to continue.'
+            : !policyRead ? 'Read the Booking & Payment Policy (step 3) to continue.'
+              : !understood ? 'Check the agreement box (step 3) to continue.'
               : 'You get a receipt right away. Leyah then checks the payment and confirms your appointment.'}
       </p>
-      {/* Once read to the end, opening it again doesn't need another scroll to unlock the agreement. */}
-      {showTerms && (
-        <LegalDocumentModal document="terms" onClose={() => setShowTerms(false)} onReadToEnd={() => setRead(true)}
-          agree={{ checked: understood, read, onChange: setUnderstood }} />
-      )}
+      {/* The whole policy; reading it to the end unlocks the agreement checkbox above. */}
+      {showPolicy && <LegalDocumentModal document="booking" onClose={() => setShowPolicy(false)} onReadToEnd={() => setPolicyRead(true)} />}
     </div>
   )
 }

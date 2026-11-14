@@ -20,20 +20,22 @@ export async function pickShade(user, number) {
   await user.click(within(chart).getByRole('button', { name: 'Use This Color' }))
 }
 
-/** Opens the Terms from the payment step (not the footer link), agrees in its window and closes it. */
+/** Opens the full Booking & Payment Policy from the payment step ("Read Booking & Payment Policy"). */
 export const openPaymentTerms = (user) =>
-  user.click(screen.getAllByRole('button', { name: 'Terms & Conditions' }).find((b) => b.closest('.payment-panel')))
+  user.click(screen.getAllByRole('button', { name: 'Read Booking & Payment Policy' }).find((b) => b.closest('.payment-panel')))
 
-/** Picks the deposit and GCash where nothing is chosen yet (the payment step starts with nothing picked), then agrees. */
+/**
+ * Picks the deposit and GCash where nothing is chosen yet (the payment step starts with nothing picked), reads the policy
+ * (a test page has no scrolling, so opening it counts as read to the end), closes it, then ticks the agreement box.
+ */
 export async function readTermsAndAgree(user) {
   const option = screen.queryAllByRole('radio', { name: /^(Booking deposit|Full payment)$/ })
   if (option.length && !option.some((r) => r.checked)) await user.click(screen.getByRole('radio', { name: 'Booking deposit' }))
   const method = screen.queryAllByRole('radio', { name: /^(GCash|Maya)$/ })
   if (method.length && !method.some((r) => r.checked)) await user.click(screen.getByRole('radio', { name: 'GCash' }))
   await openPaymentTerms(user)
-  const dialog = screen.getByRole('dialog', { name: 'Terms & Conditions' })
-  await user.click(within(dialog).getByRole('checkbox', { name: 'I have read and agree to the Terms & Conditions.' }))
-  await user.click(within(dialog).getByRole('button', { name: 'Agree and continue' }))
+  await user.click(within(screen.getByRole('dialog', { name: 'Booking & Payment Policy' })).getByRole('button', { name: 'Done' }))
+  await user.click(screen.getByRole('checkbox', { name: /^I have read and agree to the Booking Terms/ }))
 }
 
 export const signIn = (account) => mockRequest('POST', '/auth/login', { body: { usernameOrEmail: account.username, password: account.password } })

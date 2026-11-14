@@ -3,14 +3,6 @@ import userEvent from '@testing-library/user-event'
 import { CLIENT, renderApp } from './helpers'
 import { getDb } from './mockBackend/db'
 
-/** Opens the Terms & Privacy Policy from the sign-up form and agrees in its window (a short page counts as read straight away). */
-async function readBothDocuments(user) {
-  await user.click(await screen.findByRole('button', { name: 'Terms & Privacy Policy' }))
-  const dialog = await screen.findByRole('dialog', { name: 'Terms & Privacy Policy' })
-  await user.click(within(dialog).getByRole('checkbox', { name: 'I have read and agree to the Terms & Privacy Policy.' }))
-  await user.click(within(dialog).getByRole('button', { name: 'Agree and continue' }))
-}
-
 describe('Registration', () => {
   it('shows "Username is already taken." for an existing username (7.4)', async () => {
     const user = userEvent.setup()
@@ -21,33 +13,28 @@ describe('Registration', () => {
     expect(await screen.findByText('Username is already taken.')).toBeInTheDocument()
   })
 
-  it('keeps Create account disabled until the Terms & Conditions are accepted', async () => {
-    const user = userEvent.setup()
+  it('says that creating an account agrees to the Terms & Conditions and Privacy Policy, with no checkbox', async () => {
     renderApp('/register')
     const submit = await screen.findByRole('button', { name: 'Create account' })
-
-    expect(submit).toBeDisabled()
-    expect(screen.getByText('Review required')).toBeInTheDocument()
-    await readBothDocuments(user)
-    expect(screen.getByText('✓ Accepted')).toBeInTheDocument()
-    expect(submit).toBeEnabled()
+    expect(submit).toBeEnabled() // nothing to tick first
+    expect(screen.queryByRole('checkbox')).toBeNull()
+    expect(screen.getByText(/By creating an account, you agree to Nails by Leyah/)).toHaveTextContent(
+      'By creating an account, you agree to Nails by Leyah’s Terms & Conditions and Privacy Policy.')
   })
 
-  it('opens the Terms & Conditions and Privacy Policy together in one scrollable window', async () => {
+  it('opens each document from its link, to read', async () => {
     const user = userEvent.setup()
     renderApp('/register')
+    const line = (await screen.findByText(/By creating an account/)).closest('p')
 
-    await user.click(await screen.findByRole('button', { name: 'Terms & Privacy Policy' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Terms & Privacy Policy' })
-    expect(screen.getByLabelText('Terms & Privacy Policy text')).toHaveClass('legal-scroll')
-    // The key points of both come first, above the full text, with each version.
-    const reminders = within(dialog).getByRole('note', { name: 'Important reminders' })
-    expect(reminders).toHaveTextContent('₱150 deposit')
-    expect(reminders).toHaveTextContent('Data Privacy Act')
-    expect(dialog).toHaveTextContent('Terms & Conditions: Version 2.4')
-    expect(dialog).toHaveTextContent('Privacy Policy: Version 2.3')
-    expect(within(dialog).getByRole('heading', { name: 'Terms & Conditions' })).toBeInTheDocument()
-    expect(within(dialog).getByRole('heading', { name: 'Privacy Policy' })).toBeInTheDocument()
+    await user.click(within(line).getByRole('button', { name: 'Terms & Conditions' }))
+    const terms = await screen.findByRole('dialog', { name: 'Terms & Conditions' })
+    expect(terms).toHaveTextContent('Version 2.4')
+    expect(within(terms).queryByRole('button', { name: 'Agree and continue' })).toBeNull() // only to read
+    await user.keyboard('{Escape}')
+
+    await user.click(within(line).getByRole('button', { name: 'Privacy Policy' }))
+    expect(await screen.findByRole('dialog', { name: 'Privacy Policy' })).toHaveTextContent('Version 2.3')
   })
 
   it('the footer opens the Terms & Conditions and Privacy Policy on every page', async () => {
@@ -74,10 +61,11 @@ describe('Registration', () => {
     await user.type(screen.getByLabelText(/Phone Number/), '09223334444')
     await user.type(screen.getByLabelText(/^Password( \*)?$/), 'BeaPass123')
     await user.type(screen.getByLabelText(/Confirm Password/), 'BeaPass123')
-    await readBothDocuments(user)
     await user.click(screen.getByRole('button', { name: 'Create account' }))
 
     expect(await screen.findByRole('heading', { name: 'Verify your email' })).toBeInTheDocument()
+    // Creating the account recorded the agreement to the current Terms.
+    expect(getDb().users.find((u) => u.username === 'bea.torres').termsAcceptedAt).toBeTruthy()
     const code = getDb().outbox.find((e) => e.to === 'bea@example.test').code
     await user.type(screen.getByLabelText(/Verification code/), code)
     await user.click(screen.getByRole('button', { name: 'Verify email' }))
@@ -86,20 +74,6 @@ describe('Registration', () => {
     expect(await screen.findByText('Your account is ready!')).toBeInTheDocument()
     expect(screen.getByText('Your account is ready!').closest('.hm-welcome')).toHaveTextContent('Log in to book your first appointment')
     expect(screen.queryByRole('heading', { name: 'Verify your email' })).toBeNull()
-  })
-
-  it('closing the window without agreeing keeps Create account disabled', async () => {
-    const user = userEvent.setup()
-    renderApp('/register')
-    const submit = await screen.findByRole('button', { name: 'Create account' })
-
-    await user.click(screen.getByRole('button', { name: 'Terms & Privacy Policy' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Terms & Privacy Policy' })
-    expect(within(dialog).getByRole('button', { name: 'Agree and continue' })).toBeDisabled() // the box is not ticked yet
-    await user.click(within(dialog).getAllByRole('button', { name: 'Close' }).at(-1))
-
-    expect(submit).toBeDisabled()
-    expect(screen.getByText('Review required')).toBeInTheDocument()
   })
 })
 
