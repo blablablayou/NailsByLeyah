@@ -4,7 +4,7 @@ import { useAsync } from '../../hooks/useAsync'
 import { softGelSets } from '../../lib/services'
 import { ColorStockCard } from './BookingRulesCards'
 import { errorMessage, fieldErrors } from '../../api/errors'
-import { validateDuration, validatePrice, validateServiceName } from '../../validation/rules'
+import { LIMITS, validateDuration, validatePrice, validateServiceDescription, validateServiceName } from '../../validation/rules'
 import { Alert, Button, Card, Money, PageHeader, PageLoader, SelectField, TextField } from '../../components/ui'
 
 /** Update prices, service durations and add-ons without code changes (Ref 11.3). */
@@ -82,23 +82,29 @@ function CatalogRow({ item, kind, onChanged, designOf = null }) {
   const [duration, setDuration] = useState(String(item.durationMinutes ?? ''))
   const [isActive, setIsActive] = useState(item.isActive)
   const [allowsAddOns, setAllowsAddOns] = useState(Boolean(item.allowsAddOns))
+  const [description, setDescription] = useState(item.description ?? '')
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const isService = kind === 'service'
   // Only a new set can take nail art; a removal never does.
   const canTakeStones = isService && item.category === 'SoftGel'
+  // The line on the home page's service card. A design version shares its set's card, so it has none.
+  const hasDescription = isService && !designOf
   const dirty = name !== item.name || Number(price) !== item.price || isActive !== item.isActive
     || (isService && Number(duration) !== item.durationMinutes) || (canTakeStones && allowsAddOns !== Boolean(item.allowsAddOns))
+    || (hasDescription && description.trim() !== (item.description ?? ''))
 
   const save = async () => {
     const found = Object.fromEntries([['name', validateServiceName(name)], ['price', validatePrice(price)],
-      ['durationMinutes', isService ? validateDuration(duration) : null]].filter(([, m]) => m))
+      ['durationMinutes', isService ? validateDuration(duration) : null],
+      ['description', hasDescription ? validateServiceDescription(description) : null]].filter(([, m]) => m))
     setErrors(found)
     if (Object.keys(found).length) return
     setSaving(true)
     try {
       const body = { name, price: Number(price), isActive }
-      if (isService) await api.admin.updateService(item.id, { ...body, durationMinutes: Number(duration), ...(canTakeStones && { allowsAddOns }) })
+      if (isService) await api.admin.updateService(item.id, { ...body, durationMinutes: Number(duration), ...(canTakeStones && { allowsAddOns }),
+        ...(hasDescription && { description: description.trim() }) })
       else await api.admin.updateAddOn(item.id, body)
       onChanged(`${name} saved.`)
     } catch (err) {
@@ -174,6 +180,19 @@ function CatalogRow({ item, kind, onChanged, designOf = null }) {
         </div>
         {errors.form && <div className="field-error">{errors.form}</div>}
       </div>
+      {hasDescription && (
+        <div className="catalog-cell catalog-desc">
+          <label className="catalog-desc-label" htmlFor={`desc-${item.id}`}>Home page line</label>
+          <input id={`desc-${item.id}`} aria-label={`Home page line for ${item.name}`} className="input input-compact" maxLength={LIMITS.serviceDescriptionMax} value={description}
+            placeholder="Leave empty to use the website's own line" aria-describedby={`desc-hint-${item.id}`}
+            onChange={(e) => setDescription(e.target.value)} />
+          <div className="catalog-was" id={`desc-hint-${item.id}`}>
+            {item.category === 'Removal' ? 'Shown on the Removal card (the first removal with a line is used).' : 'Shown under the name on its home page card.'}
+            {' '}{description.trim().length}/{LIMITS.serviceDescriptionMax}
+          </div>
+          {errors.description && <div className="field-error">{errors.description}</div>}
+        </div>
+      )}
     </div>
   )
 }

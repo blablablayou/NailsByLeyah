@@ -54,6 +54,12 @@ public abstract class CatalogService : Service
     public virtual bool TakesAddOns => AllowsAddOns;
 
     /// <summary>
+    /// One line about the service for the home page's service cards, written by the administrator on admin Services.
+    /// Empty until she writes one; the home page then shows its own default line.
+    /// </summary>
+    public string Description { get; set; } = "";
+
+    /// <summary>
     /// Set on a "with design" version of another service ("Soft Gel Extension with Design", "BIAB with Design"; Plain has
     /// none). The booking page shows it as the optional "With design" choice on that service's card, not as a card of its own.
     /// </summary>

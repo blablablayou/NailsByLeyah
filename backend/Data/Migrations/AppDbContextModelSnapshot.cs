@@ -523,6 +523,14 @@ namespace NailsByLeah.Api.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasDefaultValue("")
+                        .HasColumnName("description");
+
                     b.Property<int?>("DesignOptionOfId")
                         .HasColumnType("integer")
                         .HasColumnName("design_option_of_id");
@@ -1299,6 +1307,7 @@ namespace NailsByLeah.Api.Data.Migrations
                             Id = 4,
                             AllowsAddOns = false,
                             CreatedAt = new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "",
                             DurationMinutes = 60,
                             IsActive = true,
                             IsDeleted = false,
@@ -1311,6 +1320,7 @@ namespace NailsByLeah.Api.Data.Migrations
                             Id = 5,
                             AllowsAddOns = false,
                             CreatedAt = new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "",
                             DurationMinutes = 60,
                             IsActive = true,
                             IsDeleted = false,
@@ -1339,6 +1349,7 @@ namespace NailsByLeah.Api.Data.Migrations
                             Id = 1,
                             AllowsAddOns = false,
                             CreatedAt = new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "",
                             DurationMinutes = 120,
                             IsActive = true,
                             IsDeleted = false,
@@ -1351,6 +1362,7 @@ namespace NailsByLeah.Api.Data.Migrations
                             Id = 2,
                             AllowsAddOns = true,
                             CreatedAt = new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "",
                             DesignOptionOfId = 1,
                             DurationMinutes = 180,
                             IsActive = false,
@@ -1364,6 +1376,7 @@ namespace NailsByLeah.Api.Data.Migrations
                             Id = 3,
                             AllowsAddOns = true,
                             CreatedAt = new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "",
                             DurationMinutes = 180,
                             IsActive = true,
                             IsDeleted = false,
@@ -1376,6 +1389,7 @@ namespace NailsByLeah.Api.Data.Migrations
                             Id = 6,
                             AllowsAddOns = true,
                             CreatedAt = new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "",
                             DesignOptionOfId = 3,
                             DurationMinutes = 240,
                             IsActive = true,
@@ -1389,6 +1403,7 @@ namespace NailsByLeah.Api.Data.Migrations
                             Id = 7,
                             AllowsAddOns = true,
                             CreatedAt = new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "",
                             DurationMinutes = 120,
                             IsActive = true,
                             IsDeleted = false,
@@ -1401,6 +1416,7 @@ namespace NailsByLeah.Api.Data.Migrations
                             Id = 8,
                             AllowsAddOns = true,
                             CreatedAt = new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "",
                             DesignOptionOfId = 7,
                             DurationMinutes = 180,
                             IsActive = true,

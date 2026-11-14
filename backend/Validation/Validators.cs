@@ -169,6 +169,7 @@ public sealed class CreateServiceRequestValidator : AbstractValidator<CreateServ
         RuleFor(x => x.Name).ServiceName();
         RuleFor(x => x.Price).PriceRule();
         RuleFor(x => x.DurationMinutes).DurationRule();
+        RuleFor(x => x.Description).ServiceDescription();
     }
 }
 
@@ -189,6 +190,7 @@ public sealed class UpdateServiceRequestValidator : AbstractValidator<UpdateServ
         RuleFor(x => x.Price).PriceRule();
         RuleFor(x => x.DurationMinutes!.Value).DurationRule().When(x => x.DurationMinutes is not null)
             .OverridePropertyName(nameof(UpdateServiceRequest.DurationMinutes));
+        RuleFor(x => x.Description).ServiceDescription();
     }
 }
 

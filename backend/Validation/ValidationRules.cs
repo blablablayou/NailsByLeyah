@@ -22,6 +22,8 @@ public static class InputLimits
 
     public const int ExplanationMaxLength = 500;
     public const int ServiceNameMaxLength = 100;
+    /// <summary>The one line under a service's name on the home page's service cards.</summary>
+    public const int ServiceDescriptionMaxLength = 160;
     public const decimal MaxPrice = 100_000m;
     public const int BlockReasonMaxLength = 200;
     public const int FeedbackCommentMaxLength = 1000;
@@ -173,4 +175,9 @@ public static class ValidationRuleExtensions
             .Must(v => !string.IsNullOrWhiteSpace(v)).WithMessage("Name is required.")
             .Must(v => InputNormalizer.Text(v).Length <= InputLimits.ServiceNameMaxLength)
             .WithMessage($"Name must be {InputLimits.ServiceNameMaxLength} characters or fewer.");
+
+    /// <summary>Optional; empty is allowed (the home page then shows its own line).</summary>
+    public static IRuleBuilderOptions<T, string?> ServiceDescription<T>(this IRuleBuilder<T, string?> rule) =>
+        rule.Must(v => InputNormalizer.Text(v ?? "").Length <= InputLimits.ServiceDescriptionMaxLength)
+            .WithMessage($"Description must be {InputLimits.ServiceDescriptionMaxLength} characters or fewer.");
 }

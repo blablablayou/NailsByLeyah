@@ -109,7 +109,8 @@ const bookingRules = (db) => ({
 
 const serviceItem = (s) => ({ id: s.id, category: s.category, categoryLabel: categoryLabels[s.category], name: s.name,
   price: s.price, pricingUnit: 'per service', maxQuantity: 1, isActive: s.isActive, durationMinutes: s.durationMinutes,
-  allowsAddOns: s.category !== 'Removal' && s.allowsAddOns !== false, designOptionOfId: s.designOptionOfId ?? null })
+  allowsAddOns: s.category !== 'Removal' && s.allowsAddOns !== false, designOptionOfId: s.designOptionOfId ?? null,
+  description: s.description ?? '' })
 const addOnItem = (a) => ({ id: a.id, category: 'Stone', categoryLabel: categoryLabels.Stone, name: a.name,
   price: a.price, pricingUnit: 'per nail', maxQuantity: rules.LIMITS.maxNailsPerAddOn, isActive: a.isActive })
 
@@ -625,6 +626,8 @@ function validateServiceBody(body, { durationRequired = false } = {}) {
   if (name) errors.name = name
   if (price) errors.price = price
   if (duration) errors.durationMinutes = duration
+  const description = rules.validateServiceDescription(body.description)
+  if (description) errors.description = description
   if (Object.keys(errors).length) invalidMany(errors)
 }
 
@@ -643,6 +646,11 @@ function updateCatalogRow(db, user, row, body, entityType) {
   if (entityType === 'Service' && body.allowsAddOns != null && row.category !== 'Removal' && Boolean(body.allowsAddOns) !== serviceItem(row).allowsAddOns) {
     details += `, add-ons ${body.allowsAddOns ? 'allowed' : 'not allowed'}`
     row.allowsAddOns = Boolean(body.allowsAddOns)
+  }
+  // Leaving the description out keeps it (as the backend does).
+  if (entityType === 'Service' && body.description != null && body.description.trim() !== (row.description ?? '')) {
+    details += ', description changed'
+    row.description = body.description.trim()
   }
   Object.assign(row, { name, price: Number(body.price), isActive: Boolean(body.isActive), updatedAt: nowIso() })
   audit(db, user.id, 'ServiceUpdated', entityType, row.id, details)
@@ -1388,7 +1396,7 @@ const routes = [
     const name = body.name.trim()
     if (db.services.some((s) => s.category === body.category && same(s.name, name)))
       conflict(`A ${categoryLabels[body.category]} service named '${name}' already exists.`, 'duplicate_name')
-    const row = { id: nextId('services'), category: body.category, name, price: Number(body.price), durationMinutes: Number(body.durationMinutes), isActive: true, isDeleted: false, createdAt: nowIso(), updatedAt: nowIso() }
+    const row = { id: nextId('services'), category: body.category, name, price: Number(body.price), durationMinutes: Number(body.durationMinutes), description: (body.description ?? '').trim(), isActive: true, isDeleted: false, createdAt: nowIso(), updatedAt: nowIso() }
     db.services.push(row)
     audit(db, admin.id, 'ServiceCreated', 'Service', row.id, `${categoryLabels[row.category]} '${row.name}' at PHP ${row.price.toFixed(2)}, ${row.durationMinutes} min`)
     saveDb()

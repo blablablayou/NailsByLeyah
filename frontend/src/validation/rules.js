@@ -11,6 +11,7 @@ export const LIMITS = {
   passwordMaxBytes: 72,
   explanationMax: 500,
   serviceNameMax: 100,
+  serviceDescriptionMax: 160, // the line on the home page service card
   maxPrice: 100000,
   blockReasonMax: 200,
   maxNailsPerAddOn: 10,
@@ -165,6 +166,13 @@ export function validateServiceName(value) {
   const text = String(value ?? '').trim()
   if (!text) return 'Name is required.'
   if (text.length > LIMITS.serviceNameMax) return `Name must be ${LIMITS.serviceNameMax} characters or fewer.`
+  return null
+}
+
+/** Optional: empty means the home page shows its own line for the service. */
+export function validateServiceDescription(value) {
+  const text = String(value ?? '').trim()
+  if (text.length > LIMITS.serviceDescriptionMax) return `Description must be ${LIMITS.serviceDescriptionMax} characters or fewer.`
   return null
 }
 

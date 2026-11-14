@@ -30,8 +30,8 @@
 | D3 | Header: centred logo with links split left and right (reference) — on every page, or the landing page only | **Every page**, same links | ✅ Agreed (2026-11-14): **every page** |
 | D4 | Hero photo | A real photo of Leah's work on a light background; placeholder until supplied | ✅ Agreed (2026-11-14): first a plain white panel; then, on your request, **the hand and the open polish bottle cropped from the reference design** (`public/img/hero-reference.webp`) until Leah's photo arrives |
 | D5 | Hero headline | Brief's *Beautiful Nails, Beautiful You.* (reference shows *Let's be nail friends*) | ✅ Agreed (2026-11-14): **Beautiful Nails, Beautiful You.** with the brief's supporting text |
-| D6 | Service descriptions: written in the website code (A), or editable by Leah in admin (B, database change) | **A** | ⏳ Waiting |
-| D7 | Service cards: photo on each card (brief) or small icons (reference) | **Small icons** | ⏳ Waiting |
+| D6 | Service descriptions: written in the website code (A), or editable by Leah in admin (B, database change) | **A** | ✅ **B** — editable in admin (2026-11-14); database change waits on your permission |
+| D7 | Service cards: photo on each card (brief) or small icons (reference) | **Small icons** | ✅ Small icons (2026-11-14) |
 | D8 | "View Full Gallery": new public `/gallery` page (none exists today) or expand in place | **New `/gallery` page** | ⏳ Waiting |
 | D9 | Meet Leyah content: Leah's profile bio and photo (editable today) with a marked placeholder until she writes it | **Profile bio and photo** | ⏳ Waiting |
 | D10 | Visit Us: heading text, and whether the phone and hours show as listed rows (reference "Get in Touch") | "Visit Us", rows with icons, no booking button | ⏳ Waiting |
@@ -138,8 +138,8 @@ Ask D1–D11 with the options below, a few at a time, and record each answer in 
 - [ ] **Step 6: Commit** (with your OK): `Landing page: new hero`.
 
 ### ✅ Checkpoint 2 — hero
-- [x] Tests pass (187/187) · checked at 375, 768, 1024, 1440 px (headline on two lines everywhere; button above the fold on a phone; no sideways scroll) · committed on `landing-page-redesign`: waiting for your OK
-- [x] Date: 2026-11-14 · commit: ______
+- [x] Tests pass (187/187) · checked at 375, 768, 1024, 1440 px (headline on two lines everywhere; button above the fold on a phone; no sideways scroll) · committed on `landing-page-redesign`
+- [x] Date: 2026-11-14 · commit: 98f5dfd (not pushed, not merged)
 
 **What Phase 2 actually did:** new two-column hero (`Hero({ bookTo, revealAfter })`): *Beautiful Nails, / Beautiful You.* (two lines), the brief's text, and an outlined burgundy **Book an Appointment** rectangle (same shape as Sign in; `/register` for guests, `/book` for clients); a white rounded panel on the right where Leah's photo will go; one soft blush curve in the cream background. Floating photo cards, cursor glow, typing line, "See the designs" button and the label above the title removed (D12; the label option is gone from `SectionHeading` too). The copy appears whole once the opening animation ends.
 
@@ -178,8 +178,13 @@ Ask D1–D11 with the options below, a few at a time, and record each answer in 
 - [ ] **Step 6: Commit** (with your OK): `Landing page: five service cards from the live price list`.
 
 ### ✅ Checkpoint 3 — services & pricing
-- [ ] Tests pass · checked at 4 widths · committed (and backend tests passed if D6 = B)
-- [ ] Date / commit: ______
+- [x] Frontend tests pass (195) · checked at 1440, 1024, 768 and 375 px on the live backend · committed
+- [ ] Backend tests (new `The_administrator_writes_each_services_home_page_description`): waiting on your Visual Studio run
+- [x] Date: 2026-11-14 · database: `services.description` added with your permission (migration `ServiceDescriptions`)
+
+**Header follow-up (2026-11-14):** a signed-in client's right side ran into the logo. My bookings and Rate us moved into
+the account menu (right side: About, Contact, account), and the links sit beside the logo only from 1024 px; narrower
+screens use the menu button.
 
 ---
 

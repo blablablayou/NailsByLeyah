@@ -56,6 +56,7 @@ internal sealed class CatalogServiceConfiguration : IEntityTypeConfiguration<Cat
         b.Property(s => s.Id).HasIdentityOptions(startValue: SeededRows.FirstNewId);
         b.Property(s => s.DurationMinutes).HasDefaultValue(CatalogService.DefaultDurationMinutes);
         b.Property(s => s.Name).HasMaxLength(InputLimits.ServiceNameMaxLength).IsRequired();
+        b.Property(s => s.Description).HasMaxLength(InputLimits.ServiceDescriptionMaxLength).IsRequired().HasDefaultValue("");
         b.HasOne<CatalogService>().WithMany().HasForeignKey(s => s.DesignOptionOfId).OnDelete(DeleteBehavior.Restrict);
 
         b.HasDiscriminator<string>("category")

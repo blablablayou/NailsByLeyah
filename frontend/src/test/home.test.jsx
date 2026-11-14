@@ -1,29 +1,99 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { CLIENT, renderApp, signIn } from './helpers'
+import { api } from '../api'
+import { mockRequest } from './mockBackend/mockApi'
+import { ADMIN, CLIENT, renderApp, signIn } from './helpers'
 
 describe('Home page', () => {
-  it('shows every section, with starting prices from the live price list', async () => {
+  it('shows every section', () => {
     renderApp('/')
     expect(screen.getByRole('heading', { level: 1, name: 'Beautiful Nails, Beautiful You.' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Up close' })).toBeNull() // replaced by the gallery (D2)
+    expect(screen.getByRole('heading', { name: 'Services & Pricing' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Our Works' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Nail Rules' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Find Nails by Leyah' })).toBeInTheDocument()
+  })
 
-    const pricing = screen.getByRole('region', { name: 'Pricing' })
-    expect(await within(pricing).findByText('₱250+')).toBeInTheDocument() // BIAB is the cheapest soft gel
-    expect(within(pricing).getByText('₱100+')).toBeInTheDocument()
-    expect(within(pricing).getByText('₱10+')).toBeInTheDocument()
-    // The sets as clients book them, with "With design" as the option on top.
-    expect(within(pricing).getByText('Plain • Soft Gel Extension • BIAB • With design (optional)')).toBeInTheDocument()
+  describe('Services & Pricing', () => {
+    const cardsIn = async () => {
+      const section = screen.getByRole('region', { name: 'Services & Pricing' })
+      await within(section).findAllByRole('article')
+      return section
+    }
+    const card = (section, name) => within(section).getByRole('article', { name })
+
+    it('shows five service cards: Plain, BIAB, Soft Gel Extension, Nail Design Add-ons, Removal', async () => {
+      renderApp('/')
+      const section = await cardsIn()
+      expect(section).toHaveTextContent('Final pricing depends on your service, design and add-ons.')
+      const names = within(section).getAllByRole('article').map((a) => within(a).getByRole('heading').textContent)
+      expect(names).toEqual(['Plain', 'BIAB', 'Soft Gel Extension', 'Nail Design Add-ons', 'Removal'])
+      expect(within(section).getByRole('link', { name: 'Book now' })).toHaveAttribute('href', '/register')
+      expect(within(section).getByRole('button', { name: 'View full price list' })).toBeInTheDocument()
+    })
+
+    it('takes every price from the live price list', async () => {
+      renderApp('/')
+      const section = await cardsIn()
+      expect(card(section, 'Plain')).toHaveTextContent('₱300')
+      expect(card(section, 'Plain')).toHaveTextContent('Plain colour only')
+      expect(card(section, 'BIAB')).toHaveTextContent('₱250')
+      expect(card(section, 'BIAB')).toHaveTextContent('With design · ₱350')
+      expect(card(section, 'Soft Gel Extension')).toHaveTextContent('₱399')
+      expect(card(section, 'Soft Gel Extension')).toHaveTextContent('With design · ₱499')
+      expect(card(section, 'Nail Design Add-ons')).toHaveTextContent('From₱10/ nail')
+      expect(card(section, 'Removal')).toHaveTextContent('My work · ₱100')
+      expect(card(section, 'Removal')).toHaveTextContent('Not my work · ₱150')
+    })
+
+    it('shows how long each set takes', async () => {
+      renderApp('/')
+      const section = await cardsIn()
+      expect(card(section, 'Plain')).toHaveTextContent('2 hr')
+      expect(card(section, 'BIAB')).toHaveTextContent('3 hr')
+      expect(card(section, 'Soft Gel Extension')).toHaveTextContent('2 hr')
+      expect(card(section, 'Nail Design Add-ons')).not.toHaveTextContent(/\d hr/)
+    })
+
+    it("shows the line Leah wrote in admin, or the website's own line until she writes one", async () => {
+      await signIn(ADMIN)
+      await mockRequest('PUT', '/admin/services/3', { body: { name: 'BIAB', price: 250, isActive: true, description: 'Strength for your own nails.' } })
+      await mockRequest('POST', '/auth/logout')
+      renderApp('/')
+      const section = await cardsIn()
+      expect(card(section, 'BIAB')).toHaveTextContent('Strength for your own nails.')
+      expect(card(section, 'Plain')).toHaveTextContent('A clean, glossy soft gel in one colour.')
+    })
+
+    it('drops a service that Leah turned off', async () => {
+      await signIn(ADMIN)
+      await mockRequest('PUT', '/admin/services/7', { body: { name: 'Soft Gel Extension', price: 399, isActive: false } })
+      await mockRequest('POST', '/auth/logout')
+      renderApp('/')
+      const section = await cardsIn()
+      expect(within(section).getAllByRole('article')).toHaveLength(4)
+      expect(within(section).queryByRole('article', { name: 'Soft Gel Extension' })).toBeNull()
+    })
+
+    it('still shows the cards when the price list fails to load', async () => {
+      vi.spyOn(api.catalog, 'get').mockRejectedValue(Object.assign(new Error('Network down'), { status: 0 }))
+      renderApp('/')
+      const section = await cardsIn()
+      const cards = within(section).getAllByRole('article')
+      expect(cards).toHaveLength(5)
+      cards.forEach((c) => expect(c).toHaveTextContent('See prices when booking'))
+      expect(section).not.toHaveTextContent('₱0')
+      expect(within(section).queryByRole('button', { name: 'View full price list' })).toBeNull()
+      vi.restoreAllMocks()
+    })
   })
 
   it('unfolds the full price list from the live prices, with the design versions and Rhinestone', async () => {
     const user = userEvent.setup()
     renderApp('/')
-    const pricing = screen.getByRole('region', { name: 'Pricing' })
-    await within(pricing).findByText('₱250+')
+    const pricing = screen.getByRole('region', { name: 'Services & Pricing' })
+    await within(pricing).findAllByRole('article')
     await user.click(within(pricing).getByRole('button', { name: 'View full price list' }))
 
     const card = within(pricing).getByRole('article', { name: 'Nails price list' })

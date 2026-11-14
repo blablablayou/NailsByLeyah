@@ -75,6 +75,19 @@ describe('Shade stock and booking rules', () => {
     expect(design).toMatchObject({ price: 450, durationMinutes: 210 })
   })
 
+  it("writes each service's line for its home page card (none on a design version)", async () => {
+    const user = userEvent.setup()
+    await signIn(ADMIN)
+    renderApp('/admin/services')
+    const line = await screen.findByLabelText('Home page line for BIAB')
+    expect(screen.queryByLabelText('Home page line for BIAB with Design')).toBeNull() // it shares BIAB's card
+    expect(screen.queryByLabelText('Home page line for Chrome')).toBeNull() // add-ons share one card
+    await user.type(line, 'Strength for your own nails.')
+    await user.click(within(line.closest('.catalog-row')).getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText('BIAB saved.')).toBeInTheDocument()
+    expect((await mockRequest('GET', '/services')).services.find((s) => s.id === 3).description).toBe('Strength for your own nails.')
+  })
+
   it('changes the deposit, which the price list then uses', async () => {
     const user = userEvent.setup()
     await signIn(ADMIN)

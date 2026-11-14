@@ -136,6 +136,7 @@ public sealed class ServiceCatalogService(
         service.Price = request.Price;
         service.DurationMinutes = request.DurationMinutes;
         service.AllowsAddOns = request.AllowsAddOns && service is not RemovalService;
+        service.Description = InputNormalizer.Text(request.Description ?? "");
         service.CreatedAt = now;
         service.UpdatedAt = now;
         catalog.AddService(service);
@@ -164,6 +165,11 @@ public sealed class ServiceCatalogService(
         {
             details += $", add-ons {(allows ? "allowed" : "not allowed")}";
             service.AllowsAddOns = allows;
+        }
+        if (request.Description is not null && InputNormalizer.Text(request.Description) is var description && description != service.Description)
+        {
+            details += ", description changed";
+            service.Description = description;
         }
         Apply(service, name, request);
 
@@ -233,7 +239,8 @@ public sealed class ServiceCatalogService(
         new(s.Id, s.Category, s.CategoryLabel, s.Name, s.Price, s.PricingUnit, s.MaxQuantity, s.IsActive,
             (s as CatalogService)?.DurationMinutes,
             (s as CatalogService)?.TakesAddOns ?? false,
-            (s as CatalogService)?.DesignOptionOfId);
+            (s as CatalogService)?.DesignOptionOfId,
+            (s as CatalogService)?.Description);
 
     private async Task<CatalogResponse> BuildAsync(bool includeInactive, CancellationToken ct)
     {

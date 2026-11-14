@@ -101,6 +101,31 @@ public sealed class BookingRulesTests(ApiFactory factory) : IClassFixture<ApiFac
     }
 
     [Fact]
+    public async Task The_administrator_writes_each_services_home_page_description()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var created = await admin.PostJsonAsync("/api/admin/services",
+            new CreateServiceRequest("SoftGel", $"Blurb {Guid.NewGuid():N}"[..20], 350m, 120));
+        var service = await created.ReadAsync<ServiceItemResponse>();
+        Assert.Equal("", service.Description); // empty until she writes one
+
+        var written = await admin.PutJsonAsync($"/api/admin/services/{service.Id}",
+            new UpdateServiceRequest(service.Name, 350m, true, Description: "  A strong, natural-looking overlay.  "));
+        await written.ShouldHaveStatus(HttpStatusCode.OK);
+        Assert.Equal("A strong, natural-looking overlay.", (await written.ReadAsync<ServiceItemResponse>()).Description);
+
+        // Leaving it out keeps it; the public price list shows it.
+        await admin.PutJsonAsync($"/api/admin/services/{service.Id}", new UpdateServiceRequest(service.Name, 360m, true));
+        var catalog = await factory.NewClient().GetAsync<CatalogResponse>("/api/services");
+        Assert.Equal("A strong, natural-looking overlay.", catalog.Services.Single(s => s.Id == service.Id).Description);
+
+        var tooLong = await admin.PutJsonAsync($"/api/admin/services/{service.Id}",
+            new UpdateServiceRequest(service.Name, 360m, true, Description: new string('a', 161)));
+        await tooLong.ShouldHaveStatus(HttpStatusCode.BadRequest);
+        Assert.NotEmpty((await tooLong.ReadProblemAsync()).ErrorsFor("description"));
+    }
+
+    [Fact]
     public async Task With_design_always_costs_its_set_price_plus_100_and_takes_its_set_time_plus_an_hour()
     {
         var admin = await factory.CreateAdminClientAsync();

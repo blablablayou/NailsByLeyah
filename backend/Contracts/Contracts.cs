@@ -64,7 +64,8 @@ public sealed record ServiceItemResponse(
     int Id, string Category, string CategoryLabel, string Name, decimal Price, string PricingUnit, int MaxQuantity, bool IsActive,
     int? DurationMinutes = null, // minutes for main services; null for add-ons
     bool AllowsAddOns = false, // whether Stone add-ons can be chosen with this service
-    int? DesignOptionOfId = null); // set on a "with design" version: the service whose card shows it as an option
+    int? DesignOptionOfId = null, // set on a "with design" version: the service whose card shows it as an option
+    string? Description = null); // the home page's line about the service; null for add-ons
 
 public sealed record CatalogResponse(
     IReadOnlyList<ServiceItemResponse> Services,
@@ -87,12 +88,14 @@ public sealed record QuoteLineResponse(
     int ItemId, string Name, string Category, string PricingUnit, decimal UnitPrice, int Quantity, decimal LineTotal);
 
 
-public sealed record CreateServiceRequest(string Category, string Name, decimal Price, int DurationMinutes = CatalogService.DefaultDurationMinutes, bool AllowsAddOns = true);
+public sealed record CreateServiceRequest(string Category, string Name, decimal Price, int DurationMinutes = CatalogService.DefaultDurationMinutes, bool AllowsAddOns = true,
+    string? Description = null);
 
 public sealed record CreateAddOnRequest(string Name, decimal Price);
 
-/// <summary>Also used for add-ons, which have no duration. Leaving DurationMinutes out keeps the current one.</summary>
-public sealed record UpdateServiceRequest(string Name, decimal Price, bool IsActive, int? DurationMinutes = null, bool? AllowsAddOns = null);
+/// <summary>Also used for add-ons, which have no duration or description. Leaving DurationMinutes or Description out keeps the current one.</summary>
+public sealed record UpdateServiceRequest(string Name, decimal Price, bool IsActive, int? DurationMinutes = null, bool? AllowsAddOns = null,
+    string? Description = null);
 
 // ---- Schedule ----
 

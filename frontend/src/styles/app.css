@@ -632,6 +632,10 @@ select.input { appearance: auto; }
 .catalog-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .catalog-actions { align-items: flex-end; }
 .catalog-was { color: var(--muted); font-size: var(--fs-caption); }
+/* The service's line for its home page card: a full-width box under the row's fields. */
+.catalog-cell.catalog-desc { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 12px; }
+.catalog-desc-label { font-size: var(--fs-caption); font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.catalog-desc .catalog-was, .catalog-desc .field-error { grid-column: 2; }
 
 .affix { position: relative; display: flex; align-items: center; }
 .affix .input { font-variant-numeric: tabular-nums; padding-left: 26px; }
@@ -661,6 +665,8 @@ select.input { appearance: auto; }
   .catalog-head { display: none; }
   .catalog-row { grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 12px; }
   .catalog-name { grid-column: 1 / -1; }
+  .catalog-cell.catalog-desc { grid-template-columns: 1fr; }
+  .catalog-desc .catalog-was, .catalog-desc .field-error { grid-column: 1; }
   .catalog-cell[data-label]::before { content: attr(data-label); color: var(--muted); font-size: var(--fs-caption); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
   .catalog-cell:empty { display: none; }
   .catalog-actions { align-self: end; }

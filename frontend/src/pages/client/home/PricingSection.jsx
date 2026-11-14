@@ -1,43 +1,132 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { Alert, PageLoader } from '../../../components/ui'
-import { errorMessage } from '../../../api/errors'
+import { PageLoader } from '../../../components/ui'
 import { canAnimate, peso, prefersReducedMotion } from './motion'
 import { softGelSets, withDesignName } from '../../../lib/services'
 import { SectionHeading } from './SectionHeading'
 
-const lowest = (items) => (items.length ? Math.min(...items.map((i) => i.price)) : null)
-
-/** Starting prices from the live price list: Soft Gel, Removal and per-nail add-ons. */
-function startingPrices({ services, addOns }) {
-  const active = (items) => items.filter((i) => i.isActive !== false)
-  const softGel = active(services.filter((s) => s.category === 'SoftGel'))
-  const removal = active(services.filter((s) => s.category === 'Removal'))
-  const extras = active(addOns)
-  const sets = softGelSets(softGel)
-  return [
-    // The sets as clients book them: Plain, Soft Gel Extension, BIAB, then "With design" as the option on top.
-    { title: 'Soft Gel', from: 'Starting at', price: lowest(softGel), dir: 'from-left',
-      tags: [...sets.map((s) => s.base.name), ...(sets.some((s) => s.design) ? ['With design (optional)'] : [])] },
-    { title: 'Removal', from: 'Starting at', price: lowest(removal), tags: removal.map((s) => s.name), dir: 'from-top' },
-    { title: 'Add-ons', from: 'Per nail', price: lowest(extras), tags: extras.map((a) => a.name), dir: 'from-right' },
-  ].filter((c) => c.price !== null)
+/** The website's own line for each card, used until Leah writes one on admin Services (D6). */
+const DEFAULT_LINES = {
+  plain: 'A clean, glossy soft gel in one colour.',
+  biab: 'A builder gel overlay that strengthens your natural nails.',
+  'soft gel extension': 'Longer nails, shaped and built with soft gel.',
+  addOns: 'Chrome, cat eye, French tips, rhinestones and more.',
+  removal: 'Gentle removal of your old set before the new one.',
 }
 
-/** Pricing: three cards fly in (left, top, right); "View full price list" unfolds the full price card. */
+/** Small line icons in a round badge (D7); decoration only. */
+const ICONS = {
+  plain: <><path d="M10 3h4v4h-4z" /><path d="M8.5 7h7l1 3v9a2 2 0 0 1-2 2h-5a2 2 0 0 1-2-2v-9z" /><path d="M7.5 13h9" /></>,
+  biab: <><path d="M6.5 21v-8.5a5.5 5.5 0 0 1 11 0V21" /><path d="M9.3 13a2.7 2.7 0 0 1 5.4 0v3.5H9.3z" /></>,
+  extension: <><path d="M6.5 21v-6a5.5 5.5 0 0 1 11 0v6" /><path d="M9.3 16.5V8.2C9.3 5.5 10.5 3 12 3s2.7 2.5 2.7 5.2v8.3z" /></>,
+  addOns: <><path d="M11 3l1.7 4.8 4.8 1.7-4.8 1.7L11 16l-1.7-4.8-4.8-1.7 4.8-1.7z" /><path d="M18 14.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" /></>,
+  removal: <><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" /><path d="M19.5 4v4h-4" /></>,
+}
+
+const key = (name) => name.trim().toLowerCase()
+// Plain first, then BIAB, then Soft Gel Extension and any set added later (the reference's order).
+const CARD_ORDER = { plain: 0, biab: 1 }
+const lowest = (items) => (items.length ? Math.min(...items.map((i) => i.price)) : null)
+const sentence = (name) => name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() // "Not My Work" -> "Not my work"
+const hours = (minutes) => {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return [h && `${h} hr`, m && `${m} min`].filter(Boolean).join(' ')
+}
+
+/** The five cards when the price list can't be read: names and lines only, "See prices when booking". */
+const FALLBACK_CARDS = [
+  { id: 'plain', icon: 'plain', name: 'Plain', blurb: DEFAULT_LINES.plain },
+  { id: 'biab', icon: 'biab', name: 'BIAB', blurb: DEFAULT_LINES.biab },
+  { id: 'extension', icon: 'extension', name: 'Soft Gel Extension', blurb: DEFAULT_LINES['soft gel extension'] },
+  { id: 'addOns', icon: 'addOns', name: 'Nail Design Add-ons', blurb: DEFAULT_LINES.addOns },
+  { id: 'removal', icon: 'removal', name: 'Removal', blurb: DEFAULT_LINES.removal },
+].map((c) => ({ ...c, price: null }))
+
+/** One card per offered set, then add-ons and removal, all from the live price list. */
+function serviceCards({ services, addOns }) {
+  const active = (items) => items.filter((i) => i.isActive !== false)
+  // A design version is never a card of its own, even when its set is turned off (the public list then leaves the set out).
+  const isOn = (s) => s && s.isActive !== false
+  const sets = softGelSets(services)
+    .filter((s) => isOn(s.base) && !s.base.designOptionOfId)
+    .map((s) => ({ ...s, design: isOn(s.design) ? s.design : null }))
+    .sort((a, b) => (CARD_ORDER[key(a.base.name)] ?? 2) - (CARD_ORDER[key(b.base.name)] ?? 2))
+  const extras = active(addOns)
+  const removals = active(services.filter((s) => s.category === 'Removal'))
+  const takesArt = sets.filter((s) => s.base.allowsAddOns).map((s) => s.base.name)
+
+  const cards = sets.map(({ base, design }) => ({
+    id: `set-${base.id}`,
+    icon: { plain: 'plain', biab: 'biab' }[key(base.name)] ?? 'extension',
+    name: base.name,
+    blurb: base.description || DEFAULT_LINES[key(base.name)] || '',
+    price: base.price,
+    note: design ? `With design · ${peso(design.price)}` : !base.allowsAddOns ? 'Plain colour only' : null,
+    duration: base.durationMinutes ? hours(base.durationMinutes) : null,
+  }))
+  if (extras.length) cards.push({
+    id: 'addOns', icon: 'addOns', name: 'Nail Design Add-ons', blurb: DEFAULT_LINES.addOns,
+    price: lowest(extras), from: true, unit: '/ nail',
+    note: takesArt.length ? `Added to ${takesArt.join(' or ')}` : null,
+  })
+  if (removals.length) cards.push({
+    id: 'removal', icon: 'removal', name: 'Removal',
+    blurb: removals.find((r) => r.description)?.description || DEFAULT_LINES.removal,
+    price: lowest(removals), from: true,
+    note: removals.map((r) => <span key={r.id}>{sentence(r.name)} · {peso(r.price)}</span>),
+  })
+  return cards
+}
+
+function ServiceCard({ card, index }) {
+  return (
+    <article className="hm-svc" style={{ '--i': index }} aria-labelledby={`svc-${card.id}`}>
+      <span className="hm-svc-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          {ICONS[card.icon]}
+        </svg>
+      </span>
+      {card.duration && <span className="hm-svc-time"><span className="sr-only">Takes about </span>{card.duration}</span>}
+      <h3 id={`svc-${card.id}`}>{card.name}</h3>
+      {card.blurb && <p className="hm-svc-blurb">{card.blurb}</p>}
+      <div className="hm-svc-price">
+        {card.price === null ? (
+          <span className="hm-svc-soon">See prices when booking</span>
+        ) : (
+          <>
+            {card.from && <span className="hm-svc-from">From</span>}
+            <span className="hm-svc-amount">{peso(card.price)}</span>
+            {card.unit && <span className="hm-svc-unit">{card.unit}</span>}
+          </>
+        )}
+      </div>
+      {card.price !== null && card.note && <p className="hm-svc-note">{card.note}</p>}
+    </article>
+  )
+}
+
+/**
+ * Services & Pricing (Phase 3): a card per service with its icon, line, price and time, all from the live price list,
+ * then "View full price list" (unfolds Leyah's price card) and "Book now". If the prices can't load, the cards still
+ * show, without prices.
+ */
 export function PricingSection({ catalog, bookTo }) {
   const cardsRef = useRef(null)
   const listRef = useRef(null)
   const [cardsIn, setCardsIn] = useState(!canAnimate)
   const [listOpen, setListOpen] = useState(false)
   const loaded = Boolean(catalog.data)
+  const cards = loaded ? serviceCards(catalog.data) : catalog.error ? FALLBACK_CARDS : null
+  const hasCards = Boolean(cards)
 
+  // The cards are drawn once the prices arrive, after the page's own fade-in has looked for elements, so they watch themselves.
   useEffect(() => {
-    if (cardsIn || !loaded) return undefined
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) setCardsIn(true) }, { threshold: 0.25 })
+    if (cardsIn || !hasCards) return undefined
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) setCardsIn(true) }, { threshold: 0.15 })
     io.observe(cardsRef.current)
     return () => io.disconnect()
-  }, [cardsIn, loaded])
+  }, [cardsIn, hasCards])
 
   const toggleList = () => {
     setListOpen((open) => !open)
@@ -46,26 +135,20 @@ export function PricingSection({ catalog, bookTo }) {
 
   return (
     <section className="hm-prices hm-section" id="services" tabIndex={-1} aria-labelledby="services-title">
-      <SectionHeading id="services-title" title="Pricing"
-        intro="Starting prices are shown below. The final price depends on the service, design and add-ons." />
-      {catalog.loading && <PageLoader label="Loading prices…" />}
-      {catalog.error && <Alert kind="error">{errorMessage(catalog.error)}</Alert>}
-      {loaded && (
-        <div className={cardsIn ? 'hm-cards is-in' : 'hm-cards'} ref={cardsRef}>
-          {startingPrices(catalog.data).map((c) => (
-            <div key={c.title} className={`hm-card ${c.dir}`}>
-              <h3>{c.title}</h3>
-              <p className="hm-from">{c.from}</p>
-              <div className="hm-amount">{peso(c.price)}+</div>
-              <p className="hm-tags">{c.tags.join(' • ')}</p>
-            </div>
-          ))}
+      <SectionHeading id="services-title" title="Services & Pricing" intro="Final pricing depends on your service, design and add-ons." />
+      {!cards && <PageLoader label="Loading prices…" />}
+      {cards && (
+        <div className={cardsIn ? 'hm-svcs is-in' : 'hm-svcs'} ref={cardsRef}>
+          {cards.map((c, i) => <ServiceCard key={c.id} card={c} index={i} />)}
         </div>
       )}
+      {catalog.error && !loaded && <p className="hm-svc-offline">Prices couldn&rsquo;t load just now. You&rsquo;ll see them when you book.</p>}
       <div className="hm-price-actions">
-        <button type="button" className="btn btn-secondary" aria-expanded={listOpen} aria-controls="full-price-list" onClick={toggleList}>
-          {listOpen ? 'Hide price list' : 'View full price list'}
-        </button>
+        {loaded && (
+          <button type="button" className="btn btn-secondary" aria-expanded={listOpen} aria-controls="full-price-list" onClick={toggleList}>
+            {listOpen ? 'Hide price list' : 'View full price list'}
+          </button>
+        )}
         <Link to={bookTo} className="btn btn-primary">Book now</Link>
       </div>
       <div className={listOpen ? 'hm-unfold open' : 'hm-unfold'} id="full-price-list" aria-hidden={!listOpen} inert={!listOpen}>
