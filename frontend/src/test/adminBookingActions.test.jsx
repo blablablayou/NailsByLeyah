@@ -1,8 +1,10 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ADMIN, renderApp, signIn } from './helpers'
 import { getDb, saveDb } from './mockBackend/db'
-import { addDays, dateFromToday, today } from '../lib/dates'
+import { addDays, dateFromToday, toIsoDate, today } from '../lib/dates'
+import { formatDate } from '../lib/format'
+import { api } from '../api'
 import ExcelJS from 'exceljs'
 import { buildSalesReportWorkbook, totalReceived } from '../lib/reportExcel'
 import { BookingDetails } from '../pages/admin/BookingDetails'
@@ -36,7 +38,7 @@ const menuFor = async (user, name) => {
 
 /** The dashboard's "Needs your attention" row for a booking. */
 const attentionRow = (bookingId) => waitFor(() => {
-  const card = screen.getByRole('heading', { name: 'Needs your attention' }).closest('.card')
+  const card = screen.getByRole('heading', { name: 'Needs your attention' }).closest('section')
   const item = within(card).getAllByRole('listitem').find((li) => within(li).queryByRole('button', { name: new RegExp(`booking #${bookingId}\\.`) }))
   expect(item).toBeTruthy()
   return item
@@ -202,7 +204,7 @@ describe('Dashboard', () => {
     const booking = stage({ bookingDate: addDays(today(), 1), startTime: '11:00:00', status: 'Pending' })
     await openDashboard()
 
-    const week = screen.getByRole('heading', { name: 'Next 7 days' }).closest('.card')
+    const week = screen.getByRole('heading', { name: 'Next 7 days' }).closest('section')
     const line = within(week).getByRole('button', { name: /Testa Client, Pending/ })
     expect(line).toHaveTextContent('Testa Client · ')
 
@@ -221,7 +223,7 @@ describe('Dashboard', () => {
     await openDashboard()
 
     for (let i = 0; i < 3; i++) await user.click(await screen.findByRole('button', { name: 'Next day' }))
-    const card = (await screen.findByRole('heading', { name: /First client/ })).closest('.card')
+    const card = (await screen.findByRole('heading', { name: /First client/ })).closest('section')
 
     expect(card).toHaveTextContent('11:00 AM')
     expect(card).toHaveTextContent('Testa Client')
@@ -247,12 +249,172 @@ describe('Dashboard', () => {
     saveDb()
     await openDashboard()
 
-    const day = (await screen.findByRole('heading', { name: 'Today’s schedule' })).closest('.card')
+    const day = (await screen.findByRole('heading', { name: 'Today’s schedule' })).closest('section')
     expect(within(day).getByRole('button', { name: /11:00 PM to .*Testa Client, Confirmed/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Next 7 days' })).toBeInTheDocument()
-    expect(screen.getByText(/Balance to collect/)).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Today at a glance' })).toHaveTextContent(/to collect/) // the balance, now in the summary bar
     expect(screen.queryByRole('button', { name: 'Busy day' })).toBeNull()
     expect(screen.queryByText('Moved to other pages')).toBeNull()
+  })
+
+  it('puts what needs action first, then the day, with the next client beside them', async () => {
+    stage({ bookingDate: today(), startTime: '23:00:00', status: 'Confirmed' })
+    await openDashboard()
+    await screen.findByRole('heading', { name: 'Needs your attention' })
+    const main = document.querySelector('.dash-main')
+    const side = document.querySelector('.dash-side')
+    expect([...main.querySelectorAll('h2')].map((h) => h.textContent)).toEqual(['Needs your attention', 'Today’s schedule'])
+    // The side column: the next client, this month, the week, and the latest feedback once it has loaded.
+    await waitFor(() => expect([...side.querySelectorAll('h2')].map((h) => h.textContent))
+      .toEqual(['Next client', 'This month', 'Next 7 days', 'Latest feedback']))
+    // Today's count sits beside its heading, not in a stat tile.
+    const today_ = screen.getByRole('heading', { name: 'Today’s schedule' }).closest('section')
+    expect(today_.querySelector('.dash-count')).toHaveTextContent(/^\d+ appointments?$/)
+    expect(document.querySelector('.dash-tile, .dash-art, .dash-stats, .dash-head-icon')).toBeNull() // no icon tiles, drawing or stat tiles
+  })
+})
+
+describe('Dashboard at a glance', () => {
+  const summary = () => screen.getByRole('list', { name: 'Today at a glance' })
+
+  it('sums up the day in one bar: appointments, payments to check, deposits today and balance to collect', async () => {
+    stage({ bookingDate: today(), startTime: '23:00:00', status: 'Pending' })
+    await openDashboard()
+    await screen.findByRole('heading', { name: 'Needs your attention' })
+    const items = within(summary()).getAllByRole('listitem').map((li) => li.textContent)
+    expect(items).toHaveLength(4)
+    expect(items[0]).toMatch(/^\d+ appointments? today$/)
+    expect(items[1]).toMatch(/^\d+ payments? to check$/)
+    expect(items[2]).toMatch(/^₱[\d,.]+ deposits today$/)
+    expect(items[3]).toMatch(/^₱[\d,.]+ to collect$/)
+    // Each figure jumps to its section.
+    expect(within(summary()).getByRole('link', { name: /payments? to check/ })).toHaveAttribute('href', '#dash-attention')
+    expect(within(summary()).getByRole('link', { name: /appointments? today/ })).toHaveAttribute('href', '#dash-day')
+  })
+
+  it('links deposits to Reports, and the section jumps scroll without adding to Back', async () => {
+    await openDashboard()
+    await screen.findByRole('heading', { name: 'Needs your attention' })
+    expect(within(summary()).getByRole('link', { name: /deposits today/ })).toHaveAttribute('href', '/admin/reports')
+    const jump = within(summary()).getByRole('link', { name: /payments? to check/ })
+    const scroll = vi.fn()
+    document.getElementById('dash-attention').scrollIntoView = scroll
+    expect(fireEvent.click(jump)).toBe(false) // the browser's own jump (and its Back step) is replaced
+    expect(scroll).toHaveBeenCalled()
+  })
+
+  it('names the summary after the chosen day, and says the balance covers 8 days', async () => {
+    const user = userEvent.setup()
+    await openDashboard()
+    await screen.findByRole('heading', { name: 'Needs your attention' })
+    expect(within(summary()).getAllByRole('listitem')[3]).toHaveTextContent(/to collect$/)
+    await user.click(screen.getByRole('button', { name: 'Next day' }))
+    const bar = await screen.findByRole('list', { name: /at a glance$/ })
+    await waitFor(() => expect(bar).not.toHaveAccessibleName('Today at a glance'))
+    expect(within(bar).getAllByRole('listitem')[3]).toHaveTextContent(/to collect over 8 days$/)
+    expect(within(bar).getAllByRole('listitem')[2]).toHaveTextContent(/deposits today$/) // still today's money
+  })
+
+  it('opens New booking from the dashboard and links Block time to the schedule', async () => {
+    const user = userEvent.setup()
+    await openDashboard()
+    expect(screen.getByRole('link', { name: 'Block time' })).toHaveAttribute('href', '/admin/schedule')
+    await user.click(screen.getByRole('button', { name: '+ New booking' }))
+    expect(await screen.findByRole('dialog', { name: 'New booking' })).toBeInTheDocument()
+  })
+
+  it('gives every section heading a small icon, hidden from screen readers', async () => {
+    await openDashboard()
+    await screen.findByRole('heading', { name: 'Latest feedback' })
+    for (const h of document.querySelectorAll('.dash-section h2')) {
+      expect(h.closest('.dash-card-head').querySelector('svg.dash-head-svg')).toHaveAttribute('aria-hidden', 'true')
+    }
+  })
+
+  it('shows this month from the monthly report, with a link to Reports', async () => {
+    await openDashboard()
+    const month = (await screen.findByRole('heading', { name: 'This month' })).closest('section')
+    await waitFor(() => expect(month).toHaveTextContent(/\d+ made/))
+    expect(month).toHaveTextContent(/\d+ completed/)
+    expect(month).toHaveTextContent(/₱[\d,.]+ received/)
+    expect(within(month).getByRole('link', { name: /Reports/ })).toHaveAttribute('href', '/admin/reports')
+  })
+
+  it('shows the latest feedback with its client, and hides the section when there is none', async () => {
+    await openDashboard()
+    const card = (await screen.findByRole('heading', { name: 'Latest feedback' })).closest('section')
+    expect(card).toHaveTextContent('Very gentle removal and a lovely design.')
+    expect(within(card).getByRole('link', { name: /Feedback/ })).toHaveAttribute('href', '/admin/feedback')
+  })
+
+  it('leaves out Latest feedback when no client has rated yet', async () => {
+    getDb().feedback = []
+    saveDb()
+    await openDashboard()
+    await screen.findByRole('heading', { name: 'This month' })
+    await waitFor(() => expect(document.querySelector('.dash-month .dash-quiet, .dash-month-figures')).not.toBeNull())
+    expect(screen.queryByRole('heading', { name: 'Latest feedback' })).toBeNull()
+  })
+
+  it("dates the latest feedback in the salon's own day, as the Feedback page does", async () => {
+    // 7:30 am in Manila on Nov 16 is still Nov 15 in UTC.
+    const createdAt = '2026-11-15T23:30:00.000Z'
+    getDb().feedback.push({ id: 99, clientId: 2, rating: 5, comment: 'Early bird', submissionKey: 'early', createdAt })
+    saveDb()
+    await openDashboard()
+    const card = (await screen.findByRole('heading', { name: 'Latest feedback' })).closest('section')
+    expect(card).toHaveTextContent('Early bird')
+    expect(card).toHaveTextContent(formatDate(toIsoDate(new Date(createdAt))).replace(/, \d{4}$/, ''))
+  })
+
+  it('a booking made from the dashboard shows its message and refreshes This month', async () => {
+    const user = userEvent.setup()
+    const reports = vi.spyOn(api.admin, 'monthlyReport')
+    try {
+      await openDashboard()
+      await waitFor(() => expect(reports).toHaveBeenCalledTimes(1))
+      await user.click(screen.getByRole('button', { name: '+ New booking' }))
+      const dialog = await screen.findByRole('dialog', { name: 'New booking' })
+      await user.click(within(dialog).getByRole('radio', { name: 'Facebook' }))
+      await user.type(within(dialog).getByLabelText(/^Name/), 'Ana Santos')
+      await user.click(within(dialog).getByRole('radio', { name: /^Plain\b/ }))
+      for (let i = 0; i < 3; i++) await user.click(within(dialog).getByRole('button', { name: 'Next day' }))
+      await user.click(await within(dialog).findByRole('radio', { name: /^11:00 AM/ }))
+      await user.click(within(dialog).getByRole('radio', { name: 'Deposit' }))
+      await user.click(within(dialog).getByRole('button', { name: 'Book and confirm' }))
+
+      expect(await screen.findByText(/made for Ana Santos and confirmed/)).toBeInTheDocument()
+      await waitFor(() => expect(reports).toHaveBeenCalledTimes(2)) // This month asked again after the change
+    } finally {
+      reports.mockRestore()
+    }
+  })
+
+  it('leaves out Latest feedback, and keeps the page up, when feedback cannot load', async () => {
+    const failed = Promise.reject(Object.assign(new Error('down'), { status: 500 }))
+    failed.catch(() => {})
+    const spy = vi.spyOn(api.admin, 'feedback').mockReturnValue(failed)
+    try {
+      await openDashboard()
+      await failed.catch(() => {}) // the request has finished
+      await screen.findByRole('heading', { name: 'This month' })
+      expect(screen.queryByRole('heading', { name: 'Latest feedback' })).toBeNull()
+      expect(screen.getByRole('heading', { name: 'Needs your attention' })).toBeInTheDocument()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('keeps the dashboard up when the monthly report cannot load', async () => {
+    const spy = vi.spyOn(api.admin, 'monthlyReport').mockRejectedValue(Object.assign(new Error('down'), { status: 500 }))
+    try {
+      await openDashboard()
+      const month = (await screen.findByRole('heading', { name: 'This month' })).closest('section')
+      expect(await within(month).findByText('This month’s figures couldn’t load. See Reports.')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Needs your attention' })).toBeInTheDocument()
+    } finally {
+      spy.mockRestore()
+    }
   })
 })
 

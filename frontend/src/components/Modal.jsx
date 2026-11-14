@@ -6,10 +6,10 @@ import { Button } from './ui'
 /**
  * Accessible dialog: focus moves inside, Escape and the backdrop close it, focus returns afterwards. It is drawn at
  * the end of the page body, so no card or animation it is opened from can tuck it under the sticky header.
- * `bare`: no title bar or footer, only the content (e.g. a card) on the dimmed page, with a small round × on its corner;
+ * `size`: "wide" (same as `wide`) or "xl", an extra-wide window for a form with a side panel (New booking). `bare`: no title bar or footer, only the content (e.g. a card) on the dimmed page, with a small round × on its corner;
  * `title` then names the dialog for screen readers.
  */
-export function Modal({ title, onClose, children, footer, wide = false, bare = false }) {
+export function Modal({ title, onClose, children, footer, wide = false, size = wide ? 'wide' : null, bare = false }) {
   const titleId = useId()
   const dialogRef = useRef(null)
   const onCloseRef = useRef(onClose)
@@ -45,7 +45,7 @@ export function Modal({ title, onClose, children, footer, wide = false, bare = f
 
   return createPortal(
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={wide ? 'modal modal-wide' : 'modal'} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} ref={dialogRef}>
+      <div className={size === 'xl' ? 'modal modal-wide modal-xl' : size === 'wide' ? 'modal modal-wide' : 'modal'} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} ref={dialogRef}>
         <div className="modal-header">
           <h2 id={titleId}>{title}</h2>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Close">×</button>
