@@ -2078,3 +2078,83 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 
 /* Paged lists scroll back to their top on a page change, clear of the sticky header. */
 .activity-card, .fb-list, .clients-card { scroll-margin-top: 84px; }
+
+/* ===== Booking polish (2026-11-16): one system across the three steps and Your total ===== */
+/* Headings: the page title keeps the display font; every section heading is the body font, semibold, with its helper
+   line under it. No small uppercase labels with rules. */
+.book .step-heading { margin-bottom: 12px !important; }
+.book .step-heading h2, .book .pick-title, .book .review-step h2.pick-title { font-family: var(--font); font-size: 1.12rem; font-weight: 600; letter-spacing: 0; color: var(--ink); }
+.book .step-hint { margin-top: 3px; }
+.book .group-title { margin: 0 0 8px; font-size: var(--fs-small); font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ink-soft); }
+.book .group-title::after { content: none; }
+.book .group-optional { font-weight: 400; color: var(--muted); }
+.book .service-group + .service-group { margin-top: 18px; }
+/* Sections of step 1 split by one hairline and one rhythm. */
+.book .choice-fieldset + .choice-fieldset { margin-top: 0; padding-top: 22px; border-top: 1px solid var(--line); }
+.book .choice-fieldset { padding-bottom: 22px; }
+.book .choice-fieldset:last-child { padding-bottom: 0; }
+/* Something that doesn't apply yet: one quiet line instead of greyed cards. */
+.book-folded { margin: 0; padding: 10px 14px; border: 1px dashed var(--nude-200); border-radius: 12px; color: var(--muted); font-size: var(--fs-small); background: #fffbfa; }
+.book .design-row.is-folded { display: block; }
+.book .design-row.is-folded > * + * { margin-top: 12px; }
+/* Nail art: a tighter grid with smaller photos (five across on a laptop). */
+.book .addon-list { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+.book .addon-check { padding: 0 10px 10px; }
+.book .addon-photo { width: calc(100% + 20px); margin: 0 -10px 8px; aspect-ratio: 1 / 1; }
+.book .addon-name { font-size: var(--fs-small); }
+/* Design photos: smaller slots. */
+.book .reference-grid { grid-template-columns: repeat(3, minmax(0, 120px)); }
+.book .reference-tile, .book .reference-empty { aspect-ratio: 1 / 1; }
+
+/* Step 2: the chosen appointment sized to its content; clearer time buttons. */
+.book .slot-chosen { align-self: start; padding: 12px 16px; border-radius: 14px; }
+.book .slot-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.book .slot-time { font-size: var(--fs-body); }
+.book .slot-status { font-size: var(--fs-caption); }
+
+/* Step 3: appointment and services in one card; the policy box only as tall as its text; columns start together. */
+.book .review-step { align-items: start; }
+.book .review { display: flex; flex-direction: column; gap: 12px; }
+.book .review-section:last-child { flex: none; }
+.book .review-card { border: 1px solid var(--line); border-radius: 16px; background: var(--white); box-shadow: 0 1px 2px rgb(48 37 42 / .04); overflow: hidden; }
+.book .review-card > .review-section { border: 0; border-radius: 0; box-shadow: none; }
+.book .review-card > .review-section + .review-section { border-top: 1px solid var(--line); }
+
+/* The step bar: a finished step is a button back to it. */
+.book .stepper li.done { padding: 0; }
+.book .step-link { display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 4px; border: 0; border-radius: 99px; background: none; color: inherit; font: inherit; cursor: pointer; }
+.book .step-link:hover .step-label { text-decoration: underline; text-underline-offset: 3px; }
+.book .step-link:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* Your total: lighter. The total is a plain line in the body font; figures line up; long values wrap neatly. */
+.book .yt-total { margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); border-radius: 0; background: none; font-family: var(--font);
+  font-size: var(--fs-lead); font-weight: 700; color: var(--ink); }
+.book .yt-total .money { color: var(--burgundy); }
+.book .yt, .book .yt-lines, .book .yt-pay, .book .yt-facts { font-variant-numeric: tabular-nums; }
+.book .yt-pay { margin: 0; padding: 10px 12px; border: 0; }
+.book .yt-facts dd { white-space: normal; max-width: 58%; overflow-wrap: anywhere; justify-content: flex-end; text-align: right; font-weight: 600; }
+.book .yt-facts dt { flex: none; }
+.book .yt-edit { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--rose-700); font: inherit; font-size: var(--fs-caption); font-weight: 600;
+  text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.book .yt-edit:hover { color: var(--burgundy); }
+.book .yt-edit:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 3px; }
+
+/* The Next button with the total: on a laptop the total is already above, so only on phones does it ride in the bar. */
+.summary-next-total { display: none; }
+@media (max-width: 899px) {
+  .book .summary-next { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .book .summary-next .btn { width: auto; flex: none; }
+  .book .summary-next-total { display: flex; flex-direction: column; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .book .summary-next-total strong { color: var(--burgundy); font-size: var(--fs-lead); }
+  .book .summary-next-total small { color: var(--muted); font-size: var(--fs-caption); }
+  .book { padding-bottom: 76px; } /* room so the bar never covers the last control */
+}
+/* The design photos' title is a label inside "Design", the size of the other group labels. */
+.book .design-row .pick-title { font-size: var(--fs-small); font-weight: 600; color: var(--ink-soft); }
+/* Your total's details: the label (and its Change) on one line, the value under it, so nothing squeezes in the narrow panel. */
+.book .yt-facts > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px; }
+.book .yt-facts dt { display: flex; align-items: center; gap: 10px; color: var(--ink-soft); font-size: var(--fs-small); }
+.book .yt-facts dd { max-width: none; justify-content: flex-start; text-align: left; padding-left: 30px; white-space: normal; }
+.book .yt-edit { margin-left: auto; }
+/* A jump from Your total lands below the sticky header, not under it. */
+.book #book-colour, .book #book-when { scroll-margin-top: 84px; }

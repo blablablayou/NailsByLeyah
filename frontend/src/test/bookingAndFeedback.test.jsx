@@ -151,11 +151,11 @@ describe('Hands for Stone add-ons', () => {
     // Plain takes no nail art and no design.
     await user.click(screen.getByRole('checkbox', { name: /^Plain/ }))
     expect(screen.getByRole('checkbox', { name: /^Plain/ })).toBeChecked()
-    expect(screen.getByRole('checkbox', { name: /^With Design/ })).toBeDisabled()
+    // What doesn't apply folds into one line (2026-11-16 polish), so nothing can be chosen.
+    expect(screen.queryByRole('checkbox', { name: /^With Design/ })).toBeNull()
 
     expect(screen.getByText("Nail art isn't available with Plain. Choose another service to add it.")).toBeInTheDocument()
-    expect(screen.getByRole('checkbox', { name: /Chrome/ })).toBeDisabled()
-    expect(screen.getByRole('checkbox', { name: /Chrome/ })).not.toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: /Chrome/ })).toBeNull()
     expect(within(screen.getByRole('complementary')).queryByText(/Chrome/)).toBeNull() // not charged
 
     // Back to a set with nail art: the earlier Chrome is gone, not quietly restored.

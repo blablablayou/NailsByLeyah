@@ -45,7 +45,7 @@ describe('Booking revisions', () => {
 
     // Plain has no design version.
     await user.click(screen.getByRole('checkbox', { name: /^Plain/ }))
-    expect(screen.getByRole('checkbox', { name: /^With Design/ })).toBeDisabled()
+    expect(screen.queryByRole('checkbox', { name: /^With Design/ })).toBeNull() // folded into the line below
     expect(screen.getByText("Designs aren't available with Plain.")).toBeInTheDocument()
   })
 
