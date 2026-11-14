@@ -122,10 +122,11 @@ function NailSlots({ nails, target, onTarget, onClear, off = false }) {
         {nailsStarted(nails) && !off && <button type="button" className="link-button" onClick={onClear}>Clear all</button>}
       </div>
       <p className="cp-nails-hint" aria-live="polite">
-        {off ? 'Not needed: Leyah helps you choose at the salon.' : target ? `Now tap a shade for your ${targetLabel}.` : 'Tap a nail, then a shade. Left hand first.'}
+        {off ? 'Not needed: Leyah helps you choose at the salon.' : target ? <>Now tap a shade for your <strong>{targetLabel}</strong>.</> : 'Tap a nail, then a shade. Left hand first.'}
       </p>
       {HAND_COLUMNS.map(([hand, label]) => {
         const locked = off || (hand === 'right' && !leftDone)
+        const waiting = !off && hand === 'right' && !leftDone // the right hand opens once the left is done
         return (
           <div key={hand} className={locked ? 'cp-hand is-locked' : 'cp-hand'} role="group" aria-label={label}>
             <span className="cp-hand-label">{label.split(' ')[0]}</span>
@@ -143,6 +144,7 @@ function NailSlots({ nails, target, onTarget, onClear, off = false }) {
                 )
               })}
             </div>
+            {waiting && <span className="cp-hand-wait">Opens after all 5 left nails</span>}
           </div>
         )
       })}
@@ -160,15 +162,18 @@ export function ColorPickerModal({ value, onChoose, onClose, nails: savedNails, 
   const missing = (n) => outOfStock.includes(`#${n}`) // shades Leyah has run out of can't be picked
   const titleId = useId()
   const dialogRef = useRef(null)
+  const gridRef = useRef(null)
   const onCloseRef = useRef(onClose)
   useLayoutEffect(() => { onCloseRef.current = onClose })
   const [picked, setPicked] = useState(() => shadeNumber(value))
   const [shown, setShown] = useState(() => shadeNumber(value)) // the shade in the large preview: the last one tapped
+  const [peek, setPeek] = useState(null) // a shade looked at (hover, focus, long press) but not chosen
   const [nails, setNails] = useState(savedNails ?? EMPTY_NAILS)
   const [target, setTarget] = useState(null) // the nail the next tapped shade goes on
   const [other, setOther] = useState(() => (others.includes(value) ? value : null)) // e.g. "Not sure yet (decide at the salon)"
   const [asking, setAsking] = useState(request !== null) // "Can't find your colour?"
   const [requestText, setRequestText] = useState(request ?? '')
+  const [focusN, setFocusN] = useState(null) // the shade that holds the grid's one Tab stop
   const started = Boolean(onNails) && nailsStarted(nails)
   const complete = nailsComplete(nails)
 
@@ -195,11 +200,11 @@ export function ColorPickerModal({ value, onChoose, onClose, nails: savedNails, 
   }
   const hasChoice = Boolean(picked || other || asking || started || nailsStarted(savedNails))
   const blocked = !hasChoice || (asking && !requestText.trim()) || (started && !complete)
-  const useLabel = asking ? 'Ask Leyah for This Colour' : started ? 'Use These Colours' : other ? 'Use This Choice' : 'Use This Color'
+  const useLabel = asking ? 'Ask Leyah for This Colour' : started ? 'Use These Colours' : other ? 'Use This Choice' : 'Use This Colour'
 
   useEffect(() => {
     const before = document.activeElement
-    dialogRef.current?.querySelector('[aria-checked="true"]')?.focus() ?? dialogRef.current?.focus()
+    ;(dialogRef.current?.querySelector('.cp-grid [aria-checked="true"]') ?? dialogRef.current)?.focus()
     const onKey = (e) => e.key === 'Escape' && onCloseRef.current()
     document.addEventListener('keydown', onKey)
     document.body.classList.add('modal-open')
@@ -210,14 +215,74 @@ export function ColorPickerModal({ value, onChoose, onClose, nails: savedNails, 
     }
   }, [])
 
-  const info = shown ? SHADE_NAMES[shown] : null
+  // The grid is one Tab stop; arrows, Home and End move between shades without choosing (Enter or Space chooses).
+  const usable = (n) => !undecided && !missing(n)
+  const tabStop = [focusN, checked].find((n) => n && usable(n)) ?? NUMBERS.find(usable)
+  const onGridKey = (e) => {
+    const from = NUMBERS.indexOf(e.target.dataset?.n)
+    if (from < 0) return
+    const template = gridRef.current ? getComputedStyle(gridRef.current).gridTemplateColumns : ''
+    const columns = template && template !== 'none' ? template.split(' ').filter(Boolean).length : 10
+    const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns }[e.key]
+    let to = -1
+    if (e.key === 'Home') to = NUMBERS.findIndex(usable)
+    else if (e.key === 'End') to = NUMBERS.findLastIndex(usable)
+    else if (step) {
+      for (let i = from + step; i >= 0 && i < NUMBERS.length; i += step) if (usable(NUMBERS[i])) { to = i; break }
+    } else return
+    e.preventDefault()
+    if (to >= 0) gridRef.current?.querySelector(`[data-n="${NUMBERS[to]}"]`)?.focus()
+  }
+
+  // Quick compare: a mouse hover, keyboard focus or a long press shows a shade without choosing it. A long press never
+  // also chooses: the click that follows it is ignored.
+  const press = useRef({ timer: null, shade: null })
+  useEffect(() => () => clearTimeout(press.current.timer), [])
+  const pressStart = (n, e) => {
+    clearTimeout(press.current.timer)
+    press.current.shade = null
+    if (e.pointerType === 'mouse' || !usable(n)) return // a shade that can't be chosen isn't previewed either
+    press.current.timer = setTimeout(() => { press.current.shade = n; setPeek(n) }, 450)
+  }
+  const pressEnd = (n) => {
+    clearTimeout(press.current.timer)
+    if (press.current.shade !== n) return
+    setPeek((p) => (p === n ? null : p))
+    // Swallow only the click that comes straight after the long press; many phones send none, and a later Enter or
+    // screen-reader tap on the same shade must still choose it.
+    press.current.timer = setTimeout(() => { if (press.current.shade === n) press.current.shade = null }, 400)
+  }
+  const onShadeClick = (n) => {
+    if (press.current.shade === n) { press.current.shade = null; return }
+    tapShade(n)
+  }
+
+  const preview = peek ?? shown
+  const previewing = Boolean(peek) && peek !== shown
+  const info = preview ? SHADE_NAMES[preview] : null
+  const cardLabel = previewing ? 'Previewing' : shown && shown !== picked ? 'Shade for your nail' : 'Selected Colour'
+  // The compact line in the phone header: what the Use button will save.
+  const now = asking ? 'Colour request' : started ? `${[...nails.left, ...nails.right].filter(Boolean).length} of 10 nails`
+    : other ?? (picked ? `#${picked} ${SHADE_NAMES[picked]?.name ?? ''}`.trim() : 'Nothing yet')
 
   return createPortal(
     <div className="modal-backdrop cp-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="cp" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} ref={dialogRef}>
-        <button type="button" className="cp-close" onClick={onClose} aria-label="Close">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-        </button>
+        <header className="cp-head">
+          <h2 id={titleId}>Choose Nail Colour</h2>
+          <p className="cp-intro">Select a colour from the {COLLECTION.name} collection.</p>
+          {/* Phones only: the chart scrolls under this header, so the choice (or the shade being previewed) shows here. */}
+          <p className="cp-now">
+            <span>{previewing ? 'Previewing:' : 'Selected:'}</span>{' '}
+            {(previewing || (!started && picked && !other && !asking)) && (
+              <span className="cp-now-dot" aria-hidden="true" style={{ background: SHADE_COLORS[previewing ? peek : picked] }} />
+            )}
+            <span className="cp-now-text">{previewing ? `#${peek} ${SHADE_NAMES[peek]?.name ?? ''}`.trim() : now}</span>
+          </p>
+          <button type="button" className="cp-close" onClick={onClose} aria-label="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </header>
 
         <section className="cp-chart" aria-label={`${COLLECTION.name} colour chart`}>
           <Bow />
@@ -229,12 +294,20 @@ export function ColorPickerModal({ value, onChoose, onClose, nails: savedNails, 
             <p className="cp-collection"><span>{COLLECTION.name.split(' ')[0]}</span>{COLLECTION.name.split(' ').slice(1).join(' ')}</p>
             <p className="cp-code"><strong>{COLLECTION.code}</strong>Swatches</p>
           </div>
-          <div className={undecided ? 'cp-grid is-off' : 'cp-grid'} role="radiogroup" aria-label="Shades" aria-disabled={undecided || undefined}>
+
+          <div className={undecided ? 'cp-grid is-off' : 'cp-grid'} role="radiogroup" aria-label="Shades" aria-disabled={undecided || undefined}
+            ref={gridRef} onKeyDown={onGridKey}>
             {NUMBERS.map((n) => (
-              <button key={n} type="button" role="radio" aria-checked={checked === n}
+              <button key={n} type="button" role="radio" aria-checked={checked === n} data-n={n} tabIndex={n === tabStop ? 0 : -1}
                 aria-label={`Shade #${n}${SHADE_NAMES[n] ? `, ${SHADE_NAMES[n].name}` : ''}${missing(n) ? ', out of stock' : ''}`}
                 title={missing(n) ? `${colorLabel(`#${n}`)} · out of stock` : colorLabel(`#${n}`)}
-                className={['cp-swatch', checked === n && 'on', missing(n) && 'is-out'].filter(Boolean).join(' ')} onClick={() => tapShade(n)}
+                className={['cp-swatch', checked === n && 'on', missing(n) && 'is-out'].filter(Boolean).join(' ')}
+                onClick={() => onShadeClick(n)}
+                onFocus={() => { setFocusN(n); setPeek(n) }} onBlur={() => setPeek((p) => (p === n ? null : p))}
+                onPointerEnter={(e) => e.pointerType === 'mouse' && usable(n) && setPeek(n)}
+                onPointerLeave={(e) => { pressEnd(n); if (e.pointerType === 'mouse') setPeek((p) => (p === n ? null : p)) }}
+                onPointerDown={(e) => pressStart(n, e)} onPointerUp={() => pressEnd(n)} onPointerCancel={() => pressEnd(n)}
+                onContextMenu={(e) => press.current.shade === n && e.preventDefault()}
                 disabled={undecided || missing(n)}>
                 <NailPair color={SHADE_COLORS[n]} />
                 <span className="cp-num">#{n}</span>
@@ -249,24 +322,22 @@ export function ColorPickerModal({ value, onChoose, onClose, nails: savedNails, 
         </section>
 
         <section className="cp-side">
-          <h2 id={titleId}>Choose Nail Color</h2>
-          <p className="cp-intro">Select a color from the {COLLECTION.name} collection.</p>
           <p className="cp-notice" role="note">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>
-            <span>Colours on screen may look different from the real polish, depending on your phone or computer. Leyah can show you the actual bottle at the salon.</span>
+            <span>Screen colours can differ from the real polish. Leyah can show you the bottle at the salon.</span>
           </p>
 
           {/* One card for the shade: large nails, its number and name, and what it looks like. */}
-          <div className={shown ? 'cp-pick' : 'cp-pick is-empty'} aria-live="polite">
-            <h3 className="cp-pick-label">{shown && shown !== picked ? 'Shade for your nail' : 'Selected Color'}</h3>
-            {shown ? (
+          <div className={preview ? 'cp-pick' : 'cp-pick is-empty'} aria-live={previewing ? 'off' : 'polite'}>
+            <h3 className={previewing ? 'cp-pick-label is-peek' : 'cp-pick-label'}>{cardLabel}</h3>
+            {preview ? (
               <div className="cp-pick-body">
-                <NailPair color={SHADE_COLORS[shown]} className="cp-pick-nails" />
+                <NailPair color={SHADE_COLORS[preview]} className="cp-pick-nails" />
                 <div className="cp-pick-text">
-                  <div className="cp-pick-name"><span className="cp-pill">#{shown}</span><h4>{info?.name ?? `Shade ${shown}`}</h4></div>
+                  <div className="cp-pick-name"><span className="cp-pill">#{preview}</span><h4>{info?.name ?? `Shade ${preview}`}</h4></div>
                   <p className="cp-pick-desc">{info?.description ?? `From the ${COLLECTION.name} ${COLLECTION.code} chart. Leyah uses this exact bottle for your set.`}</p>
                 </div>
-                {shown === picked && (
+                {!previewing && preview === picked && (
                   <button type="button" className="cp-clear" onClick={() => { setPicked(null); setShown(null) }} aria-label={`Clear #${picked}`}>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" /></svg>
                   </button>
@@ -275,7 +346,7 @@ export function ColorPickerModal({ value, onChoose, onClose, nails: savedNails, 
             ) : (
               // Every state without a shade has the same two lines, so the card keeps its height.
               <p className="cp-pick-empty">
-                {other ?? (asking ? 'Colour request' : 'No color selected yet.')}
+                {other ?? (asking ? 'Colour request' : 'No colour selected yet.')}
                 <span className="cp-pick-sub">{other ? 'Tap it again to choose a shade instead.' : asking ? 'Describe the colour below.' : 'Tap a shade on the chart.'}</span>
               </p>
             )}
@@ -288,6 +359,7 @@ export function ColorPickerModal({ value, onChoose, onClose, nails: savedNails, 
 
           {(others.length > 0 || onRequest) && (
             <div className="cp-others">
+              <h3 className="cp-others-label">Other options</h3>
               <div className="chips" role="radiogroup" aria-label="Other colour choices">
                 {others.map((c) => (
                   <button key={c} type="button" role="radio" aria-checked={other === c} className={other === c ? 'chip color-chip selected' : 'chip color-chip'}
@@ -311,14 +383,17 @@ export function ColorPickerModal({ value, onChoose, onClose, nails: savedNails, 
               )}
             </div>
           )}
+        </section>
 
+        {/* The Use button in its own bar: on phones it stays at the bottom of the screen while the chart scrolls. */}
+        <div className="cp-usebar">
           {started && !complete && <p className="cp-use-note">Choose all 10 nails to use these colours, or Clear all.</p>}
           {asking && !requestText.trim() && <p className="cp-use-note">Describe the colour you&apos;re looking for.</p>}
           <button type="button" className="cp-use" onClick={use} disabled={blocked}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
             {useLabel}
           </button>
-        </section>
+        </div>
       </div>
     </div>,
     document.body,

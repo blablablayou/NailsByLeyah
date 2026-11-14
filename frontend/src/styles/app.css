@@ -1879,6 +1879,7 @@ select.input { appearance: auto; }
 .cp-grid.is-off { opacity: .35; filter: grayscale(.6); }
 .cp-grid.is-off .cp-swatch { cursor: not-allowed; }
 .cp-nails.is-off .cp-hand { opacity: .45; }
+.cp-nails.is-off .cp-hand .cp-hand-label, .cp-nails.is-off .cp-hand .cp-hand-nails { opacity: 1; }
 .cp-pick-sub { display: block; margin-top: 2px; font-size: var(--fs-caption); }
 .cp-use-note { margin: -6px 0 -8px; font-size: var(--fs-small); color: var(--muted); text-align: center; }
 .cc-nails-text { margin: 6px 2px 0; }
@@ -2158,3 +2159,71 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 .book .yt-edit { margin-left: auto; }
 /* A jump from Your total lands below the sticky header, not under it. */
 .book #book-colour, .book #book-when { scroll-margin-top: 84px; }
+
+/* ---- Colour chart polish (2026-11-16): header and Use bar, quiet right side ---- */
+/* The middle row grows with its content (a colour request box can open), so nothing is drawn over it. */
+.cp { grid-template-rows: auto 1fr auto; }
+.cp-chart { grid-column: 1; grid-row: 1 / span 3; }
+.cp-head { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 4px; padding: 72px 28px 0 24px; min-width: 0; }
+.cp-head h2 { font-family: var(--font-display); color: var(--burgundy); font-size: var(--fs-display); font-weight: 700; line-height: 1.1; }
+.cp-head .cp-intro { margin: 0; }
+.cp-now { display: none; }
+.cp-side { grid-column: 2; grid-row: 2; padding: 14px 28px 0 24px; }
+.cp-usebar { grid-column: 2; grid-row: 3; display: flex; flex-direction: column; gap: 8px; padding: 14px 28px 24px 24px;
+  position: sticky; bottom: 0; z-index: 3; align-self: end; background: linear-gradient(rgb(253 238 242 / 0), #fdeef2 16px); } /* stays in view when the window scrolls */
+.cp-usebar .cp-use { margin-top: 0; }
+.cp-usebar .cp-use-note { margin: 0; }
+
+/* The screen-colour warning: one quiet line, not a box. */
+.cp-notice { margin: 0; padding: 0; background: none; border: 0; color: var(--muted); font-size: var(--fs-caption); align-items: center; }
+.cp-notice svg { width: 15px; height: 15px; margin: 0; }
+
+/* The display font is kept for the window title; the rest reads in the body font. */
+.cp-pick { border-radius: 18px; background: rgb(255 255 255 / .72); border-color: #f3d6de; }
+@media (min-width: 900px) { .cp-pick { padding: 14px 16px; } .cp-pick-nails { width: 92px; } }
+.cp-pick-label, .cp-others-label { font-family: var(--font); font-size: var(--fs-small); font-weight: 600; color: var(--ink-soft); margin: 0 0 8px; }
+.cp-pick-label.is-peek { color: var(--rose-600); }
+.cp-pick-name { font-family: var(--font); font-size: var(--fs-lead); font-weight: 600; color: var(--ink); gap: 8px; }
+.cp-pill { font-family: var(--font); font-size: var(--fs-small); font-weight: 700; padding: 1px 10px; font-variant-numeric: tabular-nums; }
+.cp-pick-empty { color: var(--ink-soft); font-size: var(--fs-body); }
+.cp-nails-head h3 { font-family: var(--font); font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.cp-others-label { margin-bottom: 0; }
+
+/* Per nail: the nail being chosen stands out; a locked right hand says why. */
+.cp-nails-hint strong { color: var(--burgundy); font-weight: 600; }
+.cp-slot.on { border: 2px solid var(--burgundy); background: var(--white); box-shadow: 0 0 0 3px rgb(124 46 74 / .16); }
+.cp-slot.on .cp-slot-name { color: var(--burgundy); font-weight: 700; }
+.cp-hand.is-locked { opacity: 1; }
+.cp-hand.is-locked .cp-hand-label, .cp-hand.is-locked .cp-hand-nails { opacity: .45; }
+.cp-nails.is-off .cp-hand { opacity: .45; }
+.cp-hand-wait { grid-column: 2; margin-top: -2px; font-size: var(--fs-caption); color: var(--ink-soft); }
+
+/* Swatch states: a clearer hover and a ringed choice. */
+.cp-swatch { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; transition: background .15s, border-color .15s, transform .15s, box-shadow .15s; }
+.cp-swatch:hover:not(:disabled) { background: var(--white); box-shadow: 0 6px 14px rgb(124 46 74 / .12); }
+.cp-swatch.on { background: var(--white); box-shadow: 0 0 0 3px rgb(124 46 74 / .14); }
+.cp-swatch.on .cp-num { color: var(--burgundy); }
+.cp-swatch:focus-visible, .cp-swatch.on:focus-visible, .cp-swatch:hover:not(:disabled):focus-visible, .cp-slot.on:focus-visible { box-shadow: var(--focus); }
+@media (prefers-reduced-motion: reduce) { .cp-swatch, .cp-swatch:hover:not(:disabled) { transition: none; transform: none; } }
+
+/* Phones and tablets: the title and the choice pinned at the top, the Use button at the bottom, the chart between. */
+@media (max-width: 899px) {
+  .cp { display: flex; flex-direction: column; }
+  .cp > * { flex: none; }
+  .cp-head { position: sticky; top: 0; z-index: 4; padding: 12px 64px 10px 16px; gap: 2px; background: rgb(255 248 250 / .96);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-bottom: 1px solid #f3d9e0; }
+  .cp-head h2 { font-size: var(--fs-title); }
+  .cp-head .cp-intro { display: none; }
+  .cp-now { display: flex; align-items: center; gap: 6px; min-width: 0; margin: 0; font-size: var(--fs-small); color: var(--ink); white-space: nowrap; overflow: hidden; }
+  .cp-now > span:first-child { color: var(--ink-soft); }
+  .cp-now-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .cp-now > span:first-child, .cp-now-dot { flex: none; }
+  .cp-now-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgb(0 0 0 / .15); }
+  .cp-head .cp-close { top: 50%; right: 12px; transform: translateY(-50%); }
+  .cp-head .cp-close:hover { transform: translateY(-50%) rotate(90deg); }
+  .cp-side { padding: 4px 14px 14px; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .cp-side .cp-pick-label, .cp-nails-hint { display: block; }
+  .cp-others .chips { flex-wrap: wrap; } /* the two long chips don't fit side by side at 375 px */
+  .cp-usebar { position: sticky; bottom: 0; z-index: 4; align-self: stretch; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); background: rgb(255 248 250 / .96);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-top: 1px solid #f3d9e0; box-shadow: 0 -8px 18px rgb(48 37 42 / .08); }
+}

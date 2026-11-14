@@ -7,7 +7,7 @@ const startBooking = async (user) => {
   renderApp('/book')
   await user.click(await screen.findByRole('checkbox', { name: /^Plain/ }))
 }
-const chart = () => screen.getByRole('dialog', { name: 'Choose Nail Color' })
+const chart = () => screen.getByRole('dialog', { name: 'Choose Nail Colour' })
 
 describe('Colour chart', () => {
   it('shows all 58 numbered shades, one chosen at a time, with a large preview', async () => {
@@ -19,17 +19,17 @@ describe('Colour chart', () => {
     expect(shades).toHaveLength(58)
     expect(shades[0]).toHaveAccessibleName('Shade #01, Bright White')
     expect(shades[57]).toHaveAccessibleName('Shade #58, Dark Plum-Black')
-    expect(within(chart()).getByRole('button', { name: 'Use This Color' })).toBeDisabled()
+    expect(within(chart()).getByRole('button', { name: 'Use This Colour' })).toBeDisabled()
 
     await user.click(within(chart()).getByRole('radio', { name: /^Shade #06,/ }))
     await user.click(within(chart()).getByRole('radio', { name: /^Shade #41,/ }))
-    expect(within(chart()).getAllByRole('radio', { checked: true })).toHaveLength(1)
+    expect(within(within(chart()).getByRole('radiogroup', { name: 'Shades' })).getAllByRole('radio', { checked: true })).toHaveLength(1)
     expect(within(chart()).getByRole('radio', { name: /^Shade #41,/ })).toBeChecked()
     expect(within(chart()).getByRole('heading', { name: 'Bubblegum Pink' })).toBeInTheDocument()
     expect(within(chart()).getByRole('button', { name: 'Clear #41' })).toBeInTheDocument()
   })
 
-  it('saves the shade only with Use This Color, and shows it in the total', async () => {
+  it('saves the shade only with Use This Colour, and shows it in the total', async () => {
     const user = userEvent.setup()
     await startBooking(user)
     await pickShade(user, '06')
@@ -48,7 +48,7 @@ describe('Colour chart', () => {
     // Clearing in the window and closing also keeps it.
     await user.click(screen.getByRole('button', { name: 'Colour #06 – Light Pink-Lavender. Change colour' }))
     await user.click(within(chart()).getByRole('button', { name: 'Clear #06' }))
-    expect(within(chart()).getByText(/No color selected yet/)).toBeInTheDocument()
+    expect(within(chart()).getByText(/No colour selected yet/)).toBeInTheDocument()
     await user.keyboard('{Escape}')
     expect(screen.getByRole('button', { name: 'Colour #06 – Light Pink-Lavender. Change colour' })).toBeInTheDocument()
   })

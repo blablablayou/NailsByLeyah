@@ -71,7 +71,7 @@ describe('Booking revisions', () => {
 
     await user.click(await screen.findByRole('checkbox', { name: /^Plain/ }))
     await user.click(screen.getByRole('button', { name: 'Open the colour chart' }))
-    const chart = screen.getByRole('dialog', { name: 'Choose Nail Color' })
+    const chart = screen.getByRole('dialog', { name: 'Choose Nail Colour' })
     await user.click(within(chart).getByRole('radio', { name: "Can't find your colour?" }))
     expect(within(chart).getByRole('button', { name: 'Ask Leyah for This Colour' })).toBeDisabled()
     expect(within(chart).getByText(/Describe the colour you're looking for/)).toBeInTheDocument()
@@ -92,7 +92,7 @@ describe('Booking revisions', () => {
 
     await user.click(await screen.findByRole('checkbox', { name: /^Plain/ }))
     await user.click(screen.getByRole('button', { name: 'Open the colour chart' }))
-    const chart = screen.getByRole('dialog', { name: 'Choose Nail Color' })
+    const chart = screen.getByRole('dialog', { name: 'Choose Nail Colour' })
     const right = within(chart).getByRole('group', { name: 'Right hand' })
     expect(within(right).getAllByRole('button')[0]).toBeDisabled() // the right hand waits for the left
 
