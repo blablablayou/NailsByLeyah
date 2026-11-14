@@ -287,6 +287,18 @@ describe('Home page', () => {
     })
   })
 
+  it('keeps one FAQ answer open at a time: opening another closes the first', async () => {
+    const user = userEvent.setup()
+    renderApp('/')
+    const first = screen.getByRole('button', { name: 'Do you accept walk-ins?' })
+    const second = screen.getByRole('button', { name: 'How much is the deposit?' })
+    await user.click(first)
+    expect(first).toHaveAttribute('aria-expanded', 'true')
+    await user.click(second)
+    expect(second).toHaveAttribute('aria-expanded', 'true')
+    expect(first).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('opens and closes FAQ answers', async () => {
     const user = userEvent.setup()
     renderApp('/')

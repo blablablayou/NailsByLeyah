@@ -65,6 +65,16 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 html { -webkit-text-size-adjust: 100%; }
+/* The page scrollbar: thin, a dusty-rose handle on a cream track (Chrome, Edge, Firefox). Kept, not hidden: it shows how
+   much page is left and some visitors drag it. Phones draw their own thin overlay bar. */
+html { scrollbar-width: thin; scrollbar-color: var(--dusty-rose) var(--cream); }
+/* Safari has no scrollbar-color: the same look through its own scrollbar parts, burgundy while hovered or dragged. */
+@supports not (scrollbar-color: red blue) {
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--cream); }
+  ::-webkit-scrollbar-thumb { background: var(--dusty-rose); border: 2px solid var(--cream); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active { background: var(--burgundy); }
+}
 
 body {
   margin: 0;

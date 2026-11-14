@@ -53,14 +53,11 @@ const Chevron = () => (
   </svg>
 )
 
-/** Frequently asked questions as an accordion; several answers can be open at once. */
+/** Frequently asked questions as an accordion: one answer open at a time, so opening another closes the first. */
 export function FaqSection({ deposit, hours }) {
-  const [open, setOpen] = useState(() => new Set())
-  const toggle = (i) => setOpen((prev) => {
-    const next = new Set(prev)
-    if (next.has(i)) next.delete(i); else next.add(i)
-    return next
-  })
+  const [openIndex, setOpenIndex] = useState(null)
+  const open = { has: (i) => openIndex === i }
+  const toggle = (i) => setOpenIndex((current) => (current === i ? null : i))
   const faq = [
     ['Is the reservation deposit refundable?', `No. The ${deposit} deposit is non-refundable because it secures your slot: once your booking is confirmed, that time is reserved only for you and can no longer be offered to other clients. It also covers the time spent preparing for your appointment.`],
     ['Do you accept walk-ins?', 'No. Nails by Leyah is home-based and works by appointment only, so please book your slot in advance.'],
