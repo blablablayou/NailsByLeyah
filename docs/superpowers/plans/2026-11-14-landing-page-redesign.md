@@ -28,14 +28,14 @@
 | D1 | Stay on React, or rebuild the landing page in Blazor (the brief says Blazor) | **Stay on React** | ✅ Agreed (2026-11-14): React |
 | D2 | Final order of sections, and what happens to Intro, Up Close, Nail Rules, FAQ | Intro → Hero → Services → Our Works → Meet Leyah → Nail Rules → FAQ → Visit Us | ✅ Agreed (2026-11-14): Intro, Nail Rules and FAQ stay; **Up Close dropped**; order **Intro → Hero → Services & Pricing → Our Works → Meet Leyah → Nail Rules → FAQ → Visit Us** |
 | D3 | Header: centred logo with links split left and right (reference) — on every page, or the landing page only | **Every page**, same links | ✅ Agreed (2026-11-14): **every page** |
-| D4 | Hero photo | A real photo of Leah's work on a light background; placeholder until supplied | ⏳ Waiting |
-| D5 | Hero headline | Brief's *Beautiful Nails, Beautiful You.* (reference shows *Let's be nail friends*) | ⏳ Waiting |
+| D4 | Hero photo | A real photo of Leah's work on a light background; placeholder until supplied | ✅ Agreed (2026-11-14): first a plain white panel; then, on your request, **the hand and the open polish bottle cropped from the reference design** (`public/img/hero-reference.webp`) until Leah's photo arrives |
+| D5 | Hero headline | Brief's *Beautiful Nails, Beautiful You.* (reference shows *Let's be nail friends*) | ✅ Agreed (2026-11-14): **Beautiful Nails, Beautiful You.** with the brief's supporting text |
 | D6 | Service descriptions: written in the website code (A), or editable by Leah in admin (B, database change) | **A** | ⏳ Waiting |
 | D7 | Service cards: photo on each card (brief) or small icons (reference) | **Small icons** | ⏳ Waiting |
 | D8 | "View Full Gallery": new public `/gallery` page (none exists today) or expand in place | **New `/gallery` page** | ⏳ Waiting |
 | D9 | Meet Leyah content: Leah's profile bio and photo (editable today) with a marked placeholder until she writes it | **Profile bio and photo** | ⏳ Waiting |
 | D10 | Visit Us: heading text, and whether the phone and hours show as listed rows (reference "Get in Touch") | "Visit Us", rows with icons, no booking button | ⏳ Waiting |
-| D12 | Small uppercase label above section titles ("GALLERY", "SERVICES", "CONTACT", as in the references). Impeccable's craft floor bans these labels; the references use them | Leave them out (the title carries the section), or keep them to match the references | ⏳ Waiting (raised in Phase 1; `SectionHeading` supports both) |
+| D12 | Small uppercase label above section titles ("GALLERY", "SERVICES", "CONTACT", as in the references). Impeccable's craft floor bans these labels; the references use them | Leave them out (the title carries the section), or keep them to match the references | ✅ Agreed (2026-11-14): **leave them out** everywhere (the hero's "SOFT GEL · BIAB · NAIL ART" goes too) |
 | D11 | Motion: the opening letter animation, the typing headline, and how sections appear | Keep the opening animation; headline appears whole (no typing) so the D5 headline reads at once; sections fade in once; nothing moves with reduced motion | ✅ Agreed (2026-11-14): the **opening animation stays**; the headline **shows whole** (no typing); sections **fade in once** on scroll (12 px), off with reduced motion |
 
 ## Global Constraints
@@ -110,8 +110,8 @@ Ask D1–D11 with the options below, a few at a time, and record each answer in 
 - [ ] **Step 6: Commit** (with your OK): `Landing page: new header and section order`.
 
 ### ✅ Checkpoint 1 — header and section frame
-- [x] Tests pass (185/185) · checked at 375, 768, 1024, 1440 px (signed in as a client: `/`, `/book`, `/bookings`, `/profile`; the guest header is covered by tests) · committed: waiting for your OK
-- [x] Date: 2026-11-14 · commit: ______
+- [x] Tests pass (185/185) · checked at 375, 768, 1024, 1440 px (as a client and as a guest) · committed on `landing-page-redesign`
+- [x] Date: 2026-11-14 · commit: 5746c2d (not pushed, not merged)
 
 **What Phase 1 actually did:** new header on every client/guest page (Book now, Services, Gallery left of the centred logo; account links right; phone menu unchanged); the admin header is not changed (it has its own menu). Up Close removed (`CloseupTour.jsx` and its styles). Section ids now `hero, services, gallery, rules, faq, visit` (`about` arrives with Meet Leyah in Phase 5, together with an **About** link in the header). `SectionHeading` used by Pricing, Nail Rules and FAQ; section headings fade in once with a 12 px rise. The hero's second button now goes to Our Works. Added on your request (2026-11-14): **Log in and Sign up are plain uppercase links** like the left side, without the pill buttons or the divider (old pill styles removed). Then: a **Contact** link (→ Visit Us), the header says **Sign in** (the login page itself still says "Log in"), and the right side reads **Contact · Sign up · Sign in**, with **Sign up as the filled burgundy call to action**. Final (your request): **Sign up removed from the header**; the right side is **Contact · Sign in**, with **Sign in as the call to action** (filled burgundy rectangle, 8 px rounded corners); every header link uses the same type (13.76 px, weight 500, uppercase, .12em). Guests sign up through Book now, the hero button and "Create an account" on the sign-in page. Then (your request): the header logo is a **text-only SVG wordmark** (`components/BrandLogo.jsx`: "Nails by Leyah" in Great Vibes, self-hosted via `@fontsource/great-vibes` 5.3.0, over "NAIL STUDIO" in Inter, burgundy) on every page including admin; the opening animation and the price card still use the old logo image. **About** added, so the right side is **About · Contact · Sign in**; About points to `#about`, which starts working when Meet Leyah is built in Phase 5. **About and Contact now light up** while their section is on screen, like Services and Gallery (Contact checked in the browser; About will once its section exists).
 
@@ -138,8 +138,16 @@ Ask D1–D11 with the options below, a few at a time, and record each answer in 
 - [ ] **Step 6: Commit** (with your OK): `Landing page: new hero`.
 
 ### ✅ Checkpoint 2 — hero
-- [ ] Tests pass · checked at 4 widths · committed
-- [ ] Date / commit: ______
+- [x] Tests pass (187/187) · checked at 375, 768, 1024, 1440 px (headline on two lines everywhere; button above the fold on a phone; no sideways scroll) · committed on `landing-page-redesign`: waiting for your OK
+- [x] Date: 2026-11-14 · commit: ______
+
+**What Phase 2 actually did:** new two-column hero (`Hero({ bookTo, revealAfter })`): *Beautiful Nails, / Beautiful You.* (two lines), the brief's text, and an outlined burgundy **Book an Appointment** rectangle (same shape as Sign in; `/register` for guests, `/book` for clients); a white rounded panel on the right where Leah's photo will go; one soft blush curve in the cream background. Floating photo cards, cursor glow, typing line, "See the designs" button and the label above the title removed (D12; the label option is gone from `SectionHeading` too). The copy appears whole once the opening animation ends.
+
+**Final (your request: "copy the arm and nail bottle design exactly as in the photo"):** the hero is laid out like the reference **across the whole section, edge to edge, on the site's cream** (first a white rounded card; then no card; then no white: the artwork is blended into the cream with `mix-blend-mode: multiply`, and the button is see-through with a burgundy outline): the reference artwork itself (bottle, pink splash, raised hand) cropped below its header, with three white patches covering the reference's own text (measured on the image), and our headline, text and button placed where its text was. Sizes follow the card's width so everything stays in place from 1024 px up (the button keeps ~10 px above the bottle at 1024). Phones and tablets: text first, then the hand and splash. No new image file: it uses `public/img/hero-reference.webp`. Temporary until Leah's photo.
+
+**Earlier update (superseded):** the white panel was replaced by **the hand (right) and the open polish bottle (under the button)** taken from the reference design. No image tools are installed, so they are not cut out: both are CSS crops of `public/img/hero-reference.webp` (1448 × 1086), blended with `mix-blend-mode: multiply` so the white background disappears into the cream, with soft faded edges. Phones and tablets show the hand only. The hand is **not Leah's work**, so it stays only until her photo arrives.
+
+**To add Leah's photo later:** in `frontend/src/pages/client/home/Hero.jsx`, replace the `hm-hero-hand` span with `<img className="hm-hero-photo" src="/img/hero.jpg" width="…" height="…" alt="…" />` (style it with the old rounded-panel rule), put the photo in `frontend/public/img/`, and decide whether the bottle stays.
 
 ---
 

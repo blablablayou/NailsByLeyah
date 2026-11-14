@@ -165,6 +165,6 @@ describe('Login', () => {
     await user.type(screen.getByLabelText(/^Password( \*)?$/), CLIENT.password)
     await user.click(screen.getByRole('button', { name: 'Log in' }))
 
-    expect(await screen.findByRole('heading', { name: 'Beautiful nails, booked in minutes.' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Beautiful Nails, Beautiful You.' })).toBeInTheDocument()
   })
 })

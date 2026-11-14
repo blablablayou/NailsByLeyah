@@ -1,11 +1,11 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { renderApp } from './helpers'
+import { CLIENT, renderApp, signIn } from './helpers'
 
 describe('Home page', () => {
   it('shows every section, with starting prices from the live price list', async () => {
     renderApp('/')
-    expect(screen.getByRole('heading', { level: 1, name: 'Beautiful nails, booked in minutes.' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Beautiful Nails, Beautiful You.' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Up close' })).toBeNull() // replaced by the gallery (D2)
     expect(screen.getByRole('heading', { name: 'Our Works' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Nail Rules' })).toBeInTheDocument()
@@ -35,6 +35,25 @@ describe('Home page', () => {
     expect(row('Rhinestone')).toHaveTextContent('₱15')
   })
 
+  it('hero: headline, text and Book an Appointment on the left, the photo panel on the right', async () => {
+    const { container } = renderApp('/')
+    const hero = container.querySelector('#hero')
+    expect(within(hero).getByRole('heading', { level: 1, name: 'Beautiful Nails, Beautiful You.' })).toBeInTheDocument()
+    expect(hero).toHaveTextContent('Discover personalized nail care and elegant nail designs at NailsByLeyah.')
+    expect(within(hero).getByRole('link', { name: 'Book an Appointment' })).toHaveAttribute('href', '/register')
+    expect(hero.querySelector('.hm-eyebrow')).toBeNull() // no label above the title (D12)
+    // The reference artwork (bottle, splash, hand), until Leah's photo (D4); decoration for screen readers.
+    expect(hero.querySelector('.hm-hero-art')).toHaveAttribute('aria-hidden', 'true')
+    expect(hero.querySelector('.hm-float')).toBeNull() // the floating photo cards are gone
+  })
+
+  it('hero button takes a signed-in client to booking', async () => {
+    await signIn(CLIENT)
+    const { container } = renderApp('/')
+    const hero = container.querySelector('#hero')
+    expect(await within(hero).findByRole('link', { name: 'Book an Appointment' })).toHaveAttribute('href', '/book')
+  })
+
   it('shows the sections in the agreed order, after the opening animation', () => {
     sessionStorage.removeItem('nbl-intro-seen')
     const { container } = renderApp('/')
@@ -46,7 +65,7 @@ describe('Home page', () => {
 
   it('sends guests to sign up when they book, and the header links go to Services and Gallery', () => {
     renderApp('/')
-    expect(screen.getByRole('link', { name: 'Book an appointment' })).toHaveAttribute('href', '/register')
+    expect(screen.getByRole('link', { name: 'Book an Appointment' })).toHaveAttribute('href', '/register')
     const nav = screen.getByRole('navigation', { name: 'Main' })
     expect(within(nav).getByRole('link', { name: 'Book now' })).toHaveAttribute('href', '/register')
     expect(within(nav).getByRole('link', { name: 'Services' })).toHaveAttribute('href', '/#services')

@@ -51,8 +51,6 @@ export default function HomePage() {
     opener.current = null
   }, [])
 
-  // In-page buttons glide to their section instead of jumping.
-  const jump = useCallback((id) => (e) => { e.preventDefault(); scrollToSection(id) }, [])
 
   // Header links (/#services, /#gallery) and links from other pages land here with a hash: glide to that section.
   useEffect(() => {
@@ -97,7 +95,7 @@ export default function HomePage() {
         </div>
       )}
       <Intro plan={intro} />
-      <Hero bookTo={bookTo} deposit={deposit} typingStartsAfter={intro.lettersDone + 900} onJump={jump} />
+      <Hero bookTo={bookTo} revealAfter={intro.play ? intro.lettersDone + 500 : 0} />
       <PricingSection catalog={catalog} bookTo={bookTo} />
       <WorksGallery onOpen={openPhoto} />
       <RulesSection deposit={deposit} />
