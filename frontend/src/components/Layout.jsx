@@ -83,13 +83,10 @@ export function Layout() {
                 {/* About goes to Meet Leyah (built in Phase 5 of the landing page plan). */}
                 <Link to="/#about" className="nav-link">About</Link>
                 <Link to="/#visit" className="nav-link">Contact</Link>
-                {links.slice(1).map((link) => (
-                  <NavLink key={link.to} to={link.to} end={link.end} className="nav-link">
-                    {link.label}
-                  </NavLink>
-                ))}
                 {user ? (
-                  <ClientAccountMenu user={user} photo={apiPhotoSrc(user.photoUrl, user.photoDataUrl)} onSignOut={signOut} />
+                  // My bookings and Rate us live in the account menu, so the right side matches a guest's
+                  // (About, Contact, then one item) and stays clear of the centred logo.
+                  <ClientAccountMenu user={user} links={links.slice(1)} photo={apiPhotoSrc(user.photoUrl, user.photoDataUrl)} onSignOut={signOut} />
                 ) : (
                   // Sign in is the header's call to action. Signing up is reached through Book now, the hero's button and
                   // "Create an account" on the sign-in page.

@@ -160,7 +160,10 @@ select.input { cursor: pointer; }
 .nav-link.nav-cta:hover { background: #561f35; color: var(--white); }
 .nav-link.nav-cta:focus-visible { outline: none; box-shadow: var(--focus); }
 
-@media (min-width: 960px) {
+/* The links sit either side of the logo only from 1024 px: the longest right side (About, Contact and a client's menu,
+   whose name stops at 110 px) needs about 400 px next to the 200 px logo. Narrower screens use the menu button, so the
+   links never run into the logo. */
+@media (min-width: 1024px) {
   .menu-toggle { display: none; }
   .site-nav, .site-nav.open { display: flex; flex-direction: row; align-items: center; width: auto; padding: 0; gap: 2px; }
 

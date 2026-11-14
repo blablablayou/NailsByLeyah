@@ -142,9 +142,10 @@ export function AdminNav({ user, onSignOut, menuOpen }) {
 
 /**
  * A client's account menu, laid out like Leyah's: their photo (or initial) and first name, opening to who they are signed
- * in as (name and role), My profile and Log out (My bookings is already in the top bar). Clicking elsewhere or moving to another page closes it.
+ * in as (name and role), My bookings, Rate us (after a finished visit), My profile and Log out. Clicking elsewhere or moving to
+ * another page closes it.
  */
-export function ClientAccountMenu({ user, photo, onSignOut }) {
+export function ClientAccountMenu({ user, photo, onSignOut, links = [] }) {
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
   const [closedAt, setClosedAt] = useState(pathname)
@@ -170,6 +171,9 @@ export function ClientAccountMenu({ user, photo, onSignOut }) {
           <strong>{user.firstName} {user.lastName}</strong>
           <span className="nav-account-role">Client</span>
         </div>
+        {links.map((link) => (
+          <NavLink key={link.to} to={link.to} className="nav-panel-link" onClick={close}>{link.label}</NavLink>
+        ))}
         <NavLink to="/profile" className="nav-panel-link" onClick={close}>My profile</NavLink>
         <button type="button" className="nav-panel-link nav-signout" onClick={onSignOut}>Log out</button>
       </NavDropdown>

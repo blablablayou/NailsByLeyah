@@ -150,6 +150,22 @@ describe('Home page', () => {
     expect(within(nav).queryByRole('link', { name: 'Sign up' })).toBeNull()
   })
 
+  it("keeps a signed-in client's right side as short as a guest's: My bookings sits in the account menu", async () => {
+    const user = userEvent.setup()
+    await signIn(CLIENT)
+    renderApp('/')
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    const account = await within(nav).findByRole('button', { name: /^Account:/ })
+    const end = nav.querySelector('.nav-side-end')
+    expect([...end.children].map((el) => el.textContent)).toEqual(['About', 'Contact', expect.stringContaining('Account:')])
+
+    await user.click(account)
+    expect(within(nav).getByRole('link', { name: 'My bookings' })).toHaveAttribute('href', '/bookings')
+    expect(within(nav).getByRole('link', { name: 'My profile' })).toBeInTheDocument()
+    await user.click(within(nav).getByRole('link', { name: 'My bookings' }))
+    expect(await screen.findByRole('heading', { name: 'My bookings' })).toBeInTheDocument()
+  })
+
   it('opens and closes FAQ answers', async () => {
     const user = userEvent.setup()
     renderApp('/')
