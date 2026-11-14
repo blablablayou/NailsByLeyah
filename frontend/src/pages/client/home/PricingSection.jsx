@@ -4,6 +4,7 @@ import { Alert, PageLoader } from '../../../components/ui'
 import { errorMessage } from '../../../api/errors'
 import { canAnimate, peso, prefersReducedMotion } from './motion'
 import { softGelSets, withDesignName } from '../../../lib/services'
+import { SectionHeading } from './SectionHeading'
 
 const lowest = (items) => (items.length ? Math.min(...items.map((i) => i.price)) : null)
 
@@ -44,11 +45,9 @@ export function PricingSection({ catalog, bookTo }) {
   }
 
   return (
-    <section className="hm-prices hm-section" id="prices" tabIndex={-1} aria-labelledby="prices-title">
-      <div className="hm-head">
-        <h2 id="prices-title">Pricing</h2>
-        <p>Starting prices are shown below. The final price depends on the service, design and add-ons.</p>
-      </div>
+    <section className="hm-prices hm-section" id="services" tabIndex={-1} aria-labelledby="services-title">
+      <SectionHeading id="services-title" title="Pricing"
+        intro="Starting prices are shown below. The final price depends on the service, design and add-ons." />
       {catalog.loading && <PageLoader label="Loading prices…" />}
       {catalog.error && <Alert kind="error">{errorMessage(catalog.error)}</Alert>}
       {loaded && (

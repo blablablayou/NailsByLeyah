@@ -7,7 +7,6 @@ import { policies, schedule } from '../../content/salon'
 import { formatHours } from '../../lib/format'
 import { Intro } from './home/Intro'
 import { Hero } from './home/Hero'
-import { CloseupTour } from './home/CloseupTour'
 import { PhotoViewer, WorksGallery } from './home/WorksGallery'
 import { PricingSection } from './home/PricingSection'
 import { FaqSection, RulesSection } from './home/RulesAndFaq'
@@ -17,10 +16,14 @@ import '../../styles/home.css'
 
 export { Location } from './home/InfoCards'
 
-// Header links that follow the section on screen (see Layout: Explore → #tour, Pricing → #prices).
-const SPY_SECTIONS = ['tour', 'prices']
+// Header links that light up while their section is on screen (see Layout): Services, Gallery, About, Contact.
+// About (#about) starts working when Meet Leyah is built; a section that isn't on the page yet is skipped.
+const SPY_SECTIONS = ['services', 'gallery', 'about', 'visit']
 
-/** Animated landing page: intro, hero, "Up close" tour, Our Works, Pricing, Nail Rules, FAQ and Find us. */
+/**
+ * Landing page, in the order agreed for the redesign (docs/superpowers/plans/2026-11-14-landing-page-redesign.md):
+ * the opening animation, Hero, Services & Pricing, Our Works, (Meet Leyah, Phase 5), Nail Rules, FAQ, Visit Us.
+ */
 export default function HomePage() {
   const { user } = useAuth()
   const location = useLocation()
@@ -51,7 +54,7 @@ export default function HomePage() {
   // In-page buttons glide to their section instead of jumping.
   const jump = useCallback((id) => (e) => { e.preventDefault(); scrollToSection(id) }, [])
 
-  // Header links (/#tour, /#prices) and links from other pages land here with a hash: glide to that section.
+  // Header links (/#services, /#gallery) and links from other pages land here with a hash: glide to that section.
   useEffect(() => {
     const id = location.hash.slice(1)
     if (id) scrollToSection(id)
@@ -74,7 +77,7 @@ export default function HomePage() {
       if (e.isIntersecting) html.dataset.homeSection = e.target.id
       else if (html.dataset.homeSection === e.target.id) delete html.dataset.homeSection
     }), { rootMargin: '-50% 0px -50% 0px' })
-    SPY_SECTIONS.forEach((id) => spy.observe(document.getElementById(id)))
+    SPY_SECTIONS.map((id) => document.getElementById(id)).filter(Boolean).forEach((section) => spy.observe(section))
 
     // Back-to-top shows once the hero is off screen.
     const hero = new IntersectionObserver(([e]) => toTopRef.current?.classList.toggle('show', !e.isIntersecting))
@@ -95,12 +98,11 @@ export default function HomePage() {
       )}
       <Intro plan={intro} />
       <Hero bookTo={bookTo} deposit={deposit} typingStartsAfter={intro.lettersDone + 900} onJump={jump} />
-      <CloseupTour catalog={catalog.data} />
-      <WorksGallery onOpen={openPhoto} />
       <PricingSection catalog={catalog} bookTo={bookTo} />
+      <WorksGallery onOpen={openPhoto} />
       <RulesSection deposit={deposit} />
       <FaqSection deposit={deposit} hours={hours} />
-      <section className="hm-find hm-section" id="find-us" tabIndex={-1} aria-labelledby="find-us-title">
+      <section className="hm-find hm-section" id="visit" tabIndex={-1} aria-labelledby="find-us-title">
         <Location hours={hours} />
       </section>
       <PhotoViewer photo={viewer.photo} open={viewer.open} onClose={closePhoto} />

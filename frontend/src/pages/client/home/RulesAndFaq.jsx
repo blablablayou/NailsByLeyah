@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SectionHeading } from './SectionHeading'
 
 const style = (i) => ({ '--i': Math.min(i, 6) })
 
@@ -15,10 +16,7 @@ export function RulesSection({ deposit }) {
   ]
   return (
     <section className="hm-rules hm-section" id="rules" tabIndex={-1} aria-labelledby="rules-title">
-      <div className="hm-head">
-        <h2 id="rules-title">Nail Rules</h2>
-        <p className="hm-script">Beautiful nails, confident you.</p>
-      </div>
+      <SectionHeading id="rules-title" title="Nail Rules" intro="Beautiful nails, confident you." introClassName="hm-script" />
       <ol className="hm-rule-grid">
         {rules.map(([title, text, fine], i) => (
           <li key={title} className="hm-rule hm-reveal" style={style(i)}>
@@ -79,7 +77,7 @@ export function FaqSection({ deposit, hours }) {
   const half = Math.ceil(faq.length / 2)
   return (
     <section className="hm-faq hm-section" id="faq" tabIndex={-1} aria-labelledby="faq-title">
-      <div className="hm-head"><h2 id="faq-title">Frequently Asked Questions</h2></div>
+      <SectionHeading id="faq-title" title="Frequently Asked Questions" />
       {/* Two independent columns (first half left, second half right), so opening an answer only
           pushes down the questions below it in the same column. Phones show one column in order. */}
       <div className="hm-faq-list">

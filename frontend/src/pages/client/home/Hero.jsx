@@ -91,7 +91,7 @@ export function Hero({ bookTo, deposit, typingStartsAfter, onJump }) {
         <Typed lines={lines} startAfter={typingStartsAfter} />
         <div className="hm-hero-actions">
           <Link to={bookTo} className="btn btn-primary">Book an appointment</Link>
-          <a href="#tour" className="btn btn-secondary" onClick={onJump('tour')}>See the designs</a>
+          <a href="#gallery" className="btn btn-secondary" onClick={onJump('gallery')}>See the designs</a>
         </div>
       </div>
       <span className="hm-scroll-hint" aria-hidden="true">Scroll ↓</span>

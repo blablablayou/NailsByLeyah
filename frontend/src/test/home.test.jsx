@@ -6,7 +6,7 @@ describe('Home page', () => {
   it('shows every section, with starting prices from the live price list', async () => {
     renderApp('/')
     expect(screen.getByRole('heading', { level: 1, name: 'Beautiful nails, booked in minutes.' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Up close' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Up close' })).toBeNull() // replaced by the gallery (D2)
     expect(screen.getByRole('heading', { name: 'Our Works' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Nail Rules' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Find Nails by Leyah' })).toBeInTheDocument()
@@ -35,11 +35,30 @@ describe('Home page', () => {
     expect(row('Rhinestone')).toHaveTextContent('₱15')
   })
 
-  it('sends guests to sign up when they book, and links Explore and Pricing to their sections', () => {
+  it('shows the sections in the agreed order, after the opening animation', () => {
+    sessionStorage.removeItem('nbl-intro-seen')
+    const { container } = renderApp('/')
+    expect(container.querySelector('.hm-intro')).not.toBeNull() // the opening animation stays (D2, D11)
+    const ids = [...container.querySelectorAll('.home > section[id]')].map((s) => s.id)
+    // Meet Leyah (about) joins between gallery and rules in Phase 5.
+    expect(ids).toEqual(['hero', 'services', 'gallery', 'rules', 'faq', 'visit'])
+  })
+
+  it('sends guests to sign up when they book, and the header links go to Services and Gallery', () => {
     renderApp('/')
     expect(screen.getByRole('link', { name: 'Book an appointment' })).toHaveAttribute('href', '/register')
-    expect(screen.getByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/#tour')
-    expect(screen.getByRole('link', { name: 'Pricing' })).toHaveAttribute('href', '/#prices')
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByRole('link', { name: 'Book now' })).toHaveAttribute('href', '/register')
+    expect(within(nav).getByRole('link', { name: 'Services' })).toHaveAttribute('href', '/#services')
+    expect(within(nav).getByRole('link', { name: 'Gallery' })).toHaveAttribute('href', '/#gallery')
+    expect(within(nav).getByRole('link', { name: 'Contact' })).toHaveAttribute('href', '/#visit')
+    // Right of the logo: About, Contact, then Sign in (the call to action). Sign-up is reached through Book now and the hero.
+    const right = [...nav.querySelector('.nav-side-end').querySelectorAll('a')].map((a) => a.textContent)
+    expect(right).toEqual(['About', 'Contact', 'Sign in'])
+    expect(within(nav).getByRole('link', { name: 'About' })).toHaveAttribute('href', '/#about')
+    expect(within(nav).getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login')
+    expect(within(nav).getByRole('link', { name: 'Sign in' })).toHaveClass('nav-cta')
+    expect(within(nav).queryByRole('link', { name: 'Sign up' })).toBeNull()
   })
 
   it('opens and closes FAQ answers', async () => {

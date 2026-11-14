@@ -5,6 +5,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { useAuth } from '../auth/AuthContext'
 import { Alert } from './ui'
 import { SocialLinks } from './SocialLinks'
+import { BrandLogo } from './BrandLogo'
 import { LegalDocumentModal } from './Modal'
 import { salon } from '../content/salon'
 import { formatPhone, useSalon } from './SalonProfile'
@@ -44,8 +45,10 @@ export function Layout() {
     [user?.id, user?.role, isClientPage && location.pathname])
   const canRate = (visits.data ?? []).some((b) => b.status === 'Completed')
   const links = user ? clientLinks(canRate) : []
-  // Explore and Pricing glide to their home page section (HomePage reads the hash).
-  const homeLinks = [{ to: '/#tour', label: 'Explore' }, { to: '/#prices', label: 'Pricing' }]
+  // Left of the centred logo: booking first, then the two landing sections (HomePage glides to the hash).
+  // Guests are sent to sign up when they book, as the hero's button does.
+  const bookLink = user ? links[0] : { to: '/register', label: 'Book now' }
+  const homeLinks = [{ to: '/#services', label: 'Services' }, { to: '/#gallery', label: 'Gallery' }]
 
   const signOut = async () => {
     await logout()
@@ -56,9 +59,9 @@ export function Layout() {
     <div className="app-shell">
       <a href="#main" className="skip-link">Skip to content</a>
       <header className="site-header">
-        <div className={isAdmin ? 'header-inner header-admin' : 'header-inner'}>
+        <div className={isAdmin ? 'header-inner header-admin' : 'header-inner header-split'}>
           <Link to={isAdmin ? '/admin' : '/'} className="brand">
-            <img src="/img/logo-header.webp" width="360" height="164" alt={salon.name} />
+            <BrandLogo />
           </Link>
           <button type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="site-nav"
             onClick={() => setMenuOpen((open) => !open)}>
@@ -68,24 +71,31 @@ export function Layout() {
           {isAdmin ? (
             <AdminNav user={user} onSignOut={signOut} menuOpen={menuOpen} />
           ) : (
+            // Wide screens: these two groups sit either side of the centred logo; phones show them stacked in the menu.
             <nav id="site-nav" className={menuOpen ? 'site-nav open' : 'site-nav'} aria-label="Main">
-              {homeLinks.map((link) => (
-                <Link key={link.to} to={link.to} className="nav-link">{link.label}</Link>
-              ))}
-              {links.map((link) => (
-                <NavLink key={link.to} to={link.to} end={link.end} className="nav-link">
-                  {link.label}
-                </NavLink>
-              ))}
-              {user ? (
-                <ClientAccountMenu user={user} photo={apiPhotoSrc(user.photoUrl, user.photoDataUrl)} onSignOut={signOut} />
-              ) : (
-                <div className="nav-user">
-                  {/* The same pill as Sign up, outlined, so the two read as a pair. */}
-                  <NavLink to="/login" className={({ isActive }) => (isActive ? 'btn btn-secondary btn-sm is-current' : 'btn btn-secondary btn-sm')}>Log in</NavLink>
-                  <Link to="/register" className="btn btn-primary btn-sm">Sign up</Link>
-                </div>
-              )}
+              <div className="nav-side nav-side-start">
+                <NavLink to={bookLink.to} className="nav-link">{bookLink.label}</NavLink>
+                {homeLinks.map((link) => (
+                  <Link key={link.to} to={link.to} className="nav-link">{link.label}</Link>
+                ))}
+              </div>
+              <div className="nav-side nav-side-end">
+                {/* About goes to Meet Leyah (built in Phase 5 of the landing page plan). */}
+                <Link to="/#about" className="nav-link">About</Link>
+                <Link to="/#visit" className="nav-link">Contact</Link>
+                {links.slice(1).map((link) => (
+                  <NavLink key={link.to} to={link.to} end={link.end} className="nav-link">
+                    {link.label}
+                  </NavLink>
+                ))}
+                {user ? (
+                  <ClientAccountMenu user={user} photo={apiPhotoSrc(user.photoUrl, user.photoDataUrl)} onSignOut={signOut} />
+                ) : (
+                  // Sign in is the header's call to action. Signing up is reached through Book now, the hero's button and
+                  // "Create an account" on the sign-in page.
+                  <NavLink to="/login" className="nav-link nav-cta">Sign in</NavLink>
+                )}
+              </div>
             </nav>
           )}
         </div>
