@@ -1756,7 +1756,7 @@ select.input { appearance: auto; }
 .cp-swatch:hover:not(:disabled) { background: rgb(255 255 255 / .7); transform: translateY(-2px); }
 .cp-swatch:focus-visible { outline: 0; box-shadow: var(--focus); }
 .cp-swatch.on { border-color: var(--burgundy); background: rgb(255 255 255 / .8); }
-.cp-swatch .nail-pair { filter: drop-shadow(0 2px 2px rgb(0 0 0 / .14)); }
+/* No drop-shadow filter here: 58 filtered swatches made the chart lag; the nails already have a darker rim. */
 .cp-num { font-size: var(--fs-small); font-weight: 700; font-variant-numeric: tabular-nums; }
 .cp-check { position: absolute; top: -9px; right: -8px; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--burgundy);
   box-shadow: 0 0 0 2px var(--white); }
@@ -2491,4 +2491,13 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
   /* The colour card: chart (or nails) and text side by side, the button under the text. */
   .cc-card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; row-gap: 8px; }
   .cc-card .cc-action { grid-column: 2; justify-self: start; }
+}
+
+/* ---- Speed (2026-11-16): no "frosted glass" blur behind pop-ups and pinned bars ----
+   A backdrop blur makes the browser re-blur everything behind it whenever anything in front changes: in the colour chart
+   that cost ~300 ms per hover. A slightly stronger solid scrim / solid bar looks nearly the same and costs nothing. */
+.modal-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgb(48 37 42 / .55); }
+@media (max-width: 899px) {
+  .summary-next, .book .summary-next { backdrop-filter: none; -webkit-backdrop-filter: none; background: #fff; }
+  .cp-head, .cp-usebar { backdrop-filter: none; -webkit-backdrop-filter: none; background: #fff8fa; }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { memo, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { LIMITS } from '../validation/rules'
 import { COLLECTION, SHADE_COLORS, SHADE_NAMES, colorFor, colorLabel, perNailText, shadeNumber } from '../lib/shades'
@@ -8,7 +8,8 @@ import { COLLECTION, SHADE_COLORS, SHADE_NAMES, colorFor, colorLabel, perNailTex
  * a long soft shine down the left side and a bright glint near the tip. The shading and shine are drawn over the
  * colour, so one drawing works for every shade, from white to near-black.
  */
-export function NailPair({ color, className = '' }) {
+// Memoised: hovering the chart changes the preview many times a second, and the 58 swatches never need to redraw for it.
+export const NailPair = memo(function NailPair({ color, className = '' }) {
   const id = useId().replace(/:/g, '')
   // An almond nail, 26 wide and 60 tall, tip at the top.
   const nail = 'M13 1C19 1 25.5 14 25.5 34S21.5 64 13 64 .5 54 .5 34 7 1 13 1Z'
@@ -31,8 +32,13 @@ export function NailPair({ color, className = '' }) {
           <stop offset=".7" stopColor="#fff" stopOpacity=".55" />
           <stop offset="1" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
-        <filter id={`${id}f`} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation=".7" /></filter>
-        <filter id={`${id}g`} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2" /></filter>
+        {/* A soft white spot that fades out to its edge. The highlights use it instead of blur filters: they look the
+            same, but 58 swatches with blur filters made the colour chart lag (2026-11-16). */}
+        <radialGradient id={`${id}w`}>
+          <stop offset="0" stopColor="#fff" stopOpacity="1" />
+          <stop offset=".5" stopColor="#fff" stopOpacity=".6" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </radialGradient>
         <clipPath id={`${id}c`}><path d={nail} /></clipPath>
       </defs>
       {[{ x: 2.5, r: -3 }, { x: 29.5, r: 3 }].map(({ x, r }) => (
@@ -42,19 +48,19 @@ export function NailPair({ color, className = '' }) {
             <path d={nail} fill={`url(#${id}b)`} />
             <path d={nail} fill={`url(#${id}d)`} />
             {/* broad soft sheen, then the sharp shine along the left side */}
-            <ellipse cx="9" cy="27" rx="5" ry="17" fill="#fff" opacity=".42" filter={`url(#${id}g)`} />
-            <ellipse cx="16.5" cy="22" rx="3" ry="10" fill="#fff" opacity=".18" filter={`url(#${id}g)`} />
-            <path d="M5.6 13C3.6 22 3.4 35 5.8 46" stroke={`url(#${id}s)`} strokeWidth="3.2" strokeLinecap="round" fill="none" filter={`url(#${id}f)`} />
+            <ellipse cx="9" cy="27" rx="8.5" ry="21" fill={`url(#${id}w)`} opacity=".42" />
+            <ellipse cx="16.5" cy="22" rx="6" ry="13.5" fill={`url(#${id}w)`} opacity=".18" />
+            <path d="M5.6 13C3.6 22 3.4 35 5.8 46" stroke={`url(#${id}s)`} strokeWidth="2.6" strokeLinecap="round" fill="none" opacity=".9" />
             {/* bright glint near the tip, and the faint light caught on the lower right rim */}
-            <ellipse cx="16.8" cy="10" rx="2.2" ry="4.4" transform="rotate(22 16.8 10)" fill="#fff" opacity=".95" filter={`url(#${id}f)`} />
-            <path d="M22.8 38C22.6 47 20.6 55 16.5 60" stroke="#fff" strokeOpacity=".3" strokeWidth="1.4" strokeLinecap="round" fill="none" filter={`url(#${id}f)`} />
+            <ellipse cx="16.8" cy="10" rx="3.2" ry="5.6" transform="rotate(22 16.8 10)" fill={`url(#${id}w)`} opacity=".95" />
+            <path d="M22.8 38C22.6 47 20.6 55 16.5 60" stroke="#fff" strokeOpacity=".24" strokeWidth="1.4" strokeLinecap="round" fill="none" />
           </g>
           <path d={nail} fill="none" stroke="#000" strokeOpacity=".1" strokeWidth=".8" />
         </g>
       ))}
     </svg>
   )
-}
+})
 
 /** Pink satin bow for the corner of the colour chart. */
 function Bow() {
