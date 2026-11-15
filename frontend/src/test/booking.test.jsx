@@ -4,7 +4,8 @@ import { PaymentPanel } from '../components/PaymentPanel'
 import { CancelBookingDialog } from '../components/BookingDialogs'
 import { CLIENT, openPaymentTerms, readTermsAndAgree, renderApp, signIn, pickDate, pickShade } from './helpers'
 import { dateFromToday } from '../lib/dates'
-import { getDb } from './mockBackend/db'
+import { getDb, saveDb } from './mockBackend/db'
+import { SalonProvider } from '../components/SalonProfile'
 import { lookups } from './mockBackend/data/lookups'
 
 // Soft Gel Extension with Design (₱499) + Chrome × 2 (₱20): a ₱150 deposit or ₱519 in full.
@@ -12,6 +13,23 @@ const QUOTE = { total: 519, deposit: 150, fullAmount: 519, balanceDue: 369, line
 const panel = (props) => <PaymentPanel quote={QUOTE} option="Deposit" onOptionChange={() => {}} {...props} />
 
 describe('Payment step', () => {
+  it('shows who to pay and the GCash / Maya number (the salon phone) under the account name', async () => {
+    Object.assign(getDb().salonSettings, { phone: '09486475103', paymentAccountName: 'Leah Cabayao' })
+    saveDb()
+    render(<SalonProvider>{panel()}</SalonProvider>)
+    expect(await screen.findByText('Leah Cabayao')).toBeInTheDocument()
+    const number = screen.getByText('0948 647 5103')
+    expect(number.closest('.pay-to-number')).toHaveTextContent('GCash / Maya number: 0948 647 5103')
+  })
+
+  it('shows no number line while the salon phone is empty', async () => {
+    Object.assign(getDb().salonSettings, { phone: null, paymentAccountName: 'Leah Cabayao' })
+    saveDb()
+    render(<SalonProvider>{panel()}</SalonProvider>)
+    expect(await screen.findByText('Leah Cabayao')).toBeInTheDocument()
+    expect(screen.queryByText(/GCash \/ Maya number/)).toBeNull()
+  })
+
   it('starts with nothing picked: the client chooses how much and how to pay', async () => {
     const user = userEvent.setup()
     render(panel({ option: null }))

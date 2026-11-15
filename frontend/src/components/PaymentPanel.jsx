@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { LegalDocumentModal } from './Modal'
 import { Alert, Button, Money, StatusBadge } from './ui'
-import { useSalon } from './SalonProfile'
+import { formatPhone, useSalon } from './SalonProfile'
 
 const Icon = ({ children, className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
@@ -34,7 +34,7 @@ export const balanceAfter = (quote, option) => Math.max(0, quote.total - amountN
  */
 export function PaymentPanel({ quote, option, onOptionChange, onPay, error }) {
   const [method, setMethod] = useState(null) // nothing is picked for the client: they choose
-  const { paymentAccountName } = useSalon()
+  const { paymentAccountName, phone } = useSalon()
   const [understood, setUnderstood] = useState(false) // the agreement checkbox
   const [policyRead, setPolicyRead] = useState(false) // the policy was opened and read to the end: unlocks the checkbox
   const [paying, setPaying] = useState(false)
@@ -93,6 +93,8 @@ export function PaymentPanel({ quote, option, onOptionChange, onPay, error }) {
           ))}
         </div>
         {paymentAccountName && <p className="pay-to muted small">Account name: <strong>{paymentAccountName}</strong></p>}
+        {/* Leyah's GCash and Maya use the salon phone, so it is shown as the number to send to. */}
+        {phone && <p className="pay-to pay-to-number muted small">GCash / Maya number: <strong>{formatPhone(phone)}</strong></p>}
       </fieldset>
 
       <div>
