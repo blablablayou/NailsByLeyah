@@ -2501,3 +2501,14 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
   .summary-next, .book .summary-next { backdrop-filter: none; -webkit-backdrop-filter: none; background: #fff; }
   .cp-head, .cp-usebar { backdrop-filter: none; -webkit-backdrop-filter: none; background: #fff8fa; }
 }
+
+/* ---- Paying on Xendit (2026-11-16): a slot held while the client pays is not an appointment yet ---- */
+/* Same family as the draft badge (dashed = not a booking yet), in the amber of "waiting". */
+.badge-awaitingpayment { background: var(--white); color: var(--amber-700); border: 1px dashed var(--amber-700); }
+.hold-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.hold-card { border-left: 3px solid var(--amber-700); }
+.hold-card .booking-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hold-card p { margin: 0; }
+.hold-card .row { align-items: center; }
+.payment-return { display: grid; gap: 14px; }
+.payment-return p { margin: 0; }

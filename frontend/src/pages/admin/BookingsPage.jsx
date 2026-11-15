@@ -32,6 +32,8 @@ const STATUSES = [
   { value: 'Completed', label: 'Completed', title: 'Completed bookings', icon: <CheckIcon /> },
   { value: 'Cancelled', label: 'Cancelled', title: 'Cancelled bookings', icon: <CrossIcon /> },
   { value: 'NoShow', label: 'No-show', title: 'No-shows', icon: <BanIcon /> },
+  // Held while the client pays on Xendit's page; not a booking until paid, so only listed here.
+  { value: 'AwaitingPayment', label: 'Awaiting payment', title: 'Awaiting payment (held while the client pays)', icon: <ClockIcon /> },
 ]
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const PANELS_KEY = 'nbl.bookingPanels'

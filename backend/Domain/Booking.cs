@@ -118,6 +118,46 @@ public class Booking : IPayable, ICancellable, ISoftDeletable
     public DateTime? RefundSentAt { get; set; }
     public string? RefundReference { get; set; }
 
+    // ---- Paying on Xendit's hosted page (Payments:Provider=Xendit) ----
+
+    /// <summary>Until when the slot is held for the client to pay (AwaitingPayment only).</summary>
+    public DateTime? PaymentHoldUntil { get; set; }
+
+    /// <summary>Xendit's id for the latest payment session made for this booking.</summary>
+    public string? CheckoutSessionId { get; set; }
+
+    /// <summary>Xendit's page where the client pays, for "Continue payment".</summary>
+    public string? CheckoutUrl { get; set; }
+
+    /// <summary>The Pay click's idempotency key, so a repeated click returns this hold instead of making a second one.</summary>
+    public Guid? PaymentIdempotencyKey { get; set; }
+
+    /// <summary>GCash or Maya, as chosen on the payment step; the Xendit session only offers that channel.</summary>
+    public PaymentMethod? PendingPaymentMethod { get; set; }
+
+    /// <summary>A hold that was never paid: not a booking for Leyah (lists, dashboard, reports), whether still open or expired.</summary>
+    public bool IsUnpaidHold => AmountPaid == 0 && PaymentIdempotencyKey != null
+                                && Status is BookingStatus.AwaitingPayment or BookingStatus.Cancelled;
+
+    /// <summary>The hold ends without a payment (ran out, the client cancelled it, or Xendit couldn't start): the slot is freed.</summary>
+    public void ReleaseHold(DateTime utcNow)
+    {
+        if (Status != BookingStatus.AwaitingPayment)
+            throw new ConflictException($"A {Status} booking is not waiting for a payment.", "invalid_status");
+        Status = BookingStatus.Cancelled;
+        UpdatedAt = utcNow;
+    }
+
+    /// <summary>The client is sent to Xendit: the slot is held until <paramref name="holdUntilUtc"/>.</summary>
+    public void HoldForPayment(Guid idempotencyKey, PaymentMethod method, PaymentOption option, DateTime holdUntilUtc)
+    {
+        Status = BookingStatus.AwaitingPayment;
+        PaymentIdempotencyKey = idempotencyKey;
+        PendingPaymentMethod = method;
+        PaymentOption = option;
+        PaymentHoldUntil = holdUntilUtc;
+    }
+
     public DateTime? ConfirmedAt { get; set; }
     public int? ConfirmedByUserId { get; set; }
     public User? ConfirmedBy { get; set; }

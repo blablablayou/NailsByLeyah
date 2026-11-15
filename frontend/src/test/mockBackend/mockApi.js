@@ -219,7 +219,11 @@ const onGrid = (time) => {
 }
 
 const isActive = (b) => !b.isDeleted && (b.status === 'Pending' || b.status === 'Confirmed')
-const activeOn = (db, date) => db.bookings.filter((b) => isActive(b) && b.bookingDate === date)
+// A slot held while the client pays on Xendit counts as taken (the backend's HoldsSlot).
+const isHeld = (b) => !b.isDeleted && b.status === 'AwaitingPayment'
+// Never-paid holds (open or expired) are not bookings for Leyah's lists (the backend's ForLeyah).
+const isUnpaidHold = (b) => Boolean(b.paymentIdempotencyKey) && !(b.amountPaid > 0) && (b.status === 'AwaitingPayment' || b.status === 'Cancelled')
+const activeOn = (db, date) => db.bookings.filter((b) => (isActive(b) || isHeld(b)) && b.bookingDate === date)
 const blocksFor = (db, date) => db.blockedSlots.filter((s) => !s.isDeleted && s.date === date)
 const dayOfWeek = (date) => startsAt(date, '00:00:00').getDay()
 
@@ -320,6 +324,8 @@ function bookingResponse(db, b, includeClient) {
     perNailColors: b.perNailColors ?? null, colorRequest: b.colorRequest ?? null, colorRequestStatus: b.colorRequestStatus ?? null,
     rescheduleCount: b.rescheduleCount ?? 0, rescheduleLimit: bookingRules(db).rescheduleLimit,
     guestName: b.guestName ?? null, guestPhone: b.guestPhone ?? null, createdByAdmin: Boolean(b.createdByAdmin),
+    checkoutUrl: b.status === 'AwaitingPayment' ? b.checkoutUrl ?? null : null,
+    paymentHoldUntil: b.status === 'AwaitingPayment' ? b.paymentHoldUntil ?? null : null,
     cancellation: cancellation ? {
       reason: cancellation.reason, reasonLabel: reasonLabel(cancellation.reason), explanation: cancellation.explanation,
       cancelledByRole: db.users.find((u) => u.id === cancellation.cancelledByUserId)?.role ?? '', cancelledAt: cancellation.cancelledAt,
@@ -496,6 +502,15 @@ function createBooking(db, user, body) {
     return { status: 200, data: { booking: bookingResponse(db, b, false), receipt: receipt(db, earlier) } }
   }
 
+  // Xendit on: the same Pay click again returns its hold.
+  const held = db.bookings.find((b) => b.paymentIdempotencyKey && b.paymentIdempotencyKey === body.idempotencyKey)
+  if (held) {
+    if (held.clientId !== user.id) conflict('This payment request key has already been used.', 'idempotency_key_reused')
+    if (held.status !== 'AwaitingPayment' && !(held.amountPaid > 0))
+      fail(502, "The payment couldn't be started. You have not been charged. Please try again.", 'payment_unavailable')
+    return { status: 200, data: { booking: bookingResponse(db, held, false), receipt: null, checkoutUrl: held.status === 'AwaitingPayment' ? held.checkoutUrl : null } }
+  }
+
   if (body.termsVersion !== termsAndConditions.version)
     conflict('The booking policy and Terms & Conditions have been updated. Please read them again and agree before paying.', 'terms_outdated')
   const selection = resolveSelection(db, body.serviceId, body.addOns ?? [], { requireHand: true, removalServiceId: body.removalServiceId ?? null })
@@ -542,12 +557,33 @@ function createBooking(db, user, body) {
     note: String(body.note ?? '').trim() || null, paymentOption: option, amountPaid: amount,
     confirmedAt: null, confirmedByUserId: null,
     status: 'Pending', createdAt, updatedAt: createdAt, reminderSentAt: null, isDeleted: false }
+  if (db.flags.xendit) {
+    // Paying on Xendit's page (Payments:Provider=Xendit): the slot is held 15 minutes, nothing is paid yet.
+    Object.assign(booking, { status: 'AwaitingPayment', amountPaid: 0, paymentIdempotencyKey: body.idempotencyKey,
+      paymentMethod: body.paymentMethod, checkoutUrl: `https://checkout.test/ps-${booking.id}`,
+      paymentHoldUntil: new Date(Date.now() + 15 * 60_000).toISOString() })
+  }
   db.bookings.push(booking)
   for (const image of referenceImages) image.bookingId = booking.id
   for (const { addOn, nailCount, hand } of selection.addOns)
     db.bookingAddOns.push({ id: nextId('bookingAddOns'), bookingId: booking.id, addOnId: addOn.id, nailCount, hand, linePrice: addOn.price * nailCount })
   // The draft has become a real booking.
   db.bookingDrafts = db.bookingDrafts.filter((d) => d.clientId !== user.id)
+
+  if (db.flags.xendit && db.flags.failNextCheckout) {
+    // Xendit couldn't make a page: the hold is released at once, like the backend's StartCheckoutAsync.
+    db.flags.failNextCheckout = false
+    booking.status = 'Cancelled'
+    db.cancellations.push({ id: nextId('cancellations'), bookingId: booking.id, cancelledByUserId: user.id, reason: 'PaymentNotCompleted',
+      explanation: null, cancelledAt: nowIso() })
+    saveDb()
+    fail(502, "The payment couldn't be started. You have not been charged. Please try again.", 'payment_unavailable')
+  }
+  if (db.flags.xendit) {
+    audit(db, user.id, 'BookingHeldForPayment', 'Booking', booking.id, `Held 15 minutes for ${body.paymentMethod} payment on Xendit`)
+    saveDb()
+    return { status: 201, data: { booking: bookingResponse(db, booking, false), receipt: null, checkoutUrl: booking.checkoutUrl } }
+  }
 
   const prefix = body.paymentMethod === 'GCash' ? 'GC' : 'MY'
   const payment = { id: nextId('payments'), bookingId: booking.id, clientId: user.id, method: body.paymentMethod, option, amount,
@@ -1090,12 +1126,49 @@ const routes = [
     saveDb()
     return bookingResponse(db, booking, false)
   }],
+  // Paying on Xendit's page. flags.paidHolds lists the holds Xendit has the money for (what GET /sessions/{id} would say).
+  ['GET', '/bookings/:id/payment-status', (db, { params }) => {
+    const user = requireUser(db, 'Client')
+    const booking = ownedBooking(db, user, params.id)
+    if (booking.status === 'AwaitingPayment' && (db.flags.paidHolds ?? []).includes(booking.id)) {
+      const amount = booking.paymentOption === 'Full' ? booking.servicePrice : booking.depositAmount
+      const payment = { id: nextId('payments'), bookingId: booking.id, clientId: user.id, method: booking.paymentMethod ?? 'GCash',
+        option: booking.paymentOption ?? 'Deposit', amount, totalAmount: booking.servicePrice, balanceAfter: Math.max(0, booking.servicePrice - amount),
+        referenceNumber: `py-${booking.id}-${randomHex(4)}`, idempotencyKey: booking.paymentIdempotencyKey, status: 'Succeeded',
+        paidAt: nowIso(), verifiedAt: null, verifiedByUserId: null }
+      db.payments.push(payment)
+      Object.assign(booking, { status: 'Pending', amountPaid: amount })
+      saveDb()
+    }
+    if (booking.status === 'AwaitingPayment') return { status: 'Waiting', checkoutUrl: booking.checkoutUrl, holdUntil: booking.paymentHoldUntil }
+    if (booking.amountPaid > 0 && ['Pending', 'Confirmed', 'Completed'].includes(booking.status)) return { status: 'Paid', checkoutUrl: null, holdUntil: null }
+    if (booking.amountPaid > 0 && booking.status === 'Cancelled') return { status: 'PaidRefundDue', checkoutUrl: null, holdUntil: null, amount: booking.amountPaid }
+    return { status: 'NotCompleted', checkoutUrl: null, holdUntil: null }
+  }],
+  ['POST', '/bookings/:id/checkout', (db, { params }) => {
+    const user = requireUser(db, 'Client')
+    const booking = ownedBooking(db, user, params.id)
+    if (booking.status !== 'AwaitingPayment') conflict('This booking is not waiting for a payment.', 'invalid_status')
+    if (new Date(booking.paymentHoldUntil) <= new Date()) conflict('The time held for this payment has run out. Please book again.', 'hold_expired')
+    booking.checkoutUrl = `https://checkout.test/ps-${booking.id}-${randomHex(3)}`
+    booking.paymentHoldUntil = new Date(Date.now() + 15 * 60_000).toISOString()
+    saveDb()
+    return { checkoutUrl: booking.checkoutUrl }
+  }],
   ['POST', '/bookings/:id/cancel', (db, { params, body }) => {
     const user = requireUser(db, 'Client')
     const booking = ownedBooking(db, user, params.id)
     if (!lookups.clientCancellationReasons.some((r) => r.value === body.reason)) invalid('reason', 'Select a cancellation reason.')
     const ownReason = body.reason === 'Others' ? String(body.explanation ?? '').trim() : null
     if (body.reason === 'Others' && !ownReason) invalid('explanation', 'Please tell us the reason.')
+    if (booking.status === 'AwaitingPayment') {
+      // Nothing was paid: the slot is freed, no refund, no alert for Leyah.
+      booking.status = 'Cancelled'
+      db.cancellations.push({ id: nextId('cancellations'), bookingId: booking.id, cancelledByUserId: user.id, reason: body.reason,
+        explanation: ownReason || null, cancelledAt: nowIso() })
+      saveDb()
+      return bookingResponse(db, booking, false)
+    }
     if (startsAt(booking.bookingDate, booking.startTime) <= new Date())
       conflict('This appointment has already started or passed and can no longer be cancelled.', 'invalid_status')
     cancelBooking(db, user, booking, body.reason, ownReason)
@@ -1149,6 +1222,7 @@ const routes = [
     const serviceId = query.serviceId ? Number(query.serviceId) : null
     const matches = db.bookings.filter((b) => {
       if (b.isDeleted || (query.date && b.bookingDate !== query.date) || (query.status && b.status !== query.status)) return false
+      if (query.status !== 'AwaitingPayment' && isUnpaidHold(b)) return false
       if (!query.status && String(query.open) === 'true' && !isActive(b)) return false
       if (serviceId && b.serviceId !== serviceId && b.removalServiceId !== serviceId) return false
       if (!name) return true

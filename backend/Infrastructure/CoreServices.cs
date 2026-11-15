@@ -146,6 +146,8 @@ public static class AuditActions
     public const string SignedOutEverywhere = "SignedOutEverywhere";
     public const string PaymentSucceeded = "PaymentSucceeded";
     public const string PaymentFailed = "PaymentFailed";
+    public const string BookingHeldForPayment = "BookingHeldForPayment";
+    public const string PaymentNotCompleted = "PaymentNotCompleted";
     public const string ServiceCreated = "ServiceCreated";
     public const string ServiceUpdated = "ServiceUpdated";
     public const string ServiceDeleted = "ServiceDeleted";

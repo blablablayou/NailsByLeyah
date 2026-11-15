@@ -19,7 +19,7 @@ namespace NailsByLeah.Api.Tests.Integration;
 /// API's user secrets: ConnectionStrings:Tests, or else ConnectionStrings:Default). Time, outgoing messages and the
 /// payment provider are replaced with test doubles the tests can control and inspect.
 /// </summary>
-public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
+public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string AdminUsername = "test.admin";
     public const string AdminPassword = "AdminPass123";
@@ -44,6 +44,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public FakeTimeProvider Clock { get; } = new(StartTime);
     public CapturingNotificationService Notifications { get; } = new();
     public TestPaymentGateway Gateway { get; } = new();
+    public TestHostedCheckout Checkout { get; } = new();
+
+    /// <summary>Extra settings for a host that tests another configuration (for example Xendit payments).</summary>
+    protected virtual void ConfigureSettings(IWebHostBuilder builder) { }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -53,6 +57,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Database:ApplyMigrationsOnStartup", "true");
         builder.UseSetting("Auth:BcryptWorkFactor", "4");
         builder.UseSetting("Notifications:ReminderCheckIntervalMinutes", "0");
+        builder.UseSetting("Payments:HoldCheckIntervalSeconds", "0"); // tests run the expiry job themselves
         builder.UseSetting("AdminSeed:Username", AdminUsername);
         builder.UseSetting("AdminSeed:Email", "admin@test.local");
         builder.UseSetting("AdminSeed:Password", AdminPassword);
@@ -77,7 +82,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddSingleton<IBackgroundNotifications>(new InlineBackgroundNotifications(Notifications));
             services.RemoveAll<IPaymentGateway>();
             services.AddSingleton<IPaymentGateway>(Gateway);
+            services.RemoveAll<IHostedCheckout>();
+            services.AddSingleton<IHostedCheckout>(Checkout);
         });
+        ConfigureSettings(builder);
     }
 
     public HttpClient NewClient() => CreateClient(new WebApplicationFactoryClientOptions
@@ -274,5 +282,68 @@ public sealed class TestPaymentGateway : IPaymentGateway
 
         var reference = $"TEST-{Interlocked.Increment(ref _referenceCounter):D6}-{Guid.NewGuid():N}"[..24];
         return Task.FromResult(PaymentChargeResult.Success(reference));
+    }
+}
+
+/// <summary>A host whose clients pay on (fake) Xendit pages: bookings are held until the payment is confirmed.</summary>
+public sealed class XenditApiFactory : ApiFactory
+{
+    public const string CallbackToken = "test-callback-token";
+
+    protected override void ConfigureSettings(IWebHostBuilder builder)
+    {
+        builder.UseSetting("Payments:Provider", "Xendit");
+        builder.UseSetting("Xendit:SecretKey", "xnd_development_test");
+        builder.UseSetting("Xendit:CallbackToken", CallbackToken);
+        builder.UseSetting("Frontend:BaseUrl", "https://site.test");
+    }
+}
+
+/// <summary>Stands in for Xendit's Payment Sessions: records every session and lets tests decide what Xendit answers.</summary>
+public sealed class TestHostedCheckout : IHostedCheckout
+{
+    private int _counter;
+    private int _failNext;
+
+    public ConcurrentQueue<CheckoutRequest> Requests { get; } = new();
+    public ConcurrentDictionary<string, CheckoutStatus> Statuses { get; } = new();
+    public ConcurrentQueue<string> Expired { get; } = new();
+    public CheckoutRequest? LastRequest => Requests.LastOrDefault();
+
+    public void FailNext() => Interlocked.Exchange(ref _failNext, 1);
+
+    private int _failNextExpire;
+
+    /// <summary>The next cancel fails, as Xendit's does while a payment on that page is still processing.</summary>
+    public void FailNextExpire() => Interlocked.Exchange(ref _failNextExpire, 1);
+
+    public int CreatedFor(int bookingId) => Requests.Count(r => r.BookingId == bookingId);
+
+    /// <summary>What Xendit would answer for a session after the client paid it.</summary>
+    public void MarkPaid(string sessionId, decimal amount, string? paymentId = null) =>
+        Statuses[sessionId] = new CheckoutStatus(sessionId, CheckoutState.Paid, paymentId ?? $"py-{sessionId}", amount, "PHP"); // Xendit payment ids are unique
+
+    public Task<CheckoutSession> CreateAsync(CheckoutRequest request, CancellationToken ct)
+    {
+        Requests.Enqueue(request);
+        if (Interlocked.Exchange(ref _failNext, 0) == 1)
+            throw new HostedCheckoutException("Xendit is unavailable (test).");
+        var id = $"ps-test-{Interlocked.Increment(ref _counter)}-{Guid.NewGuid():N}"[..24];
+        Statuses[id] = new CheckoutStatus(id, CheckoutState.Open, null, null, null);
+        return Task.FromResult(new CheckoutSession(id, $"https://checkout.test/{id}"));
+    }
+
+    public Task<CheckoutStatus> GetStatusAsync(string sessionId, CancellationToken ct) =>
+        Task.FromResult(Statuses.TryGetValue(sessionId, out var status)
+            ? status
+            : throw new HostedCheckoutException("Unknown session (test)."));
+
+    public Task ExpireAsync(string sessionId, CancellationToken ct)
+    {
+        if (Interlocked.Exchange(ref _failNextExpire, 0) == 1)
+            throw new HostedCheckoutException("INVALID_SESSION_STATUS (test)");
+        Expired.Enqueue(sessionId);
+        Statuses[sessionId] = new CheckoutStatus(sessionId, CheckoutState.Expired, null, null, null);
+        return Task.CompletedTask;
     }
 }

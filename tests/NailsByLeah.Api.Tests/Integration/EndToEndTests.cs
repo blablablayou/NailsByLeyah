@@ -29,7 +29,7 @@ public sealed class EndToEndTests(ApiFactory factory) : IClassFixture<ApiFactory
             NailColor: TestHelpers.Color, TermsVersion: TestHelpers.TermsVersion));
         Assert.Equal("Pending", booked.Booking.Status); // confirmed later by the administrator
         Assert.Equal(280m, booked.Booking.TotalPrice); // BIAB 250 + Embossed Art 15 x 2
-        Assert.Equal("Maya", booked.Receipt.Method);
+        Assert.Equal("Maya", booked.Receipt!.Method);
 
         // Cancel with a reason.
         var cancel = await browser.PostJsonAsync($"/api/bookings/{booked.Booking.Id}/cancel",

@@ -36,6 +36,15 @@ public sealed class BookingsController(IClientBookingService bookings) : Control
     [HttpGet("{id:int}/receipt")]
     public Task<ReceiptResponse> Receipt(int id, CancellationToken ct) => bookings.GetReceiptAsync(User.GetUserId(), id, ct);
 
+    /// <summary>Paying on Xendit's page: Paid, Waiting or NotCompleted (the page the client comes back to asks this).</summary>
+    [HttpGet("{id:int}/payment-status")]
+    public Task<PaymentStatusResponse> PaymentStatus(int id, CancellationToken ct) => bookings.GetPaymentStatusAsync(User.GetUserId(), id, ct);
+
+    /// <summary>"Try again" / "Continue payment": a fresh Xendit page for a held booking.</summary>
+    [EnableRateLimiting(RateLimitPolicies.Booking)]
+    [HttpPost("{id:int}/checkout")]
+    public Task<CheckoutResponse> Checkout(int id, CancellationToken ct) => bookings.RetryCheckoutAsync(User.GetUserId(), id, ct);
+
     [EnableRateLimiting(RateLimitPolicies.Booking)]
     [HttpPost("{id:int}/reschedule")]
     public Task<BookingResponse> Reschedule(int id, RescheduleRequest request, CancellationToken ct) =>

@@ -3,7 +3,8 @@ import { Link } from 'react-router'
 import { api } from '../../api'
 import { useAsync } from '../../hooks/useAsync'
 import { errorMessage } from '../../api/errors'
-import { formatDate, formatTime } from '../../lib/format'
+import { formatClock, formatDate, formatTime } from '../../lib/format'
+import { goToExternal } from '../../lib/navigation'
 import { hoursUntil, startsAt, today } from '../../lib/dates'
 import { Alert, Button, EmptyState, Money, PageHeader, PageLoader, Spinner, StatusBadge } from '../../components/ui'
 import { CancelBookingDialog, RescheduleDialog } from '../../components/BookingDialogs'
@@ -22,6 +23,8 @@ const isActive = (b) => b.status === 'Pending' || b.status === 'Confirmed'
 const isUpcoming = (b) => isActive(b) && startsAt(b.bookingDate, b.startTime) > new Date()
 // Cancelled and no-show bookings are one tab; everything else that is over (normally Completed) is the other.
 const isCancelled = (b) => b.status === 'Cancelled' || b.status === 'NoShow'
+// Held while the client pays on Xendit's page: not an appointment yet, so it sits apart from the tabs.
+const isHold = (b) => b.status === 'AwaitingPayment'
 const TABS = [
   { value: 'upcoming', label: 'Upcoming', empty: 'No upcoming appointments' },
   { value: 'completed', label: 'Completed', empty: 'No completed appointments yet' },
@@ -45,10 +48,11 @@ export default function MyBookingsPage() {
   const upcoming = bookings.filter(isUpcoming).sort((a, b) => (a.bookingDate + a.startTime).localeCompare(b.bookingDate + b.startTime))
   const lists = {
     upcoming,
-    completed: bookings.filter((b) => !isUpcoming(b) && !isCancelled(b)),
+    completed: bookings.filter((b) => !isUpcoming(b) && !isCancelled(b) && !isHold(b)),
     cancelled: bookings.filter((b) => !isUpcoming(b) && isCancelled(b)),
   }
   const shown = lists[tab]
+  const holds = bookings.filter(isHold)
 
   const done = (text) => {
     setDialog(null)
@@ -62,6 +66,14 @@ export default function MyBookingsPage() {
       {message && <Alert kind="success" onClose={() => setMessage(null)}>{message}</Alert>}
       {draftHasProgress(draft) && (
         <DraftCard draft={draft} catalog={catalog} onDiscard={async () => { await clearBookingDraft(); history.reload() }} />
+      )}
+
+      {holds.length > 0 && (
+        <ul className="hold-cards" aria-label="Waiting for your payment">
+          {holds.map((b) => (
+            <HoldCard key={b.id} booking={b} onCancel={() => setDialog({ kind: 'cancel', booking: b })} />
+          ))}
+        </ul>
       )}
 
       <div className="tabs" role="tablist">
@@ -100,6 +112,38 @@ export default function MyBookingsPage() {
       )}
       {dialog?.kind === 'receipt' && <ReceiptDialog booking={dialog.booking} onClose={() => setDialog(null)} />}
     </div>
+  )
+}
+
+/** A booking held while the client pays on Xendit's page: they can go back to the page, or let the time go. */
+function HoldCard({ booking, onCancel }) {
+  const [opening, setOpening] = useState(false)
+  const [error, setError] = useState(null)
+  const continuePayment = async () => {
+    setError(null)
+    setOpening(true)
+    try {
+      const { checkoutUrl } = await api.bookings.retryCheckout(booking.id)
+      goToExternal(checkoutUrl)
+    } catch (err) {
+      setError(errorMessage(err))
+      setOpening(false)
+    }
+  }
+  return (
+    <li className="booking-card hold-card">
+      <div className="booking-card-head">
+        <strong>{formatDate(booking.bookingDate)} · {formatTime(booking.startTime)}</strong>
+        <StatusBadge status={booking.status} />
+      </div>
+      <p className="muted">{booking.serviceName} · total <Money amount={booking.totalPrice} /></p>
+      {booking.paymentHoldUntil && <p>Held for you until <strong>{formatClock(booking.paymentHoldUntil)}</strong>. Finish paying to book it.</p>}
+      {error && <Alert kind="error">{error}</Alert>}
+      <div className="row">
+        <Button onClick={continuePayment} loading={opening}>Continue payment</Button>
+        <button type="button" className="link-button" onClick={onCancel} disabled={opening}>Cancel</button>
+      </div>
+    </li>
   )
 }
 

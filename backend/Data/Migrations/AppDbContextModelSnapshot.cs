@@ -185,6 +185,16 @@ namespace NailsByLeah.Api.Data.Migrations
                         .HasColumnType("date")
                         .HasColumnName("booking_date");
 
+                    b.Property<string>("CheckoutSessionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("checkout_session_id");
+
+                    b.Property<string>("CheckoutUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("checkout_url");
+
                     b.Property<int>("ClientId")
                         .HasColumnType("integer")
                         .HasColumnName("client_id");
@@ -248,11 +258,24 @@ namespace NailsByLeah.Api.Data.Migrations
                         .HasColumnType("character varying(300)")
                         .HasColumnName("note");
 
+                    b.Property<DateTime?>("PaymentHoldUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("payment_hold_until");
+
+                    b.Property<Guid?>("PaymentIdempotencyKey")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payment_idempotency_key");
+
                     b.Property<string>("PaymentOption")
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)")
                         .HasColumnName("payment_option");
+
+                    b.Property<string>("PendingPaymentMethod")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("payment_method");
 
                     b.Property<string>("PerNailColors")
                         .HasMaxLength(600)
@@ -352,7 +375,12 @@ namespace NailsByLeah.Api.Data.Migrations
                     b.HasIndex(new[] { "BookingDate", "StartTime" }, "ux_bookings_active_slot")
                         .IsUnique()
                         .HasDatabaseName("ux_bookings_active_slot")
-                        .HasFilter("status IN ('Pending', 'Confirmed') AND NOT is_deleted");
+                        .HasFilter("status IN ('AwaitingPayment', 'Pending', 'Confirmed') AND NOT is_deleted");
+
+                    b.HasIndex(new[] { "PaymentIdempotencyKey" }, "ux_bookings_payment_idempotency_key")
+                        .IsUnique()
+                        .HasDatabaseName("ux_bookings_payment_idempotency_key")
+                        .HasFilter("payment_idempotency_key IS NOT NULL");
 
                     b.ToTable("bookings", null, t =>
                         {

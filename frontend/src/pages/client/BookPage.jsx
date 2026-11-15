@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { api, referenceImageUrl } from '../../api'
 import { addMinutesToTime, today } from '../../lib/dates'
 import { clearBookingDraft, draftHasProgress, loadBookingDraft, saveBookingDraft } from '../../lib/bookingDraft'
@@ -14,7 +14,8 @@ import { SlotPicker } from '../../components/SlotPicker'
 import { ColorChooser, EMPTY_NAILS, nailsComplete, nailsStarted } from '../../components/ColorPicker'
 import { colorFor, colorLabel, perNailText } from '../../lib/shades'
 import { PaymentPanel, amountNow, balanceAfter } from '../../components/PaymentPanel'
-import { Receipt } from '../../components/Receipt'
+import { BookingReceived } from '../../components/BookingReceived'
+import { goToExternal } from '../../lib/navigation'
 
 const STEPS = ['Service', 'Date & time', 'Summary & payment']
 const HANDS = [{ value: 'Left', label: 'Left hand' }, { value: 'Right', label: 'Right hand' }, { value: 'Both', label: 'Both hands' }]
@@ -144,6 +145,7 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
   const [stepError, setStepError] = useState(null)
   const [payError, setPayError] = useState(null)
   const [result, setResult] = useState(null)
+  const [checkoutMethod, setCheckoutMethod] = useState(null) // leaving for Xendit's page: 'GCash' or 'Maya'
   const [paymentOption, setPaymentOption] = useState(null) // 'Deposit' | 'Full', chosen by the client (nothing picked at first)
 
   // Every change is saved to the client's account as a Draft (shortly after the last change, and straight away
@@ -206,7 +208,9 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
   // recognised by the server and never charged twice (Ref 12.4).
   const detailsKey = JSON.stringify([serviceId, removalId, color, perNail, colorRequest, colorImages.map((r) => r.id), nails, hands, date, time, note,
     paymentOption, referenceImages.map((r) => r.id)])
-  const idempotencyKey = useMemo(() => crypto.randomUUID(), [detailsKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  // A new key when the details change, or when Xendit couldn't start (that attempt's hold was released).
+  const [keyNonce, setKeyNonce] = useState(0)
+  const idempotencyKey = useMemo(() => crypto.randomUUID(), [detailsKey, keyNonce]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Which times are free depends on how long the appointment takes, so a different service needs the time chosen again.
   // A service without add-ons (Plain) clears any chosen, so they are never charged or sent.
@@ -296,12 +300,25 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
         referenceImageIds: referenceImages.map((r) => r.id),
       })
       // The server deleted the draft together with creating the booking.
+      if (response.checkoutUrl) {
+        // Paying on Xendit's page: the slot is held while the client pays there, then they come back to /bookings/payment.
+        setCheckoutMethod(paymentMethod)
+        goToExternal(response.checkoutUrl)
+        return
+      }
+      if (!response.receipt) {
+        setPayError('Your payment page is still opening. Please wait a moment and press Pay again.')
+        return
+      }
       setResult(response)
     } catch (err) {
       if (err instanceof ApiError && err.code === 'slot_unavailable') {
         setTime('')
         setStep(1)
         setStepError(err.message)
+      } else if (err instanceof ApiError && err.code === 'payment_unavailable') {
+        setKeyNonce((n) => n + 1) // that attempt is over: the next Pay starts a new one
+        setPayError(err.message)
       } else if (err instanceof ApiError && err.code === 'terms_outdated') {
         setPayError(`${err.message} Reload the page to see the new version.`)
       } else if (err instanceof ApiError && err.code === 'image_unavailable') {
@@ -313,21 +330,8 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
     }
   }
 
-  if (result) {
-    return (
-      <div className="narrow stack">
-        <PageHeader title="Booking received!"
-          subtitle={`Your payment went through. Leyah will confirm your ${formatDate(result.booking.bookingDate)}, ${formatTime(result.booking.startTime)} appointment shortly.`} />
-        <Card>
-          <Receipt receipt={result.receipt} booking={result.booking} />
-        </Card>
-        <div className="row">
-          <Link to="/bookings" className="btn btn-primary">Go to my bookings</Link>
-          <Link to="/" className="btn btn-secondary">Back to home</Link>
-        </div>
-      </div>
-    )
-  }
+  if (result) return <BookingReceived booking={result.booking} receipt={result.receipt} />
+  if (checkoutMethod) return <PageLoader label={`Opening ${checkoutMethod}… Your time is held while you pay.`} />
 
   return (
     <div className="stack book">

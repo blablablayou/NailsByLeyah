@@ -55,6 +55,11 @@ public sealed class CooldownException(int retryAfterSeconds)
     public int RetryAfterSeconds { get; } = retryAfterSeconds;
 }
 
+/// <summary>The payment provider couldn't start a checkout; the client has not been charged.</summary>
+public sealed class PaymentUnavailableException()
+    : AppException(StatusCodes.Status502BadGateway, "Payment unavailable",
+        "The payment couldn't be started. You have not been charged. Please try again.", "payment_unavailable");
+
 public sealed class PaymentFailedException(string detail)
     : AppException(StatusCodes.Status402PaymentRequired, "Payment failed", detail, "payment_failed");
 

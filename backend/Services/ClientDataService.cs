@@ -62,7 +62,8 @@ public sealed class ClientDataService(
         if (client is null || client.Role != UserRole.Client)
             throw new NotFoundException(NotFoundMessage);
 
-        var bookings = await clientData.GetBookingsAsync(client.Id, ct);
+        // Holds never paid on Xendit's page are not bookings for Leyah's counts (they are still erased with the client).
+        var bookings = (await clientData.GetBookingsAsync(client.Id, ct)).Where(b => !b.IsUnpaidHold).ToList();
         var photos = await clientData.GetReferenceImagesAsync(client.Id, ct);
         var feedback = await clientData.GetFeedbackAsync(client.Id, ct);
         return new ClientDataResponse(client.Id, client.FirstName, client.LastName, client.Username, client.Email, client.PhoneNumber,

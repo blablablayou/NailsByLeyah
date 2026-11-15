@@ -99,7 +99,8 @@ All settings are in `appsettings.json`. Override any of them with user secrets o
 | `AdminSeed` | First administrator (user secrets only) |
 | `ForwardedHeaders` | Reading the visitor's real address behind the host's proxy. On the host: `Enabled` true. `ForwardLimit` is how many `X-Forwarded-For` entries to believe, counted from the right (2 on Render) |
 | `RateLimits` | How many requests one visitor or client may make per time window (see [Security](#security)). `Enabled: false` only in tests |
-| `Payments:AllowSimulated` | Test deployments only: lets the site start with the simulated gateway, which approves every payment without money moving. Off by default, so the live site refuses to start without a real gateway. Remove it before real clients book |
+| `Payments` | `Provider`: `Simulated` (default; approves every payment at once, no money moves) or `Xendit` (Xendit's hosted GCash/Maya checkout, confirmed by its webhook). `HoldMinutes`: how long a slot is held while the client pays on Xendit (15). `AllowSimulated`: test deployments only, lets the site start with `Simulated` outside Development; remove it before real clients book |
+| `Xendit` | `SecretKey` and `CallbackToken` (the webhook verification token), user secrets or host settings only. Needed for `Provider=Xendit`; may stay set with `Simulated` so payments already sent to Xendit still finish |
 
 ## Test deployment on Render
 
@@ -121,6 +122,8 @@ Environment variables (secrets are pasted in Render's dashboard, never committed
 | `Supabase__Url`, `Supabase__SecretKey` | The Supabase project's address and secret key (design photos) |
 | `AdminSeed__Username`, `AdminSeed__Email`, `AdminSeed__Password`, `AdminSeed__PhoneNumber` | First administrator, created only if that username doesn't exist yet |
 | `Payments__AllowSimulated` | `true` while payments are simulated; delete it before real clients book |
+| `Payments__Provider` | `Simulated`, or `Xendit` once Xendit is set up (switch back to `Simulated` as the fallback) |
+| `Xendit__SecretKey`, `Xendit__CallbackToken` | Xendit's test secret key and webhook verification token |
 
 A keep-awake ping (cron-job.org or UptimeRobot) opens `https://<address>/api/health/database` every 10 minutes, so
 the free service doesn't sleep and the free database doesn't pause. After the first deploy, check the time zone

@@ -45,7 +45,7 @@ public sealed class BookingTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal(669m, result.Booking.TotalPrice); // 499 + 15x10 + 10x2
         Assert.Equal(150m, result.Booking.DepositAmount);
         Assert.Equal(519m, result.Booking.BalanceDue);
-        Assert.Equal(150m, result.Receipt.Amount);
+        Assert.Equal(150m, result.Receipt!.Amount);
         Assert.Equal("GCash", result.Receipt.Method);
         Assert.False(result.Receipt.Refundable);
         Assert.False(string.IsNullOrWhiteSpace(result.Receipt.ReferenceNumber));
@@ -139,7 +139,7 @@ public sealed class BookingTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var a = await first.ReadAsync<CreateBookingResponse>();
         var b = await second.ReadAsync<CreateBookingResponse>();
         Assert.Equal(a.Booking.Id, b.Booking.Id);
-        Assert.Equal(a.Receipt.ReferenceNumber, b.Receipt.ReferenceNumber);
+        Assert.Equal(a.Receipt!.ReferenceNumber, b.Receipt!.ReferenceNumber);
         Assert.Equal(1, factory.Gateway.ChargeCount(request.IdempotencyKey));
         Assert.Equal(1, factory.WithDb(db => db.Payments.Count(p => p.IdempotencyKey == request.IdempotencyKey)));
     }

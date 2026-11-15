@@ -57,6 +57,15 @@ public static class Labels
             return ClientCancellationReasons[client];
         if (Enum.TryParse<AdminCancellationReason>(reason, out var admin))
             return AdminCancellationReasons[admin];
+        if (reason == SystemCancellationReasons.PaymentNotCompleted)
+            return "Payment not completed";
         return reason;
     }
+}
+
+/// <summary>Reasons the system records itself; never offered to clients or Leyah as a choice.</summary>
+public static class SystemCancellationReasons
+{
+    /// <summary>The client didn't finish paying on Xendit's page before the hold ran out (or Xendit couldn't start).</summary>
+    public const string PaymentNotCompleted = "PaymentNotCompleted";
 }

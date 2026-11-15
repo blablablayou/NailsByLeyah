@@ -84,6 +84,10 @@ export const api = {
     receipt: (id) => get(`/bookings/${id}/receipt`),
     reschedule: (id, body) => post(`/bookings/${id}/reschedule`, body),
     cancel: (id, body) => post(`/bookings/${id}/cancel`, body),
+    /** Paying on Xendit's page: { status: Paid | Waiting | NotCompleted, checkoutUrl, holdUntil }. */
+    paymentStatus: (id) => get(`/bookings/${id}/payment-status`),
+    /** A fresh Xendit page for a held booking: { checkoutUrl }. */
+    retryCheckout: (id) => post(`/bookings/${id}/checkout`),
   },
   /** The booking the signed-in client started but hasn't paid for (null when there is none). */
   bookingDraft: {

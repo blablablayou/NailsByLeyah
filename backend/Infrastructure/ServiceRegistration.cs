@@ -32,6 +32,7 @@ public static class ServiceRegistration
         services.AddOptions<NotificationOptions>().Bind(configuration.GetSection(NotificationOptions.Section));
         services.AddOptions<DatabaseOptions>().Bind(configuration.GetSection(DatabaseOptions.Section));
         services.AddOptions<PaymentOptions>().Bind(configuration.GetSection(PaymentOptions.Section));
+        services.AddOptions<XenditOptions>().Bind(configuration.GetSection(XenditOptions.Section));
         services.AddOptions<AdminSeedOptions>().Bind(configuration.GetSection(AdminSeedOptions.Section));
         services.AddOptions<UploadOptions>().Bind(configuration.GetSection(UploadOptions.Section));
         services.AddOptions<SupabaseOptions>().Bind(configuration.GetSection(SupabaseOptions.Section));
@@ -105,10 +106,21 @@ public static class ServiceRegistration
         services.AddScopedFor<ServiceCatalogService, IServiceCatalog, IServiceManagement>();
         services.AddScopedFor<ScheduleService, ISlotAvailability, IScheduleManagement>();
         services.AddScopedFor<BookingService, IClientBookingService, IAdminBookingService>();
+        services.AddScoped<ICheckoutConfirmationService, CheckoutConfirmationService>();
         services.AddScopedFor<ReferenceImageService, IReferenceImageService, IReferenceImageAttacher>();
 
         // External integrations
         services.AddSingleton<IPaymentGateway, SimulatedPaymentGateway>();
+        // Xendit's hosted checkout when its keys are set (they may stay set with Payments:Provider=Simulated, so payments
+        // already sent to Xendit still finish); otherwise a stand-in that fails like an unavailable provider.
+        if (configuration.GetSection(XenditOptions.Section).Get<XenditOptions>() is { IsConfigured: true })
+            services.AddHttpClient<IHostedCheckout, XenditCheckout>((sp, client) =>
+            {
+                client.BaseAddress = new Uri(sp.GetRequiredService<IOptions<XenditOptions>>().Value.BaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(15);
+            });
+        else
+            services.AddSingleton<IHostedCheckout, UnconfiguredHostedCheckout>();
         services.AddScoped<INotificationService, EmailNotificationService>();
         // Email channel: Brevo's HTTPS API when a key is set, else the log (the live site refuses to start without a key).
         services.AddHttpClient<BrevoEmailSender>((sp, client) =>
@@ -132,6 +144,8 @@ public static class ServiceRegistration
                 : sp.GetRequiredService<FileSystemReferenceImageStore>());
         services.AddScoped<IAppointmentReminderJob, AppointmentReminderJob>();
         services.AddHostedService<AppointmentReminderWorker>();
+        services.AddScoped<IPaymentHoldExpiryJob, PaymentHoldExpiryJob>();
+        services.AddHostedService<PaymentHoldExpiryWorker>();
         services.AddSingleton<ErrorAlertQueue>();
         services.AddSingleton<ILoggerProvider, ErrorAlertLoggerProvider>();
         services.AddSingleton<ErrorAlertSender>();

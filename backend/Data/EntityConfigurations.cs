@@ -125,7 +125,16 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
         b.HasIndex(x => new { x.BookingDate, x.StartTime }, IndexNames.BookingsActiveSlot)
             .HasDatabaseName(IndexNames.BookingsActiveSlot)
             .IsUnique()
-            .HasFilter("status IN ('Pending', 'Confirmed') AND NOT is_deleted");
+            .HasFilter("status IN ('AwaitingPayment', 'Pending', 'Confirmed') AND NOT is_deleted");
+
+        // Paying on Xendit's page: one hold per Pay click.
+        b.Property(x => x.CheckoutSessionId).HasMaxLength(100);
+        b.Property(x => x.CheckoutUrl).HasMaxLength(500);
+        b.Property(x => x.PendingPaymentMethod).HasColumnName("payment_method");
+        b.HasIndex(x => x.PaymentIdempotencyKey, IndexNames.BookingsPaymentIdempotencyKey)
+            .HasDatabaseName(IndexNames.BookingsPaymentIdempotencyKey)
+            .IsUnique()
+            .HasFilter("payment_idempotency_key IS NOT NULL");
     }
 }
 
@@ -290,6 +299,7 @@ public static class IndexNames
     public const string UsersPhoneNumber = "ux_users_phone_number";
     public const string BookingsActiveSlot = "ux_bookings_active_slot";
     public const string PaymentsIdempotencyKey = "ux_payments_idempotency_key";
+    public const string BookingsPaymentIdempotencyKey = "ux_bookings_payment_idempotency_key";
 }
 
 internal sealed class SalonSettingsConfiguration : IEntityTypeConfiguration<SalonSettings>

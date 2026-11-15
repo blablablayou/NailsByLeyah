@@ -6,6 +6,7 @@ using NailsByLeah.Api.Domain;
 using NailsByLeah.Api.Errors;
 using NailsByLeah.Api.Infrastructure;
 using NailsByLeah.Api.Notifications;
+using NailsByLeah.Api.Payments;
 using NailsByLeah.Api.Validation;
 
 namespace NailsByLeah.Api.Services;
@@ -21,6 +22,12 @@ public interface IClientBookingService
     Task<ReceiptResponse> GetReceiptAsync(int clientId, int bookingId, CancellationToken ct = default);
     Task<BookingResponse> RescheduleAsync(int clientId, int bookingId, RescheduleRequest request, CancellationToken ct = default);
     Task<BookingResponse> CancelAsync(int clientId, int bookingId, ClientCancelRequest request, CancellationToken ct = default);
+
+    /// <summary>For the page the client returns to from Xendit: asks Xendit itself if no notification has arrived yet.</summary>
+    Task<PaymentStatusResponse> GetPaymentStatusAsync(int clientId, int bookingId, CancellationToken ct = default);
+
+    /// <summary>A new Xendit page for a held booking; the earlier page is closed.</summary>
+    Task<CheckoutResponse> RetryCheckoutAsync(int clientId, int bookingId, CancellationToken ct = default);
 }
 
 /// <summary>Booking operations available to administrators (Ref 11.2, 11.5).</summary>
@@ -75,7 +82,12 @@ public sealed class BookingService(
     IOptions<LegalOptions> legalOptions,
     ISalonProfileService salonProfile,
     IBookingRulesService bookingRules,
-    IUserRepository users) : IClientBookingService, IAdminBookingService
+    IUserRepository users,
+    IHostedCheckout checkout,
+    IOptions<PaymentOptions> paymentOptions,
+    IOptions<FrontendOptions> frontendOptions,
+    ICheckoutConfirmationService confirmations,
+    ILogger<BookingService> logger) : IClientBookingService, IAdminBookingService
 {
     private const string SlotTakenMessage = "This time slot has just been booked by someone else. Please choose another slot.";
 
@@ -91,6 +103,10 @@ public sealed class BookingService(
         // A repeated Pay click after the first request finished returns the original result (Ref 12.4).
         if (await payments.FindByIdempotencyKeyAsync(request.IdempotencyKey, ct) is { } earlier)
             return (await BuildCreateResponseAsync(clientId, earlier, ct), false);
+        // With Xendit the Pay click holds the slot first; the same click again returns that hold and its checkout.
+        var hosted = paymentOptions.Value.Provider == PaymentProvider.Xendit;
+        if (hosted && await bookings.FindByPaymentIdempotencyKeyAsync(request.IdempotencyKey, ct) is { } held)
+            return (await ReplayHoldAsync(clientId, held, ct), false);
 
         // The client must have agreed to the Terms version in force now, not one shown before an update.
         if (request.TermsVersion != legalOptions.Value.TermsVersion)
@@ -117,6 +133,8 @@ public sealed class BookingService(
             // taking the slot; return the first result instead of "slot taken".
             if (await payments.FindByIdempotencyKeyAsync(request.IdempotencyKey, ct) is { } committed)
                 return (await BuildCreateResponseAsync(clientId, committed, ct), false);
+            if (hosted && await bookings.FindByPaymentIdempotencyKeyAsync(request.IdempotencyKey, ct) is { } heldNow)
+                return (await ReplayHoldAsync(clientId, heldNow, ct), false);
             throw;
         }
 
@@ -132,6 +150,8 @@ public sealed class BookingService(
                 // A duplicate click that arrived at the same time waited on the lock above; return the first result.
                 if (await payments.FindByIdempotencyKeyAsync(request.IdempotencyKey, tx) is { } concurrent)
                     return new CreateOutcome(concurrent, null);
+                if (hosted && await bookings.FindByPaymentIdempotencyKeyAsync(request.IdempotencyKey, tx) is { } concurrentHold)
+                    return new CreateOutcome(null, null, concurrentHold);
 
                 await slots.EnsureFreeAsync(request.BookingDate, request.StartTime, duration, movingBookingId: null, tx);
 
@@ -176,6 +196,16 @@ public sealed class BookingService(
                 // The draft has become a real booking. Deleted in this transaction, so a failed payment keeps it.
                 await drafts.DeleteForClientAsync(clientId, tx);
 
+                if (hosted)
+                {
+                    // Xendit: hold the slot now; the payment is confirmed later by Xendit (webhook or status check).
+                    booking.HoldForPayment(request.IdempotencyKey, request.PaymentMethod, request.PaymentOption,
+                        now.AddMinutes(paymentOptions.Value.HoldMinutes));
+                    audit.Record(AuditActions.BookingHeldForPayment, nameof(Booking), booking.Id,
+                        $"{selection.Service.Name} on {Describe(booking.BookingDate, booking.StartTime)} held {paymentOptions.Value.HoldMinutes} minutes for {request.PaymentMethod} payment on Xendit");
+                    return new CreateOutcome(null, booking);
+                }
+
                 var payment = await paymentService.CollectAsync(booking, request.PaymentOption, request.PaymentMethod, request.IdempotencyKey, tx);
                 audit.Record(AuditActions.BookingCreated, nameof(Booking), booking.Id,
                     $"{selection.Service.Name}{(selection.Removal is { } r ? $" + removal ({r.Name})" : "")} on {Describe(booking.BookingDate, booking.StartTime)}, total PHP {booking.TotalPrice:0.00}. Booking policy and Terms v{legalOptions.Value.TermsVersion} accepted");
@@ -193,6 +223,13 @@ public sealed class BookingService(
         {
             throw new ConflictException(SlotTakenMessage, "slot_unavailable");
         }
+        catch (UniqueConstraintViolationException ex) when (ex.IndexName == IndexNames.BookingsPaymentIdempotencyKey)
+        {
+            var winner = await bookings.FindByPaymentIdempotencyKeyAsync(request.IdempotencyKey, ct);
+            if (winner is null)
+                throw;
+            return (await ReplayHoldAsync(clientId, winner, ct), false);
+        }
         catch (UniqueConstraintViolationException ex) when (ex.IndexName == IndexNames.PaymentsIdempotencyKey)
         {
             var winner = await payments.FindByIdempotencyKeyAsync(request.IdempotencyKey, ct);
@@ -201,12 +238,16 @@ public sealed class BookingService(
             return (await BuildCreateResponseAsync(clientId, winner, ct), false);
         }
 
+        if (outcome.ExistingHold is { } existing)
+            return (await ReplayHoldAsync(clientId, existing, ct), false);
         if (outcome.NewBooking is null)
-            return (await BuildCreateResponseAsync(clientId, outcome.Payment, ct), false);
+            return (await BuildCreateResponseAsync(clientId, outcome.Payment!, ct), false);
+        if (hosted)
+            return (await StartCheckoutAsync(clientId, outcome.NewBooking, ct), true);
 
         var details = await bookings.GetDetailsAsync(outcome.NewBooking.Id, ct) ?? outcome.NewBooking;
-        await NotifyConfirmedAsync(details, outcome.Payment);
-        return (new CreateBookingResponse(Map(details, includeClient: false, rules.RescheduleLimit), BookingMapper.ToReceipt(outcome.Payment, details)), true);
+        await NotifyConfirmedAsync(details, outcome.Payment!);
+        return (new CreateBookingResponse(Map(details, includeClient: false, rules.RescheduleLimit), BookingMapper.ToReceipt(outcome.Payment!, details)), true);
     }
 
     public async Task<IReadOnlyList<BookingResponse>> GetHistoryAsync(int clientId, CancellationToken ct = default)
@@ -229,6 +270,8 @@ public sealed class BookingService(
     public async Task<BookingResponse> RescheduleAsync(int clientId, int bookingId, RescheduleRequest request, CancellationToken ct = default)
     {
         var booking = await GetOwnedAsync(clientId, bookingId, ct);
+        if (booking.Status == BookingStatus.AwaitingPayment)
+            throw new ConflictException("Finish paying for this booking before moving it.", "invalid_status");
         var rules = await bookingRules.GetAsync(ct);
         if (booking.RescheduleCount >= rules.RescheduleLimit)
             throw new ConflictException(
@@ -251,6 +294,8 @@ public sealed class BookingService(
     public async Task<BookingResponse> CancelAsync(int clientId, int bookingId, ClientCancelRequest request, CancellationToken ct = default)
     {
         var booking = await GetOwnedAsync(clientId, bookingId, ct);
+        if (booking.Status == BookingStatus.AwaitingPayment)
+            return await CancelHoldAsync(clientId, booking, request, ct);
         if (booking.StartsAtLocal <= clock.LocalNow)
             throw new ConflictException("This appointment has already started or passed and can no longer be cancelled.", "invalid_status");
 
@@ -665,19 +710,232 @@ public sealed class BookingService(
     }
 
     /// <summary>The booking is already committed: emails go out after the answer, and a failed one is only logged.</summary>
-    private async Task NotifyConfirmedAsync(Booking booking, Payment payment)
-    {
-        await background.EnqueueAsync((n, stop) => n.SendBookingConfirmationAsync(booking, payment, stop), $"confirmation for booking {booking.Id}");
-        if (await salonProfile.WantsAlertAsync(SalonAlert.NewBooking))
-            await background.EnqueueAsync((n, stop) => n.SendSalonNewBookingAsync(booking, payment, stop), $"new booking alert for booking {booking.Id}");
-    }
+    private Task NotifyConfirmedAsync(Booking booking, Payment payment) =>
+        BookingEmails.QueuePaidAsync(background, salonProfile, booking, payment);
 
     private static BookingResponse Map(Booking booking, bool includeClient, int rescheduleLimit = Booking.ClientRescheduleLimit) =>
         BookingMapper.ToResponse(booking, includeClient, rescheduleLimit);
 
     private static string Describe(DateOnly date, TimeOnly time) => $"{date:yyyy-MM-dd} {time:HH\\:mm}";
 
-    private sealed record CreateOutcome(Payment Payment, Booking? NewBooking);
+    private sealed record CreateOutcome(Payment? Payment, Booking? NewBooking, Booking? ExistingHold = null);
+
+    // ---- Back from Xendit's page ----
+
+    /// <summary>Asked at most this often per session, so a page checking every few seconds doesn't flood Xendit.</summary>
+    private static readonly TimeSpan StatusCheckInterval = TimeSpan.FromSeconds(5);
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> LastStatusCheck = new(StringComparer.Ordinal);
+
+    public async Task<PaymentStatusResponse> GetPaymentStatusAsync(int clientId, int bookingId, CancellationToken ct = default)
+    {
+        var booking = await GetOwnedAsync(clientId, bookingId, ct);
+        // Also for a hold that ran out: the client may have paid at the last minute and the notification got lost.
+        var mayBePaid = booking.Status == BookingStatus.AwaitingPayment
+                        || (booking.IsUnpaidHold && booking.Cancellation?.Reason == SystemCancellationReasons.PaymentNotCompleted);
+        if (mayBePaid && booking.CheckoutSessionId is { } session && ShouldAskXendit(session))
+        {
+            // A late webhook must not stall the client: ask Xendit directly. Only the server's answer marks it paid.
+            if (await TryGetStatusAsync(session, ct) is { State: CheckoutState.Paid } paid)
+            {
+                await confirmations.ApplyAsync(booking.Id, paid, ct);
+                unitOfWork.DiscardChanges();
+                booking = await GetOwnedAsync(clientId, bookingId, ct);
+            }
+        }
+
+        return booking switch
+        {
+            { Status: BookingStatus.AwaitingPayment } => new PaymentStatusResponse("Waiting", booking.CheckoutUrl, booking.PaymentHoldUntil),
+            { AmountPaid: > 0, Status: BookingStatus.Pending or BookingStatus.Confirmed or BookingStatus.Completed } =>
+                new PaymentStatusResponse("Paid", null, null),
+            { AmountPaid: > 0, Status: BookingStatus.Cancelled } =>
+                new PaymentStatusResponse("PaidRefundDue", null, null, booking.AmountPaid),
+            _ => new PaymentStatusResponse("NotCompleted", null, null),
+        };
+    }
+
+    public async Task<CheckoutResponse> RetryCheckoutAsync(int clientId, int bookingId, CancellationToken ct = default)
+    {
+        var booking = await GetOwnedAsync(clientId, bookingId, ct);
+        if (booking.Status != BookingStatus.AwaitingPayment)
+            throw new ConflictException("This booking is not waiting for a payment.", "invalid_status");
+        if (booking.PaymentHoldUntil is not { } until || until <= clock.UtcNow)
+            throw new ConflictException("The time held for this payment has run out. Please book again.", "hold_expired");
+
+        if (booking.CheckoutSessionId is { } previous)
+        {
+            // The client may have paid on the earlier page after all: never open a second page for money already taken.
+            if (await TryGetStatusAsync(previous, ct) is { State: CheckoutState.Paid } paid)
+            {
+                await confirmations.ApplyAsync(booking.Id, paid, ct);
+                throw new ConflictException("This booking has already been paid.", "already_paid");
+            }
+            if (!await TryExpireAsync(previous, ct)
+                && await TryGetStatusAsync(previous, ct) is not { State: CheckoutState.Expired or CheckoutState.Failed })
+                throw new ConflictException(
+                    "Your earlier payment page is still open. Finish paying there, or try again in a few minutes.", "payment_in_progress");
+        }
+
+        // Xendit needs an expiry at least 10 minutes ahead, so trying again holds the slot for a fresh period.
+        var holdUntil = clock.UtcNow.AddMinutes(paymentOptions.Value.HoldMinutes);
+        CheckoutSession session;
+        try
+        {
+            session = await checkout.CreateAsync(CheckoutRequestFor(booking, holdUntil), ct);
+        }
+        catch (HostedCheckoutException ex)
+        {
+            logger.LogWarning(ex, "Xendit could not start a new checkout for booking {BookingId}", booking.Id);
+            throw new PaymentUnavailableException();
+        }
+
+        booking.PaymentHoldUntil = holdUntil;
+        booking.UpdatedAt = clock.UtcNow;
+        await unitOfWork.SaveChangesAsync(ct);
+        await bookings.SetCheckoutAsync(booking.Id, session.SessionId, session.CheckoutUrl, ct);
+        return new CheckoutResponse(session.CheckoutUrl);
+    }
+
+    private static bool ShouldAskXendit(string sessionId)
+    {
+        var now = DateTime.UtcNow;
+        var last = LastStatusCheck.GetValueOrDefault(sessionId);
+        if (now - last < StatusCheckInterval)
+            return false;
+        LastStatusCheck[sessionId] = now;
+        return true;
+    }
+
+    private async Task<CheckoutStatus?> TryGetStatusAsync(string sessionId, CancellationToken ct)
+    {
+        try
+        {
+            return await checkout.GetStatusAsync(sessionId, ct);
+        }
+        catch (HostedCheckoutException ex)
+        {
+            logger.LogWarning(ex, "Could not ask Xendit about a payment session");
+            return null;
+        }
+    }
+
+    /// <summary>Closes a Xendit page; false if Xendit wouldn't (for example while a payment on it is processing).</summary>
+    private async Task<bool> TryExpireAsync(string sessionId, CancellationToken ct)
+    {
+        try
+        {
+            await checkout.ExpireAsync(sessionId, ct);
+            return true;
+        }
+        catch (HostedCheckoutException ex)
+        {
+            logger.LogWarning(ex, "Could not close an earlier Xendit payment session");
+            return false;
+        }
+    }
+
+    /// <summary>The client gives up on a hold: the slot is freed and the Xendit page closed. Nothing was paid, so no alert.</summary>
+    private async Task<BookingResponse> CancelHoldAsync(int clientId, Booking booking, ClientCancelRequest request, CancellationToken ct)
+    {
+        var explanation = request.Reason == ClientCancellationReason.Others ? InputNormalizer.Text(request.Explanation) : null;
+        if (request.Reason == ClientCancellationReason.Others && string.IsNullOrEmpty(explanation))
+            throw new ValidationAppException("explanation", ClientCancelRequestValidator.ExplanationRequired);
+        var now = clock.UtcNow;
+        booking.ReleaseHold(now);
+        bookings.AddCancellation(new Cancellation
+        {
+            BookingId = booking.Id,
+            CancelledByUserId = clientId,
+            Reason = request.Reason.ToString(),
+            Explanation = explanation,
+            CancelledAt = now,
+        });
+        audit.Record(AuditActions.BookingCancelled, nameof(Booking), booking.Id, "Client cancelled before paying on Xendit");
+        await unitOfWork.SaveChangesAsync(ct);
+        if (booking.CheckoutSessionId is { } session)
+            await TryExpireAsync(session, ct);
+        return Map(await ReloadAsync(booking.Id, ct), includeClient: false);
+    }
+
+    // ---- Paying on Xendit's page ----
+
+    /// <summary>
+    /// The hold is committed; now Xendit is asked for a checkout page. If Xendit can't make one, the hold is released at
+    /// once (slot freed) and the client is told nothing was charged.
+    /// </summary>
+    private async Task<CreateBookingResponse> StartCheckoutAsync(int clientId, Booking booking, CancellationToken ct)
+    {
+        CheckoutSession session;
+        try
+        {
+            session = await checkout.CreateAsync(CheckoutRequestFor(booking, booking.PaymentHoldUntil!.Value), ct);
+        }
+        catch (HostedCheckoutException ex)
+        {
+            logger.LogWarning(ex, "Xendit could not start a checkout for booking {BookingId}", booking.Id);
+            await ReleaseHoldAsync(booking, clientId, "Xendit could not start the checkout", CancellationToken.None);
+            throw new PaymentUnavailableException();
+        }
+
+        await bookings.SetCheckoutAsync(booking.Id, session.SessionId, session.CheckoutUrl, ct);
+        unitOfWork.DiscardChanges(); // read the row again as saved, with its checkout
+        var details = await bookings.GetDetailsAsync(booking.Id, ct) ?? booking;
+        return await BuildHoldResponseAsync(clientId, details, ct);
+    }
+
+    /// <summary>What Xendit is asked to collect: the server's own amount for the option chosen, in the chosen channel.</summary>
+    private CheckoutRequest CheckoutRequestFor(Booking booking, DateTime expiresAtUtc)
+    {
+        var returnUrl = $"{frontendOptions.Value.BaseUrl.TrimEnd('/')}/bookings/payment?booking={booking.Id}";
+        var what = booking.PaymentOption == PaymentOption.Full ? "full payment" : "deposit";
+        return new CheckoutRequest(booking.Id, HostedCheckoutReference.For(booking.Id), booking.AmountFor(booking.PaymentOption),
+            booking.PendingPaymentMethod ?? PaymentMethod.GCash, expiresAtUtc, returnUrl, returnUrl,
+            $"Nails by Leyah booking #{booking.Id} {what}");
+    }
+
+    /// <summary>Frees the slot of a hold that won't be paid. Recorded as cancelled by the client, "Payment not completed".</summary>
+    private async Task ReleaseHoldAsync(Booking booking, int byUserId, string why, CancellationToken ct)
+    {
+        var now = clock.UtcNow;
+        booking.ReleaseHold(now);
+        bookings.AddCancellation(new Cancellation
+        {
+            BookingId = booking.Id,
+            CancelledByUserId = byUserId,
+            Reason = SystemCancellationReasons.PaymentNotCompleted,
+            CancelledAt = now,
+        });
+        audit.Record(AuditActions.PaymentNotCompleted, nameof(Booking), booking.Id, $"Hold released: {why}");
+        await unitOfWork.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// The same Pay click again. Its hold may be waiting (answer with the same page), paid (the receipt), still getting
+    /// its page from Xendit, or released because Xendit couldn't start: never an answer without a page or a receipt.
+    /// </summary>
+    private async Task<CreateBookingResponse> ReplayHoldAsync(int clientId, Booking held, CancellationToken ct)
+    {
+        if (held.ClientId != clientId)
+            throw new ConflictException("This payment request key has already been used.", "idempotency_key_reused");
+        if (held.Status == BookingStatus.AwaitingPayment && string.IsNullOrEmpty(held.CheckoutUrl))
+            throw new ConflictException("Your payment page is still opening. Please wait a moment and try again.", "payment_starting");
+        if (held.AmountPaid <= 0 && held.Status != BookingStatus.AwaitingPayment)
+            throw new PaymentUnavailableException();
+        return await BuildHoldResponseAsync(clientId, held, ct);
+    }
+
+    /// <summary>The answer for a held booking: no receipt until it is paid, and Xendit's page while it waits.</summary>
+    private async Task<CreateBookingResponse> BuildHoldResponseAsync(int clientId, Booking booking, CancellationToken ct)
+    {
+        if (booking.ClientId != clientId)
+            throw new ConflictException("This payment request key has already been used.", "idempotency_key_reused");
+        var limit = (await bookingRules.GetAsync(ct)).RescheduleLimit;
+        var payment = booking.Payments.Where(p => p.Status == PaymentStatus.Succeeded).OrderBy(p => p.PaidAt).FirstOrDefault();
+        return new CreateBookingResponse(Map(booking, includeClient: false, limit),
+            payment is null ? null : BookingMapper.ToReceipt(payment, booking),
+            booking.Status == BookingStatus.AwaitingPayment ? booking.CheckoutUrl : null);
+    }
+
 }
 
 public static class BookingMapper
@@ -722,7 +980,9 @@ public static class BookingMapper
         rescheduleLimit,
         b.GuestName,
         b.GuestPhone,
-        b.CreatedByAdmin);
+        b.CreatedByAdmin,
+        b.Status == BookingStatus.AwaitingPayment ? b.CheckoutUrl : null,
+        b.Status == BookingStatus.AwaitingPayment ? b.PaymentHoldUntil : null);
 
     // The first successful payment (bookings are paid once, when they are made).
     private static BookingPaymentResponse PaymentOf(Booking b)

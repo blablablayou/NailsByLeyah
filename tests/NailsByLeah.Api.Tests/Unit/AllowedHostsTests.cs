@@ -1,4 +1,5 @@
 using NailsByLeah.Api.Infrastructure;
+using NailsByLeah.Api.Payments;
 
 namespace NailsByLeah.Api.Tests.Unit;
 
@@ -36,16 +37,18 @@ public sealed class AllowedHostsTests
         Assert.Null(StartupTasks.WebsiteAddressProblem("https://nailsbyleyah.onrender.com"));
 
     [Fact]
-    public void The_live_site_refuses_simulated_payments_unless_a_test_deployment_allows_them() =>
-        Assert.NotNull(StartupTasks.PaymentGatewayProblem(isSimulated: true, allowSimulated: false));
+    public void Simulated_on_the_live_site_needs_the_test_switch() =>
+        Assert.NotNull(StartupTasks.PaymentSetupProblem(PaymentProvider.Simulated, allowSimulated: false, xenditConfigured: false));
 
     [Fact]
-    public void A_test_deployment_may_start_with_simulated_payments() =>
-        Assert.Null(StartupTasks.PaymentGatewayProblem(isSimulated: true, allowSimulated: true));
+    public void Simulated_starts_with_the_test_switch_even_with_xendit_keys_set() =>
+        Assert.Null(StartupTasks.PaymentSetupProblem(PaymentProvider.Simulated, allowSimulated: true, xenditConfigured: true));
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void A_real_gateway_always_starts(bool allowSimulated) =>
-        Assert.Null(StartupTasks.PaymentGatewayProblem(isSimulated: false, allowSimulated));
+    [Fact]
+    public void Xendit_needs_its_keys() =>
+        Assert.NotNull(StartupTasks.PaymentSetupProblem(PaymentProvider.Xendit, allowSimulated: false, xenditConfigured: false));
+
+    [Fact]
+    public void Xendit_with_keys_starts() =>
+        Assert.Null(StartupTasks.PaymentSetupProblem(PaymentProvider.Xendit, allowSimulated: false, xenditConfigured: true));
 }

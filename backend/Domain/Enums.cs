@@ -21,6 +21,11 @@ public enum BookingStatus
     Cancelled,
     /// <summary>The client did not come. The time has passed, so it holds no slot; the deposit is kept.</summary>
     NoShow,
+    /// <summary>
+    /// The client is paying on Xendit's page: the slot is held until <see cref="Booking.PaymentHoldUntil"/>, but it is not a
+    /// booking for Leyah yet. Becomes Pending once Xendit confirms the payment, or Cancelled if the hold runs out.
+    /// </summary>
+    AwaitingPayment,
 }
 
 public enum PaymentMethod

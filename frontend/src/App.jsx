@@ -12,6 +12,7 @@ import WorksPage from './pages/client/WorksPage'
 import GalleryPage from './pages/admin/GalleryPage'
 import BookPage from './pages/client/BookPage'
 import MyBookingsPage from './pages/client/MyBookingsPage'
+import PaymentReturnPage from './pages/client/PaymentReturnPage'
 import DashboardPage from './pages/admin/DashboardPage'
 import BookingsPage from './pages/admin/BookingsPage'
 import ServicesPage from './pages/admin/ServicesPage'
@@ -43,6 +44,7 @@ export function AppRoutes() {
 
         <Route path="book" element={client(<BookPage />)} />
         <Route path="bookings" element={client(<MyBookingsPage />)} />
+        <Route path="bookings/payment" element={client(<PaymentReturnPage />)} />
         <Route path="feedback" element={client(<FeedbackPage />)} />
         <Route path="profile" element={<SignedIn><ProfilePage /></SignedIn>} />
 

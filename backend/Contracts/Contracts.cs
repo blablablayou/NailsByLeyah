@@ -260,7 +260,9 @@ public sealed record BookingResponse(
     int RescheduleLimit = 0,
     string? GuestName = null, // who the appointment is for when it isn't the account holder (a walk-in Leyah booked)
     string? GuestPhone = null,
-    bool CreatedByAdmin = false);
+    bool CreatedByAdmin = false,
+    string? CheckoutUrl = null, // AwaitingPayment only: Xendit's page where the client pays ("Continue payment")
+    DateTime? PaymentHoldUntil = null); // AwaitingPayment only: when the held slot is released
 
 /// <summary>
 /// How the booking was paid. AmountPaid includes the deposit; BalanceDue on the booking is what is left for the salon.
@@ -306,7 +308,18 @@ public sealed record ReceiptResponse(
 /// <summary>One priced line on a receipt: the service, the removal before it, or a Stone add-on.</summary>
 public sealed record ReceiptLineResponse(string Description, decimal Amount);
 
-public sealed record CreateBookingResponse(BookingResponse Booking, ReceiptResponse Receipt);
+/// <summary>
+/// The new booking. Simulated payments: paid at once, with its receipt. Xendit: held (AwaitingPayment), no receipt yet,
+/// and CheckoutUrl is Xendit's page the website sends the client to.
+/// </summary>
+/// <summary>Where a payment on Xendit's page stands: Paid, Waiting (with the page to continue on) or NotCompleted.</summary>
+/// <remarks>PaidRefundDue: Xendit took the money but the booking could not be kept (Amount is owed back).</remarks>
+public sealed record PaymentStatusResponse(string Status, string? CheckoutUrl, DateTime? HoldUntil, decimal? Amount = null);
+
+/// <summary>A fresh Xendit page for a held booking ("Try again" / "Continue payment").</summary>
+public sealed record CheckoutResponse(string CheckoutUrl);
+
+public sealed record CreateBookingResponse(BookingResponse Booking, ReceiptResponse? Receipt, string? CheckoutUrl = null);
 
 public sealed class BookingSearchQuery
 {

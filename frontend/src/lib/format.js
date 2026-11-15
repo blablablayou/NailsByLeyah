@@ -33,6 +33,12 @@ export function formatDateTime(iso) {
   return new Date(iso).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
+/** ISO timestamp → "2:05 PM" (the clock time only, e.g. when a held slot is released) */
+export function formatClock(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
+}
+
 /** "SomeEnumValue" → "Some enum value" */
 export function humanize(value) {
   return String(value ?? '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase())

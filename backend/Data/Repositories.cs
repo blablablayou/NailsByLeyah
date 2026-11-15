@@ -61,6 +61,18 @@ public interface IBookingRepository
     void Add(Booking booking);
     void AddCancellation(Cancellation cancellation);
     Task<Booking?> GetDetailsAsync(int id, CancellationToken ct = default);
+
+    /// <summary>The booking held (or since paid) for this Pay click, with details; null if none.</summary>
+    Task<Booking?> FindByPaymentIdempotencyKeyAsync(Guid key, CancellationToken ct = default);
+
+    /// <summary>Saves the provider's session on a booking without touching anything else (the webhook may already have run).</summary>
+    Task SetCheckoutAsync(int bookingId, string sessionId, string checkoutUrl, CancellationToken ct = default);
+
+    /// <summary>Holds whose time ran out before they were paid.</summary>
+    Task<List<Booking>> GetExpiredHoldsAsync(DateTime utcNow, CancellationToken ct = default);
+
+    Task<int?> FindIdByCheckoutSessionAsync(string sessionId, CancellationToken ct = default);
+    void RemoveCancellation(Cancellation cancellation);
     Task<List<Booking>> GetForClientAsync(int clientId, CancellationToken ct = default);
     Task<(List<Booking> Items, int TotalCount)> SearchAsync(BookingSearchCriteria criteria, CancellationToken ct = default);
     Task<List<Booking>> GetForDateAsync(DateOnly date, CancellationToken ct = default);
@@ -251,7 +263,17 @@ internal sealed class BookingRepository(AppDbContext db) : IBookingRepository
 {
     private IQueryable<Booking> Live => db.Bookings.Where(b => !b.IsDeleted);
 
-    private IQueryable<Booking> WithDetails => Live
+    /// <summary>
+    /// Bookings as Leyah sees them: without holds that were never paid (still open on Xendit's page, or expired).
+    /// Same rule as <see cref="Booking.IsUnpaidHold"/>.
+    /// </summary>
+    private IQueryable<Booking> ForLeyah => Live.Where(b => !(b.AmountPaid == 0 && b.PaymentIdempotencyKey != null &&
+        (b.Status == BookingStatus.AwaitingPayment || b.Status == BookingStatus.Cancelled)));
+
+    private IQueryable<Booking> WithDetails => Details(Live);
+    private IQueryable<Booking> WithDetailsForLeyah => Details(ForLeyah);
+
+    private static IQueryable<Booking> Details(IQueryable<Booking> bookings) => bookings
         .Include(b => b.Client)
         .Include(b => b.Service)
         .Include(b => b.RemovalService)
@@ -262,12 +284,29 @@ internal sealed class BookingRepository(AppDbContext db) : IBookingRepository
         .Include(b => b.ReferenceImages.Where(r => !r.IsDeleted).OrderBy(r => r.Id))
         .AsSplitQuery();
 
-    private IQueryable<Booking> Active => Live.Where(b => b.Status == BookingStatus.Pending || b.Status == BookingStatus.Confirmed);
+    /// <summary>Bookings that take their time slot: paid ones, and holds while the client pays on Xendit's page.</summary>
+    private IQueryable<Booking> HoldsSlot => Live.Where(b =>
+        b.Status == BookingStatus.Pending || b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.AwaitingPayment);
 
     public void Add(Booking booking) => db.Bookings.Add(booking);
     public void AddCancellation(Cancellation cancellation) => db.Cancellations.Add(cancellation);
 
     public Task<Booking?> GetDetailsAsync(int id, CancellationToken ct) => WithDetails.FirstOrDefaultAsync(b => b.Id == id, ct);
+
+    public Task<Booking?> FindByPaymentIdempotencyKeyAsync(Guid key, CancellationToken ct) =>
+        WithDetails.FirstOrDefaultAsync(b => b.PaymentIdempotencyKey == key, ct);
+
+    public Task SetCheckoutAsync(int bookingId, string sessionId, string checkoutUrl, CancellationToken ct) =>
+        db.Bookings.Where(b => b.Id == bookingId)
+            .ExecuteUpdateAsync(s => s.SetProperty(b => b.CheckoutSessionId, sessionId).SetProperty(b => b.CheckoutUrl, checkoutUrl), ct);
+
+    public async Task<int?> FindIdByCheckoutSessionAsync(string sessionId, CancellationToken ct) =>
+        await Live.Where(b => b.CheckoutSessionId == sessionId).Select(b => (int?)b.Id).FirstOrDefaultAsync(ct);
+
+    public void RemoveCancellation(Cancellation cancellation) => db.Cancellations.Remove(cancellation);
+
+    public Task<List<Booking>> GetExpiredHoldsAsync(DateTime utcNow, CancellationToken ct) =>
+        Live.Where(b => b.Status == BookingStatus.AwaitingPayment && b.PaymentHoldUntil <= utcNow).ToListAsync(ct);
 
     public Task<List<Booking>> GetForClientAsync(int clientId, CancellationToken ct) =>
         WithDetails.Where(b => b.ClientId == clientId)
@@ -276,7 +315,8 @@ internal sealed class BookingRepository(AppDbContext db) : IBookingRepository
 
     public async Task<(List<Booking> Items, int TotalCount)> SearchAsync(BookingSearchCriteria c, CancellationToken ct)
     {
-        var query = WithDetails;
+        // Unpaid holds are listed only when asked for by their status ("Awaiting payment").
+        var query = c.Status == BookingStatus.AwaitingPayment ? WithDetails : WithDetailsForLeyah;
         if (c.Date is { } date)
             query = query.Where(b => b.BookingDate == date);
         if (c.Status is { } status)
@@ -307,14 +347,14 @@ internal sealed class BookingRepository(AppDbContext db) : IBookingRepository
     }
 
     public Task<List<Booking>> GetForDateAsync(DateOnly date, CancellationToken ct) =>
-        WithDetails.Where(b => b.BookingDate == date).OrderBy(b => b.StartTime).ToListAsync(ct);
+        WithDetailsForLeyah.Where(b => b.BookingDate == date).OrderBy(b => b.StartTime).ToListAsync(ct);
 
     public Task<List<Booking>> GetInDateRangeAsync(DateOnly from, DateOnly to, CancellationToken ct) =>
-        WithDetails.Where(b => b.BookingDate >= from && b.BookingDate <= to).ToListAsync(ct);
+        WithDetailsForLeyah.Where(b => b.BookingDate >= from && b.BookingDate <= to).ToListAsync(ct);
 
     public async Task<List<(DateOnly Date, int Count, int ActiveCount)>> CountByDayAsync(DateOnly from, DateOnly to, CancellationToken ct)
     {
-        var rows = await Live.Where(b => b.BookingDate >= from && b.BookingDate <= to)
+        var rows = await ForLeyah.Where(b => b.BookingDate >= from && b.BookingDate <= to)
             .GroupBy(b => b.BookingDate)
             .Select(g => new { Date = g.Key, Count = g.Count(), Active = g.Count(b => b.Status == BookingStatus.Pending || b.Status == BookingStatus.Confirmed) })
             .OrderBy(x => x.Date)
@@ -323,20 +363,20 @@ internal sealed class BookingRepository(AppDbContext db) : IBookingRepository
     }
 
     public Task<List<ScheduledAppointment>> GetActiveOnDateAsync(DateOnly date, CancellationToken ct) =>
-        Active.Where(b => b.BookingDate == date)
+        HoldsSlot.Where(b => b.BookingDate == date)
             .Select(b => new ScheduledAppointment(b.Id, b.BookingDate, b.StartTime, b.DurationMinutes)).ToListAsync(ct);
 
     public Task<List<ScheduledAppointment>> GetActiveFromDateAsync(DateOnly from, CancellationToken ct) =>
-        Active.Where(b => b.BookingDate >= from)
+        HoldsSlot.Where(b => b.BookingDate >= from)
             .Select(b => new ScheduledAppointment(b.Id, b.BookingDate, b.StartTime, b.DurationMinutes)).ToListAsync(ct);
 
-    public Task<int> CountByStatusAsync(BookingStatus status, CancellationToken ct) => Live.CountAsync(b => b.Status == status, ct);
+    public Task<int> CountByStatusAsync(BookingStatus status, CancellationToken ct) => ForLeyah.CountAsync(b => b.Status == status, ct);
 
     public Task<int> CountCreatedBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct) =>
-        Live.CountAsync(b => b.CreatedAt >= fromUtc && b.CreatedAt < toUtc, ct);
+        ForLeyah.CountAsync(b => b.CreatedAt >= fromUtc && b.CreatedAt < toUtc, ct);
 
     public Task<List<Booking>> GetCancelledBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct) =>
-        Live.Include(b => b.Cancellation)
+        ForLeyah.Include(b => b.Cancellation)
             .Where(b => b.Cancellation != null && b.Cancellation.CancelledAt >= fromUtc && b.Cancellation.CancelledAt < toUtc)
             .ToListAsync(ct);
 
@@ -344,7 +384,7 @@ internal sealed class BookingRepository(AppDbContext db) : IBookingRepository
         await Live.Where(b => b.BalanceReceivedAt >= fromUtc && b.BalanceReceivedAt < toUtc).SumAsync(b => (decimal?)b.BalanceReceived, ct) ?? 0;
 
     public Task<List<DateTime>> GetCreatedTimesBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct) =>
-        Live.Where(b => b.CreatedAt >= fromUtc && b.CreatedAt < toUtc).Select(b => b.CreatedAt).ToListAsync(ct);
+        ForLeyah.Where(b => b.CreatedAt >= fromUtc && b.CreatedAt < toUtc).Select(b => b.CreatedAt).ToListAsync(ct);
 
     public Task<List<BalanceReceipt>> GetBalancesReceivedBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct) =>
         Live.Where(b => b.BalanceReceivedAt >= fromUtc && b.BalanceReceivedAt < toUtc)
@@ -357,7 +397,7 @@ internal sealed class BookingRepository(AppDbContext db) : IBookingRepository
             .ToListAsync(ct);
 
     public Task<List<Booking>> GetAttentionCandidatesAsync(DateOnly today, DateOnly balanceSince, CancellationToken ct) =>
-        WithDetails.Where(b => b.Status == BookingStatus.Pending ||
+        WithDetailsForLeyah.Where(b => b.Status == BookingStatus.Pending ||
                                (b.Status == BookingStatus.Confirmed && b.BookingDate <= today) ||
                                (b.Status == BookingStatus.Completed && b.BookingDate >= balanceSince) ||
                                (b.RefundDue > 0 && b.RefundSentAt == null) ||

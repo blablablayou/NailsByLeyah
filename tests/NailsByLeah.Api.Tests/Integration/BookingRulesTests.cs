@@ -245,7 +245,7 @@ public sealed class BookingRulesTests(ApiFactory factory) : IClassFixture<ApiFac
         // The removal counts as a service of the booking it was added to.
         var byRemoval = await admin.GetAsync<PagedResponse<BookingResponse>>($"/api/admin/bookings?date={date:yyyy-MM-dd}&serviceId={RemovalMyWork}");
         Assert.Equal(design.Booking.Id, Assert.Single(byRemoval.Items).Id);
-        var byReference = await admin.GetAsync<PagedResponse<BookingResponse>>($"/api/admin/bookings?clientName={design.Receipt.ReferenceNumber}");
+        var byReference = await admin.GetAsync<PagedResponse<BookingResponse>>($"/api/admin/bookings?clientName={design.Receipt!.ReferenceNumber}");
         Assert.Equal(design.Booking.Id, Assert.Single(byReference.Items).Id);
     }
 

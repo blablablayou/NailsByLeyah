@@ -138,6 +138,31 @@ public sealed class PaymentOptions
     /// Off by default, so the live site still refuses to start without a real gateway. Remove it before real clients book.
     /// </summary>
     public bool AllowSimulated { get; set; }
+
+    /// <summary>Who takes payments: Simulated (default, one step) or Xendit (hosted checkout + webhook).</summary>
+    public Payments.PaymentProvider Provider { get; set; } = Payments.PaymentProvider.Simulated;
+
+    /// <summary>How long a slot is held while the client pays on Xendit's page.</summary>
+    public int HoldMinutes { get; set; } = 15;
+
+    /// <summary>How often holds whose time ran out are released (seconds); 0 turns the job off.</summary>
+    public int HoldCheckIntervalSeconds { get; set; } = 60;
+}
+
+/// <summary>Xendit (test mode). Both values only in user secrets or the host's settings.</summary>
+public sealed class XenditOptions
+{
+    public const string Section = "Xendit";
+
+    /// <summary>The secret API key (test key for the defense).</summary>
+    public string? SecretKey { get; set; }
+
+    /// <summary>The webhook verification token from Xendit's dashboard; Xendit sends it in the x-callback-token header.</summary>
+    public string? CallbackToken { get; set; }
+
+    public string BaseUrl { get; set; } = "https://api.xendit.co/";
+
+    public bool IsConfigured => !string.IsNullOrWhiteSpace(SecretKey) && !string.IsNullOrWhiteSpace(CallbackToken);
 }
 
 /// <summary>Optional first administrator account, created on startup if it does not exist.</summary>

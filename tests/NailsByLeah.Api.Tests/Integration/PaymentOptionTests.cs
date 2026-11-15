@@ -26,7 +26,7 @@ public sealed class PaymentOptionTests(ApiFactory factory) : IClassFixture<ApiFa
         Assert.Equal(519m, result.Booking.TotalPrice);
         Assert.Equal(150m, result.Booking.Payment!.AmountPaid);
         Assert.Equal(369m, result.Booking.BalanceDue);
-        Assert.Equal("Booking deposit", result.Receipt.PaymentOptionLabel);
+        Assert.Equal("Booking deposit", result.Receipt!.PaymentOptionLabel);
         Assert.Equal(150m, result.Receipt.Amount);
         Assert.Equal(369m, result.Receipt.BalanceDue);
     }
@@ -44,7 +44,7 @@ public sealed class PaymentOptionTests(ApiFactory factory) : IClassFixture<ApiFa
         Assert.Equal("Full", result.Booking.Payment!.Option);
         Assert.Equal(519m, result.Booking.Payment.AmountPaid);
         Assert.Equal(0m, result.Booking.BalanceDue);
-        Assert.Equal(0m, result.Receipt.BalanceDue);
+        Assert.Equal(0m, result.Receipt!.BalanceDue);
         Assert.Equal(519m, result.Receipt.TotalAmount);
         var payment = factory.WithDb(db => db.Payments.Single(p => p.BookingId == result.Booking.Id));
         Assert.Equal((PaymentOption.Full, 519m, 519m, 0m, user.Id), (payment.Option, payment.Amount, payment.TotalAmount, payment.BalanceAfter, payment.ClientId));
@@ -109,7 +109,7 @@ public sealed class PaymentOptionTests(ApiFactory factory) : IClassFixture<ApiFa
         var booked = await user.Client.BookAsync(Booking(WithDesign, PaymentOption.Full));
         Assert.Equal("Pending", booked.Booking.Status);
         Assert.False(booked.Booking.Payment!.Verified);
-        Assert.Equal("Pending", booked.Receipt.BookingStatus);
+        Assert.Equal("Pending", booked.Receipt!.BookingStatus);
 
         // Clients can't confirm their own bookings.
         await (await user.Client.PostAsync($"/api/admin/bookings/{booked.Booking.Id}/confirm", null)).ShouldHaveStatus(HttpStatusCode.Forbidden);

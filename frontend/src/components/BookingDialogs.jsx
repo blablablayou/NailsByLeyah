@@ -144,6 +144,8 @@ export function BalanceDialog({ booking, completing = false, onSubmit, onClose }
 
 /** What happens to the money if this booking is cancelled now, worded for whoever is cancelling. */
 function RefundNote({ booking, bySalon, reason }) {
+  if (booking.status === 'AwaitingPayment')
+    return <Alert kind="info">Nothing has been charged. The time held for you will be released.</Alert>
   const paid = amountPaid(booking)
   const refund = refundFor(booking, { bySalon, reason })
   if (bySalon) {

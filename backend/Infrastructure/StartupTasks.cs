@@ -34,11 +34,11 @@ public static class StartupTasks
     {
         if (!services.GetRequiredService<IOptions<BrevoOptions>>().Value.IsConfigured)
             throw new InvalidOperationException("Brevo:ApiKey must be configured outside Development; emails would otherwise only be logged.");
-        var simulated = services.GetRequiredService<IPaymentGateway>() is SimulatedPaymentGateway;
-        var allowSimulated = services.GetRequiredService<IOptions<PaymentOptions>>().Value.AllowSimulated;
-        if (PaymentGatewayProblem(simulated, allowSimulated) is { } paymentProblem)
+        var payments = services.GetRequiredService<IOptions<PaymentOptions>>().Value;
+        var xenditConfigured = services.GetRequiredService<IOptions<XenditOptions>>().Value.IsConfigured;
+        if (PaymentSetupProblem(payments.Provider, payments.AllowSimulated, xenditConfigured) is { } paymentProblem)
             throw new InvalidOperationException(paymentProblem);
-        if (simulated)
+        if (payments.Provider == PaymentProvider.Simulated)
             logger.LogWarning("TEST DEPLOYMENT: payments are simulated (Payments:AllowSimulated is on). Every payment is approved without money moving. Remove the setting before real clients book.");
         if (!services.GetRequiredService<IOptions<SupabaseOptions>>().Value.IsConfigured)
             throw new InvalidOperationException("Supabase:Url and Supabase:SecretKey must be set outside Development: hosts wipe their disk, so clients' photos would be lost.");
@@ -51,13 +51,18 @@ public static class StartupTasks
     }
 
     /// <summary>
-    /// Why the site can't start with this payment gateway, or null if it can. The simulated gateway is allowed outside
-    /// Development only when a test deployment asks for it with Payments:AllowSimulated.
+    /// Why the site can't start with these payment settings, or null if it can. Simulated payments are allowed outside
+    /// Development only when a test deployment asks for them with Payments:AllowSimulated; Xendit needs its keys.
+    /// Xendit keys may stay set with Simulated, so payments already sent to Xendit still finish after a switch back.
     /// </summary>
-    public static string? PaymentGatewayProblem(bool isSimulated, bool allowSimulated) =>
-        isSimulated && !allowSimulated
-            ? "The simulated payment gateway cannot be used outside Development. Register a real GCash/Maya gateway, or set Payments:AllowSimulated=true on a test deployment only."
-            : null;
+    public static string? PaymentSetupProblem(PaymentProvider provider, bool allowSimulated, bool xenditConfigured) => provider switch
+    {
+        PaymentProvider.Simulated when !allowSimulated =>
+            "Simulated payments cannot be used outside Development. Set Payments:Provider=Xendit with its keys, or set Payments:AllowSimulated=true on a test deployment only.",
+        PaymentProvider.Xendit when !xenditConfigured =>
+            "Payments:Provider is Xendit, but Xendit:SecretKey and Xendit:CallbackToken are not both set.",
+        _ => null,
+    };
 
     /// <summary>Why this address can't be used in emailed links on the live site, or null if it can.</summary>
     public static string? WebsiteAddressProblem(string? baseUrl)
