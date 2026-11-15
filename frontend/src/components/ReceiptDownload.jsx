@@ -27,7 +27,13 @@ export function ReceiptDownload({ receipt, load, variant = 'primary', showHint =
     <span className="receipt-download">
       {!ready && showHint && <span className="muted small">Available once Leyah verifies your payment.</span>}
       {error && <span className="field-error">{error}</span>}
-      <Button variant={variant} loading={busy} disabled={!ready} onClick={run}>Download receipt (PDF)</Button>
+      {/* Until Leyah verifies the payment the button is plainly unavailable (outline and a lock), not a faded pink one. */}
+      <Button variant={ready ? variant : 'secondary'} className={ready ? '' : 'receipt-pdf-locked'} loading={busy} disabled={!ready} onClick={run}>
+        {!ready && (
+          <svg className="receipt-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5" /><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" /></svg>
+        )}
+        Download receipt (PDF)
+      </Button>
     </span>
   )
 }

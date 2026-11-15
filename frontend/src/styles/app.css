@@ -2328,3 +2328,65 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
   .cp-usebar { position: sticky; bottom: 0; z-index: 4; align-self: stretch; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); background: rgb(255 248 250 / .96);
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-top: 1px solid #f3d9e0; box-shadow: 0 -8px 18px rgb(48 37 42 / .08); }
 }
+
+/* ---- Receipt polish (2026-11-16): a slip-like top, reference with Copy, progress, price list, totals block ---- */
+.receipt { gap: 16px; }
+.receipt-header { gap: 12px; }
+.receipt-header-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.receipt-header-text strong { font-size: var(--fs-lead); color: var(--ink); }
+.receipt-check { flex: none; width: 40px; height: 40px; }
+.receipt-check svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+
+.receipt-ref { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--rose-50); border: 1px dashed var(--rose-100); }
+.receipt-ref-label { font-size: var(--fs-small); color: var(--ink-soft); }
+.receipt-ref-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; margin: 0; }
+.receipt-ref-value { font-size: var(--fs-lead); font-weight: 600; color: var(--ink); letter-spacing: .02em; overflow-wrap: anywhere; min-width: 0; }
+.receipt-copy { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--nude-200); border-radius: 99px;
+  background: var(--white); color: var(--rose-700); font: inherit; font-size: var(--fs-small); font-weight: 600; cursor: pointer; transition: border-color .15s, background .15s; }
+.receipt-copy:hover { border-color: var(--rose-500); background: var(--rose-50); }
+.receipt-copy:focus-visible { outline: 0; box-shadow: var(--focus); }
+.receipt-copy.is-failed { border-color: var(--rose-500); background: var(--rose-50); }
+.receipt-copy svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+
+/* Paid → Leyah checks → Confirmed */
+.receipt-progress { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
+.receipt-progress li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: var(--fs-small); color: var(--muted); text-align: center; }
+.receipt-progress li + li::before { content: ''; position: absolute; top: 11px; right: 50%; width: 100%; height: 2px; background: var(--nude-200); z-index: 0; }
+.receipt-progress li.done + li.done::before { background: var(--green-700); }
+.receipt-progress-dot { position: relative; z-index: 1; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--white); border: 2px solid var(--nude-200); }
+.receipt-progress-dot svg { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.receipt-progress li.done { color: var(--ink); }
+.receipt-progress li.done .receipt-progress-dot { background: var(--green-700); border-color: var(--green-700); }
+.receipt-progress li.now { color: var(--rose-700); font-weight: 600; }
+.receipt-progress li.now .receipt-progress-dot { border-color: var(--rose-600); box-shadow: 0 0 0 4px var(--rose-50); }
+
+/* Details: labels in one column, values in the other; the add-ons as a price list. */
+.receipt-lines { grid-template-columns: minmax(120px, max-content) 1fr; gap: 10px 20px; }
+.receipt-addons { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 0; }
+.receipt-addons li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.receipt-price { flex: none; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* Totals: amounts lined up on the right; the balance stands out. */
+.receipt-totals { padding-top: 12px; border-top: 1px solid var(--line); }
+.receipt-totals dl { display: grid; grid-template-columns: 1fr minmax(0, auto); gap: 8px 0; margin: 0; }
+.receipt-totals dt { color: var(--ink-soft); }
+.receipt-totals dd { margin: 0; padding-left: 16px; text-align: right; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
+.receipt-totals .receipt-balance { padding-top: 8px; border-top: 1px dashed var(--line); color: var(--ink); font-weight: 600; font-size: var(--fs-lead); }
+
+/* What happens next: one calm line, the deposit rule small beneath it. */
+.receipt-notes { display: flex; flex-direction: column; gap: 6px; }
+.receipt-notes .receipt-pending { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--rose-50); border: 0; color: var(--ink); }
+.receipt-notes .receipt-note { margin: 0; padding: 0; background: none; border: 0; color: var(--muted); font-size: var(--fs-caption); }
+
+/* The PDF button before the payment is verified: an outline with a lock, not a faded pink button. */
+.btn.receipt-pdf-locked:disabled { opacity: 1; background: var(--white); border-color: var(--nude-200); border-style: dashed; color: var(--muted); box-shadow: none; }
+.receipt-lock { width: 15px; height: 15px; margin-right: 6px; vertical-align: -2px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+/* Phones: labels above their values, so nothing is squeezed. */
+@media (max-width: 560px) {
+  .receipt-lines { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .receipt-lines dd + dt { margin-top: 10px; }
+  .receipt-progress li { font-size: var(--fs-caption); }
+  .receipt-ref-value { font-size: var(--fs-small); letter-spacing: 0; } /* the whole number fits on one line */
+  .receipt-copy { padding: 0 10px; }
+}
