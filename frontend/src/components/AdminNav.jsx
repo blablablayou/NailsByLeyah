@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router'
 import { useSalon } from './SalonProfile'
 
@@ -133,6 +133,7 @@ export function AdminNav({ user, onSignOut, menuOpen }) {
             <span className="nav-account-role">Administrator</span>
           </div>
           <NavLink to="/profile" className="nav-panel-link" onClick={close}>My profile</NavLink>
+          <div role="separator" className="nav-panel-divider" />
           <button type="button" className="nav-panel-link nav-signout" onClick={onSignOut}>Log out</button>
         </NavDropdown>
       </div>
@@ -142,9 +143,11 @@ export function AdminNav({ user, onSignOut, menuOpen }) {
 
 /**
  * A client's account menu, laid out like Leyah's: their photo (or initial) and first name, opening to who they are signed
- * in as (name and role), My bookings, Rate us (after a finished visit), My profile and Log out. Clicking elsewhere or moving to
- * another page closes it.
+ * in as (name and role), then their own pages (My bookings, My profile), then Rate us (after a finished visit) on its own,
+ * then Log out last, each group set apart by a thin line. Clicking elsewhere or moving to another page closes it.
  */
+const RATE_US = '/feedback'
+
 export function ClientAccountMenu({ user, photo, onSignOut, links = [] }) {
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
@@ -171,10 +174,18 @@ export function ClientAccountMenu({ user, photo, onSignOut, links = [] }) {
           <strong>{user.firstName} {user.lastName}</strong>
           <span className="nav-account-role">Client</span>
         </div>
-        {links.map((link) => (
+        {/* Their own pages first, the occasional "Rate us" next, Log out last and apart. */}
+        {links.filter((link) => link.to !== RATE_US).map((link) => (
           <NavLink key={link.to} to={link.to} className="nav-panel-link" onClick={close}>{link.label}</NavLink>
         ))}
         <NavLink to="/profile" className="nav-panel-link" onClick={close}>My profile</NavLink>
+        {links.filter((link) => link.to === RATE_US).map((link) => (
+          <Fragment key={link.to}>
+            <div role="separator" className="nav-panel-divider" />
+            <NavLink to={link.to} className="nav-panel-link" onClick={close}>{link.label}</NavLink>
+          </Fragment>
+        ))}
+        <div role="separator" className="nav-panel-divider" />
         <button type="button" className="nav-panel-link nav-signout" onClick={onSignOut}>Log out</button>
       </NavDropdown>
     </div>

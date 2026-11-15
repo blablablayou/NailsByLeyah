@@ -86,7 +86,14 @@ export function AdminBookingTable({ bookings, onChanged, emptyTitle = 'No bookin
     <>
       {error && <Alert kind="error" onClose={() => setError(null)}>{error}</Alert>}
       <div className="table-wrap">
-        <table className="data-table bookings-table">
+        <table className={dayView ? 'data-table bookings-table day-table' : 'data-table bookings-table'}>
+          {/* The day view keeps the same column widths on every day, whatever the bookings hold. */}
+          {dayView && (
+            <colgroup>
+              <col className="col-time" /><col className="col-client" /><col className="col-service" />
+              <col className="col-payment" /><col className="col-status" /><col className="col-action" />
+            </colgroup>
+          )}
           <thead>
             <tr>
               <th>{dayView ? 'Time' : 'Date & time'}</th>
@@ -108,7 +115,8 @@ export function AdminBookingTable({ bookings, onChanged, emptyTitle = 'No bookin
                     {dayView ? (
                       <span className="time-pill">
                         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-                        <span>{formatTime(b.startTime)} –</span> <span>{formatTime(b.endTime)}</span>
+                        <span className="time-start">{formatTime(b.startTime)}</span>
+                        <span className="time-end">– {formatTime(b.endTime)}</span>
                       </span>
                     ) : (
                       <div className="when-cell">

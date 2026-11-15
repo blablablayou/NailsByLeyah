@@ -2555,3 +2555,41 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
   .bookings-table .booking-row.needs-action { background: color-mix(in srgb, var(--amber-100) 45%, var(--white)); }
   .bookings-table .booking-row.needs-action > td { background: transparent; }
 }
+
+/* ---- Leyah's day view: the same shape on every day (2026-11-16) ---- */
+/* The time is always two lines (start, then "– end") and never breaks inside a time. */
+/* (".bookings-table td > span" makes cell spans blocks; the pill needs its own grid back, hence the longer selector.) */
+.fb-day .bookings-table td > .time-pill { display: inline-grid; grid-template-columns: auto auto; column-gap: 8px; row-gap: 1px; padding: 6px 10px; line-height: 1.25; white-space: normal; }
+.fb-day .time-pill svg { grid-row: span 2; align-self: center; }
+.fb-day .time-pill .time-start, .fb-day .time-pill .time-end { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fb-day .time-pill .time-end { font-weight: 500; opacity: .85; }
+/* Fixed columns on laptops; on phones the rows become cards as before. The panel sits next to the calendar, so the
+   fixed columns are kept narrow and the service gets the rest. */
+@media (min-width: 760px) {
+  .bookings-table.day-table { table-layout: fixed; width: 100%; }
+  .day-table th, .day-table td { padding-left: 8px; padding-right: 8px; }
+  .day-table .col-time { width: 128px; }
+  .day-table .col-client { width: 17%; }
+  .day-table .col-payment { width: 108px; }
+  .day-table .col-status { width: 108px; }
+  .day-table .col-action { width: 96px; }
+  .day-table .client-handle { max-width: 100%; }
+  .day-table td { overflow-wrap: break-word; }
+  /* The main action above the "more" menu, so the column stays narrow. */
+  .day-table .row-actions { flex-direction: column; align-items: flex-end; gap: 4px; }
+}
+/* The day's list scrolls inside the panel (about as tall as the calendar beside it) instead of stretching the page;
+   the column headings stay in view while it scrolls. Phones keep the full-length cards. */
+@media (min-width: 760px) {
+  .fb-day .table-wrap { max-height: 306px; overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--dusty-rose) 70%, transparent) transparent; }
+  .fb-day .table-wrap::-webkit-scrollbar { width: 6px; }
+  .fb-day .table-wrap::-webkit-scrollbar-track { background: transparent; }
+  .fb-day .table-wrap::-webkit-scrollbar-thumb { background: var(--dusty-rose); border: 0; border-radius: 999px; }
+  .fb-day .data-table thead th { position: sticky; top: 0; z-index: 1; }
+}
+
+/* ---- Account menus (2026-11-16): groups set apart by a thin line; Log out last, same weight as the rest ---- */
+.nav-panel-divider { height: 1px; margin: 6px 6px; background: var(--line); }
+.nav-panel-link.nav-signout { font-weight: 400; color: var(--ink-soft); }
+.nav-panel-link.nav-signout:hover { background: var(--rose-50); color: var(--rose-700); }

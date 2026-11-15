@@ -77,3 +77,19 @@ describe('Find bookings polish', () => {
     expect(rowOf(8)).not.toHaveClass('needs-action') // already confirmed
   })
 })
+
+describe("Leyah's day view stays the same shape on every day", () => {
+  it('uses fixed column widths and a two-line time (start, then end) that never breaks inside a time', async () => {
+    const user = userEvent.setup()
+    await openPage()
+    await user.click(screen.getByRole('button', { name: 'Show booking details' }))
+    const day = await screen.findByRole('region', { name: 'Bookings on the chosen day' })
+    const table = await within(day).findByRole('table')
+
+    expect(table).toHaveClass('day-table')
+    expect(table.querySelectorAll('colgroup col')).toHaveLength(6)
+    const pill = table.querySelector('.time-pill')
+    expect(pill.querySelector('.time-start').textContent).toMatch(/^\d{1,2}:\d{2} [AP]M$/)
+    expect(pill.querySelector('.time-end').textContent).toMatch(/^– \d{1,2}:\d{2} [AP]M$/)
+  })
+})
