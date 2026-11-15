@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { api } from '../../api'
 import { useAsync } from '../../hooks/useAsync'
 import { errorMessage, fieldErrors } from '../../api/errors'
@@ -6,36 +6,46 @@ import { config } from '../../config'
 import { LIMITS, REFERENCE_IMAGE_ACCEPT, validateReferenceImage } from '../../validation/rules'
 import { shrinkImage } from '../../lib/shrinkImage'
 import { Alert, Button, Card, EmptyState, PageHeader, PageLoader, TextField } from '../../components/ui'
+import { Modal } from '../../components/Modal'
 
 /** Where an uploaded gallery photo is served: the API's address, or the test backend's data URL. */
 export const galleryPhotoSrc = (photo) =>
   photo.dataUrl ?? (/^https?:/.test(photo.url) ? photo.url : `${config.apiBaseUrl.replace(/\/$/, '')}${photo.url.replace(/^\/api/, '')}`)
 
+/** The home page keeps at most this many of Leyah's own photos (GalleryPhoto.MaxPhotos on the server). */
+const MAX_PHOTOS = 30
+
 /**
- * Leyah's photos for the home page's Our Works gallery. New photos show first; until she adds any, the home page keeps
- * its built-in photos.
+ * Leyah's photos for the home page's Our Works gallery. New photos show first, before the photos of her work that came
+ * with the site.
  */
 export default function GalleryPage() {
   const photos = useAsync(() => api.admin.gallery(), [])
   const [message, setMessage] = useState(null)
-  const [removing, setRemoving] = useState(null)
+  const [confirming, setConfirming] = useState(null) // the photo Leyah is about to remove
+  const [removing, setRemoving] = useState(false)
   const [error, setError] = useState(null)
 
   if (photos.loading && !photos.data) return <PageLoader label="Loading photos…" />
   if (photos.error) return <Alert kind="error">{errorMessage(photos.error)}</Alert>
 
-  const remove = async (photo) => {
-    if (!window.confirm('Remove this photo from the home page?')) return
-    setRemoving(photo.id)
+  const count = photos.data.length
+  const full = count >= MAX_PHOTOS
+
+  const remove = async () => {
+    const photo = confirming
+    setRemoving(true)
     setError(null)
     try {
       await api.admin.removeGalleryPhoto(photo.id)
       photos.setData((list) => list.filter((p) => p.id !== photo.id))
       setMessage('Photo removed.')
+      setConfirming(null)
     } catch (err) {
       setError(errorMessage(err))
+      setConfirming(null)
     } finally {
-      setRemoving(null)
+      setRemoving(false)
     }
   }
 
@@ -44,40 +54,94 @@ export default function GalleryPage() {
       <PageHeader title="Gallery" subtitle="Photos of your work for the home page's Our Works section. The newest shows first." />
       {message && <Alert kind="success" onClose={() => setMessage(null)}>{message}</Alert>}
       {error && <Alert kind="error" onClose={() => setError(null)}>{error}</Alert>}
-      <AddPhoto onAdded={(photo) => { photos.setData((list) => [photo, ...list]); setMessage('Photo added to the home page.') }} />
-      <Card title={`Your photos (${photos.data.length})`}>
-        {photos.data.length === 0 ? (
+      <AddPhoto full={full} onAdded={(photo) => { photos.setData((list) => [photo, ...list]); setMessage('Photo added to the home page.') }} />
+      <Card title={`Your photos · ${count} of ${MAX_PHOTOS}`}>
+        {count === 0 ? (
           <EmptyState title="No photos added yet">The home page already shows the photos of your work that came with the site. Photos you add here show first, newest on top.</EmptyState>
         ) : (
           <ul className="gallery-admin">
             {photos.data.map((p) => (
-              <li key={p.id}>
+              <li key={p.id} className="gallery-tile">
                 <img src={galleryPhotoSrc(p)} alt={p.caption ?? 'Gallery photo'} loading="lazy" />
-                <div className="gallery-admin-foot">
-                  <span>{p.caption ?? <span className="muted">No caption</span>}</span>
-                  <Button variant="danger-ghost" size="sm" loading={removing === p.id} onClick={() => remove(p)}>Remove</Button>
+                <div className="gallery-tile-foot">
+                  {p.caption
+                    ? <span className="gallery-tile-caption">{p.caption}</span>
+                    : <span className="gallery-tile-caption muted">No caption</span>}
+                  <Button variant="danger-ghost" size="sm" aria-label={`Remove ${p.caption ?? 'this photo'}`} onClick={() => setConfirming(p)}>Remove</Button>
                 </div>
               </li>
             ))}
           </ul>
         )}
       </Card>
+      {confirming && (
+        <Modal title="Remove this photo?" onClose={() => !removing && setConfirming(null)}
+          footer={<>
+            <Button variant="secondary" onClick={() => setConfirming(null)} disabled={removing}>Keep it</Button>
+            <Button variant="danger" onClick={remove} loading={removing}>Remove photo</Button>
+          </>}>
+          <div className="gallery-confirm">
+            <img src={galleryPhotoSrc(confirming)} alt={confirming.caption ?? 'Gallery photo'} />
+            <p>It comes off the home page&apos;s Our Works straight away. The photos of your work that came with the site stay.</p>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }
 
-function AddPhoto({ onAdded }) {
+function AddPhoto({ full, onAdded }) {
   const inputId = useId()
+  const input = useRef(null)
   const [file, setFile] = useState(null)
+  const [preview, setPreview] = useState(null)
+  const [dragging, setDragging] = useState(false)
   const [caption, setCaption] = useState('')
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
 
+  // The preview: a light object URL where the browser has one (freed when no longer shown), else a data URL.
+  const previewUrl = useRef(null)
+  const freePreview = () => {
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current)
+    previewUrl.current = null
+  }
+  useEffect(() => freePreview, [])
+
+  const clear = () => {
+    freePreview()
+    setFile(null)
+    setPreview(null)
+    if (input.current) input.current.value = ''
+  }
+
   const pick = (chosen) => {
     setErrors({})
-    const problem = chosen && validateReferenceImage(chosen)
-    setFile(problem && !/large|size/i.test(problem) ? null : chosen)
-    if (problem && !/large|size/i.test(problem)) setErrors({ file: problem })
+    if (!chosen) return clear()
+    const problem = validateReferenceImage(chosen)
+    // Too large is fine: it is shrunk before it is sent.
+    if (problem && !/large|size/i.test(problem)) {
+      clear()
+      setErrors({ file: problem })
+      return undefined
+    }
+    freePreview()
+    setFile(chosen)
+    if (typeof URL.createObjectURL === 'function') {
+      previewUrl.current = URL.createObjectURL(chosen)
+      setPreview(previewUrl.current)
+    } else {
+      const reader = new FileReader()
+      reader.onload = () => setPreview(String(reader.result))
+      reader.readAsDataURL(chosen)
+    }
+    return undefined
+  }
+
+  const drop = (e) => {
+    e.preventDefault()
+    setDragging(false)
+    if (!full) pick(e.dataTransfer?.files?.[0] ?? null)
   }
 
   const submit = async (e) => {
@@ -87,9 +151,8 @@ function AddPhoto({ onAdded }) {
     try {
       const ready = await shrinkImage(file)
       onAdded(await api.admin.addGalleryPhoto(ready, caption.trim() || null))
-      setFile(null)
+      clear()
       setCaption('')
-      e.target.reset()
     } catch (err) {
       setErrors({ ...fieldErrors(err), form: Object.keys(fieldErrors(err)).length ? null : errorMessage(err) })
     } finally {
@@ -100,16 +163,40 @@ function AddPhoto({ onAdded }) {
   return (
     <Card title="Add a photo">
       <form className="gallery-add" onSubmit={submit} noValidate>
-        {errors.form && <Alert kind="error">{errors.form}</Alert>}
-        <div className="field">
-          <label htmlFor={inputId} className="field-label">Photo</label>
-          <input id={inputId} className="input" type="file" accept={REFERENCE_IMAGE_ACCEPT} onChange={(e) => pick(e.target.files?.[0] ?? null)} />
+        <div className="gallery-add-photo">
+          <div className={['photo-drop', dragging && 'is-dragging', preview && 'has-photo', full && 'is-disabled'].filter(Boolean).join(' ')}
+            onDragOver={(e) => { e.preventDefault(); if (!full) setDragging(true) }} onDrop={drop}
+            // Moving over the text inside the zone is still inside it: only leaving the zone ends the highlight.
+            onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragging(false) }}>
+            <input ref={input} id={inputId} className="sr-only" type="file" accept={REFERENCE_IMAGE_ACCEPT} disabled={full} aria-label="Photo"
+              onChange={(e) => pick(e.target.files?.[0] ?? null)} />
+            {preview ? (
+              <>
+                <img src={preview} alt={`Selected photo: ${file.name}`} />
+                <div className="photo-drop-actions">
+                  <button type="button" className="btn btn-secondary btn-sm" aria-label="Change photo" onClick={() => input.current?.click()}><span>Change</span></button>
+                  <button type="button" className="btn btn-secondary btn-sm" aria-label="Clear selected photo" onClick={clear}><span>Clear</span></button>
+                </div>
+              </>
+            ) : (
+              <label htmlFor={inputId} className="photo-drop-empty">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="10" r="2" /><path d="M21 16l-5-5-8 8" /></svg>
+                <strong>Choose a photo or drag it here</strong>
+                <span className="muted small">JPG, PNG or WebP. Large photos are shrunk for you.</span>
+              </label>
+            )}
+          </div>
+          <span className="sr-only" aria-live="polite">{file ? `${file.name} selected` : ''}</span>
           {errors.file && <div className="field-error">{errors.file}</div>}
-          <p className="muted small">JPG, PNG or WebP. Large photos are shrunk for you.</p>
         </div>
-        <TextField label="Caption (optional)" maxLength={LIMITS.galleryCaptionMax} value={caption} error={errors.caption}
-          placeholder="e.g. Lace with silver studs" onChange={(e) => setCaption(e.target.value)} />
-        <div><Button type="submit" loading={saving}>Add to the home page</Button></div>
+        <div className="gallery-add-details">
+          {errors.form && <Alert kind="error">{errors.form}</Alert>}
+          {full && <Alert kind="info">You&apos;ve reached {MAX_PHOTOS} photos. Remove one to add another.</Alert>}
+          <TextField label="Caption (optional)" maxLength={LIMITS.galleryCaptionMax} value={caption} error={errors.caption}
+            placeholder="e.g. Lace with silver studs" disabled={full} onChange={(e) => setCaption(e.target.value)} />
+          <p className="muted small">Shown when someone opens the photo. A few words about the set are enough.</p>
+          <div><Button type="submit" loading={saving} disabled={full}>Add to the home page</Button></div>
+        </div>
       </form>
     </Card>
   )

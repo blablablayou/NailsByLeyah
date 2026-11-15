@@ -2593,3 +2593,54 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 .nav-panel-divider { height: 1px; margin: 6px 6px; background: var(--line); }
 .nav-panel-link.nav-signout { font-weight: 400; color: var(--ink-soft); }
 .nav-panel-link.nav-signout:hover { background: var(--rose-50); color: var(--rose-700); }
+
+/* ---- Admin gallery polish (2026-11-16) ---- */
+/* 2. The photo on one side, the caption and button on the other (stacked on phones). */
+.gallery-add { max-width: none; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (min-width: 760px) { .gallery-add { grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 28px; } }
+.gallery-add-photo, .gallery-add-details { display: grid; gap: 10px; align-content: start; }
+.gallery-add-details .field { max-width: 520px; }
+
+/* 1. The drop zone: square like a tile on the home page; click or drag a photo onto it. */
+.photo-drop { position: relative; aspect-ratio: 1 / 1; border: 1.5px dashed var(--rose-500); border-radius: 18px; background: var(--rose-50);
+  overflow: hidden; transition: background .15s, border-color .15s; }
+.photo-drop:hover, .photo-drop.is-dragging { background: var(--rose-100); border-color: var(--burgundy); }
+.photo-drop:focus-within { box-shadow: var(--focus); }
+.photo-drop.has-photo { border-style: solid; border-color: var(--line); background: var(--white); }
+.photo-drop.is-disabled { opacity: .55; pointer-events: none; }
+.photo-drop-empty { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 6px; padding: 18px;
+  text-align: center; cursor: pointer; color: var(--burgundy); }
+.photo-drop-empty svg { width: 34px; height: 34px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+.photo-drop-empty strong { font-size: var(--fs-body); }
+.photo-drop > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-drop-actions { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; justify-content: center; gap: 8px; }
+.photo-drop-actions .btn { background: var(--white); box-shadow: var(--shadow); cursor: pointer; }
+
+/* 5. Tiles: square photo, the caption under it on one line. */
+.gallery-tile { transition: box-shadow .2s; }
+.gallery-tile:hover { box-shadow: var(--shadow); }
+.gallery-tile-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 8px 8px 8px 12px; font-size: var(--fs-small); }
+.gallery-tile-caption { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 4. The remove dialog shows the photo being removed. */
+.gallery-confirm { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; }
+.gallery-confirm img { width: 96px; height: 96px; object-fit: cover; border-radius: 12px; }
+.gallery-confirm p { margin: 0; }
+/* On phones the full-width square would push the form far down: a shorter frame there. */
+@media (max-width: 759px) { .photo-drop { aspect-ratio: 4 / 3; } }
+
+/* ---- Services & prices polish (2026-11-16) ---- */
+/* 4. A "with design" row: a small tag instead of the old arrow; its price and length are worked out, so plain text. */
+.catalog-row.is-design .catalog-name::before { content: none; }
+.catalog-tag { display: inline-block; justify-self: start; align-self: start; width: fit-content; margin-top: 4px; padding: 1px 8px; border-radius: 99px; background: var(--rose-50); border: 1px solid var(--rose-100);
+  color: var(--rose-700); font-size: var(--fs-caption); font-weight: 600; }
+.catalog-fixed { display: inline-flex; align-items: center; min-height: 34px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+/* 1. The home page line folded to one quiet line until Leyah edits it. */
+.catalog-desc-folded { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.catalog-desc-folded .link-button { font-size: var(--fs-small); }
+
+/* 5. Unsaved changes: a calm bar floating at the bottom of the screen, so nothing on the page moves while typing. */
+.unsaved-bar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50; width: max-content; max-width: calc(100vw - 32px);
+  padding: 10px 16px; border-radius: 12px; background: var(--amber-100); border: 1px solid color-mix(in srgb, var(--amber-700) 25%, transparent);
+  color: var(--amber-700); font-size: var(--fs-small); font-weight: 600; box-shadow: var(--shadow); text-align: center; }

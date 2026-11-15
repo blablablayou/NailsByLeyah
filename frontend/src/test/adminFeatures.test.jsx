@@ -196,11 +196,11 @@ describe('Shade stock and booking rules', () => {
     const user = userEvent.setup()
     await signIn(ADMIN)
     renderApp('/admin/services')
-    // The design version's price and time can't be typed in; they follow the set.
-    expect(await screen.findByLabelText('Price of Soft Gel Extension with Design')).toHaveAttribute('readonly')
-    expect(screen.getByLabelText('Duration of Soft Gel Extension with Design in minutes')).toHaveAttribute('readonly')
+    // The design version's price and time can't be typed in; they follow the set (shown as text).
+    const price = await screen.findByLabelText('Price of Soft Gel Extension')
+    expect(screen.queryByLabelText('Price of Soft Gel Extension with Design')).toBeNull()
+    expect(screen.queryByLabelText('Duration of Soft Gel Extension with Design in minutes')).toBeNull()
 
-    const price = screen.getByLabelText('Price of Soft Gel Extension')
     await user.clear(price)
     await user.type(price, '350')
     const minutes = screen.getByLabelText('Duration of Soft Gel Extension in minutes')
@@ -217,8 +217,9 @@ describe('Shade stock and booking rules', () => {
     const user = userEvent.setup()
     await signIn(ADMIN)
     renderApp('/admin/services')
-    const line = await screen.findByLabelText('Home page line for BIAB')
-    expect(screen.queryByLabelText('Home page line for BIAB with Design')).toBeNull() // it shares BIAB's card
+    await user.click(await screen.findByRole('button', { name: 'Edit home page line for BIAB' }))
+    const line = screen.getByLabelText('Home page line for BIAB')
+    expect(screen.queryByRole('button', { name: 'Edit home page line for BIAB with Design' })).toBeNull() // it shares BIAB's card
     expect(screen.queryByLabelText('Home page line for Chrome')).toBeNull() // add-ons share one card
     await user.type(line, 'Strength for your own nails.')
     await user.click(within(line.closest('.catalog-row')).getByRole('button', { name: 'Save' }))
