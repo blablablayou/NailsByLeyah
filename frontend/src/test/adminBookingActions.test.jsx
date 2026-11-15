@@ -420,14 +420,17 @@ describe('Dashboard at a glance', () => {
 
 describe('Sales report Excel file', () => {
   const report = { bookingsMade: 4, bookingsCompleted: 3, bookingsCancelled: 1, bookingsNoShow: 2, depositsCollected: 1200, balancesReceived: 450, balancesUnpaid: 150, completedServicesValue: 1800 }
-  // The value beside a label in the Summary sheet's first column of figures.
+  // The value beside a label in the summary band: the label in column A, the figure in column H.
   const valueOf = (sheet, label) => {
     let found
     sheet.eachRow((row) => {
-      const cell = row.getCell(2).value
-      const text = typeof cell === 'object' && cell?.richText ? cell.richText[0].text : cell
-      if (text === label && found === undefined) found = row.getCell(3).value
+      if (row.getCell(1).value === label && found === undefined) found = row.getCell(8).value
     })
+    return found
+  }
+  const rowWith = (sheet, text) => {
+    let found
+    sheet.eachRow((row, n) => { if (row.getCell(1).value === text && found === undefined) found = n })
     return found
   }
 
@@ -435,31 +438,65 @@ describe('Sales report Excel file', () => {
     expect(totalReceived(report)).toBe(1650)
   })
 
-  it('writes the figures, peso formatted, and the busy days of a month with a totals row', async () => {
+  it('lays the month out like a printed report: header band, column headings, a row per busy day, grand total, summary', async () => {
     const days = [{ ...report, date: '2026-11-03' }, { date: '2026-11-04', bookingsMade: 0, bookingsCompleted: 0, bookingsCancelled: 0, bookingsNoShow: 0, depositsCollected: 0, balancesReceived: 0 }]
-    const book = buildSalesReportWorkbook(ExcelJS, { period: 'November 2026', report: { ...report, days } })
+    const book = buildSalesReportWorkbook(ExcelJS, { period: 'November 2026', report: { ...report, days }, generatedAt: new Date(2026, 10, 16, 15, 5) })
+    expect(book.worksheets.map((w) => w.name)).toEqual(['Sales Report'])
+    const sheet = book.getWorksheet('Sales Report')
 
-    const summary = book.getWorksheet('Summary')
-    expect(summary.getCell('B3').value).toBe('Sales report · November 2026')
-    expect(valueOf(summary, 'Total received')).toBe(1650)
-    expect(valueOf(summary, 'Balances unpaid')).toBe(150)
-    expect(valueOf(summary, 'No-show')).toBe(2)
+    // Report header band
+    expect(sheet.getCell('A1').value).toBe('NAILS BY LEYAH')
+    expect(sheet.getCell('A2').value).toBe('Sales Report')
+    expect(sheet.getCell('A3').value).toBe('Period: November 2026')
+    expect(String(sheet.getCell('H1').value)).toMatch(/^Printed: Nov 16, 2026/)
 
-    const daySheet = book.getWorksheet('Days')
-    expect(daySheet.getCell('A4').value).toBe('Tue, Nov 3') // Nov 4 had nothing, so it's left out
-    expect(daySheet.getCell('A5').value).toBe('Total')
-    expect(daySheet.getCell('F5').value).toMatchObject({ formula: 'SUM(F4:F4)', result: 1200 })
-    expect(daySheet.getCell('F4').numFmt).toContain('₱')
+    // Column headings, repeated on every printed page
+    const head = rowWith(sheet, 'Date')
+    expect(sheet.getRow(head).values.slice(1)).toEqual(['Date', 'Made', 'Completed', 'Cancelled', 'No-show', 'Paid online', 'Balances received', 'Total received'])
+    expect(sheet.pageSetup.printTitlesRow).toBe(`${head}:${head}`)
+
+    // Details: Nov 4 had nothing, so it's left out; then the grand total adds the rows up
+    expect(sheet.getCell(`A${head + 1}`).value).toBe('Tue, Nov 3')
+    expect(sheet.getCell(`H${head + 1}`).value).toMatchObject({ formula: `F${head + 1}+G${head + 1}`, result: 1650 })
+    expect(sheet.getCell(`A${head + 2}`).value).toBe('Grand Total')
+    expect(sheet.getCell(`F${head + 2}`).value).toMatchObject({ formula: `SUM(F${head + 1}:F${head + 1})`, result: 1200 })
+    expect(sheet.getCell(`F${head + 1}`).numFmt).toContain('#,##0.00')
+
+    // Summary band keeps every figure the old Summary sheet had
+    expect(valueOf(sheet, 'Total received')).toBe(1650)
+    expect(valueOf(sheet, 'Paid online')).toBe(1200)
+    expect(valueOf(sheet, 'Balances received')).toBe(450)
+    expect(valueOf(sheet, 'Completed services')).toBe(1800)
+    expect(valueOf(sheet, 'Balances unpaid')).toBe(150)
+    expect(valueOf(sheet, 'Bookings made')).toBe(4)
+    expect(valueOf(sheet, 'Completed')).toBe(3)
+    expect(valueOf(sheet, 'Cancelled')).toBe(1)
+    expect(valueOf(sheet, 'No-show')).toBe(2)
+
+    // Page footer: the note, and page numbers
+    expect(sheet.headerFooter.oddFooter).toContain('Page &P of &N')
+    expect(sheet.headerFooter.oddFooter).toContain('Payments count on the day they were paid')
 
     // The file is a real workbook: it opens again with the same figures.
     const reopened = new ExcelJS.Workbook()
     await reopened.xlsx.load(await book.xlsx.writeBuffer())
-    expect(valueOf(reopened.getWorksheet('Summary'), 'Total received')).toBe(1650)
+    expect(valueOf(reopened.getWorksheet('Sales Report'), 'Total received')).toBe(1650)
   })
 
-  it('makes a daily report without a sheet of days', () => {
-    const book = buildSalesReportWorkbook(ExcelJS, { period: 'Fri, Nov 6, 2026', report })
-    expect(book.worksheets.map((w) => w.name)).toEqual(['Summary'])
+  it('makes a daily report with one detail row for the day', () => {
+    const book = buildSalesReportWorkbook(ExcelJS, { period: 'Fri, Nov 6, 2026', report: { ...report, date: '2026-11-06' } })
+    const sheet = book.getWorksheet('Sales Report')
+    const head = rowWith(sheet, 'Date')
+    expect(sheet.getCell(`A${head + 1}`).value).toBe('Fri, Nov 6')
+    expect(sheet.getCell(`A${head + 2}`).value).toBe('Grand Total')
+  })
+
+  it('says so when a month had nothing', () => {
+    const days = [{ date: '2026-11-04', bookingsMade: 0, bookingsCompleted: 0, bookingsCancelled: 0, bookingsNoShow: 0, depositsCollected: 0, balancesReceived: 0 }]
+    const empty = { ...report, bookingsMade: 0, bookingsCompleted: 0, bookingsCancelled: 0, bookingsNoShow: 0, depositsCollected: 0, balancesReceived: 0, balancesUnpaid: 0, completedServicesValue: 0, days }
+    const sheet = buildSalesReportWorkbook(ExcelJS, { period: 'November 2026', report: empty }).getWorksheet('Sales Report')
+    expect(sheet.getCell(`A${rowWith(sheet, 'Date') + 1}`).value).toBe('No activity in this period.')
+    expect(valueOf(sheet, 'Total received')).toBe(0)
   })
 
   it('Reports offers the download once the figures have loaded', async () => {

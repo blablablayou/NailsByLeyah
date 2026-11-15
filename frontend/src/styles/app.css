@@ -2390,3 +2390,86 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
   .receipt-ref-value { font-size: var(--fs-small); letter-spacing: 0; } /* the whole number fits on one line */
   .receipt-copy { padding: 0 10px; }
 }
+
+/* ---- My bookings polish (2026-11-16): date leaf, days left, add-ons by hand, figures with labels ---- */
+.booking-cards { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .booking-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.booking-card { gap: 12px; padding: 16px 18px; }
+.booking-card-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; }
+.booking-date { display: flex; flex-direction: column; align-items: center; width: 56px; padding: 6px 0 7px; border-radius: 12px; background: var(--rose-50);
+  border: 1px solid var(--rose-100); line-height: 1.1; }
+.booking-date-month { font-size: var(--fs-caption); font-weight: 700; color: var(--rose-700); text-transform: uppercase; letter-spacing: .04em; }
+.booking-date-day { font-family: var(--font-display); font-size: var(--fs-title); font-weight: 700; color: var(--burgundy); }
+.booking-date-week { font-size: var(--fs-caption); color: var(--ink-soft); }
+.booking-card-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.booking-when { font-weight: 600; color: var(--ink); }
+.booking-countdown { align-self: flex-start; margin-top: 4px; padding: 1px 10px; border-radius: 99px; background: var(--rose-50); color: var(--rose-700);
+  font-size: var(--fs-caption); font-weight: 600; }
+.booking-card-details { display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px solid var(--line); }
+.booking-addons { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-small); color: var(--ink-soft); }
+.booking-addons li { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px; }
+.booking-addons-hand { color: var(--ink); font-weight: 600; }
+.booking-money { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 10px 12px; border-radius: 12px; background: #fbf6f4; }
+.booking-money > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.booking-money dt { font-size: var(--fs-caption); color: var(--ink-soft); }
+.booking-money dd { margin: 0; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.booking-money dd small { font-weight: 400; color: var(--ink-soft); font-size: var(--fs-caption); }
+.booking-note { margin: 0; font-size: var(--fs-small); color: var(--ink-soft); }
+.booking-note-label { font-weight: 600; color: var(--ink); margin-right: 4px; }
+.booking-card-actions { align-items: center; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.booking-card-actions-end { display: inline-flex; gap: 6px; margin-left: auto; }
+@media (max-width: 480px) {
+  .booking-card-head { grid-template-columns: auto minmax(0, 1fr); }
+  .booking-card-head > .badge { grid-column: 2; justify-self: start; }
+  .booking-card-actions-end { margin-left: 0; }
+}
+
+/* ---- Sales reports polish (2026-11-16): sentence-case labels, one big figure, counts row, day chart ---- */
+.report-page .report-head { gap: 10px; }
+.report-period { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.report-totals { gap: 22px; padding-top: 16px; }
+.report-page .report-section-title { margin: 0 0 10px; font-size: var(--fs-body); font-weight: 600; color: var(--ink); text-transform: none; letter-spacing: 0; }
+.report-empty { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--rose-50); color: var(--ink-soft); font-size: var(--fs-small); }
+.report-money { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 0 18px; align-items: start; }
+.report-money > .report-section-title { grid-column: 1 / -1; }
+.report-hero, .report-figure { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.report-hero { padding: 18px 20px; border-radius: 16px; background: var(--rose-50); border: 1px solid var(--rose-100); }
+.report-side { display: flex; flex-direction: column; }
+.report-figure { padding: 12px 2px; }
+.report-figure + .report-figure { border-top: 1px solid var(--line); }
+.report-label { font-size: var(--fs-small); font-weight: 600; color: var(--ink-soft); }
+.report-hero-value { font-size: calc(var(--fs-headline) * 1.35); font-weight: 700; color: var(--burgundy); font-variant-numeric: tabular-nums; line-height: 1.15; }
+.report-value { font-size: var(--fs-title); font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.report-hint { font-size: var(--fs-small); color: var(--muted); }
+.report-change { margin-top: 4px; font-size: var(--fs-small); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.report-change.better { color: var(--green-700); }
+.report-change.worse { color: var(--red-700); }
+.report-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; border: 1px solid var(--line); border-radius: 14px; }
+.report-counts > div { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; min-width: 0; }
+.report-counts > div + div { border-left: 1px solid var(--line); }
+.report-counts dt { display: flex; align-items: center; gap: 7px; font-size: var(--fs-small); font-weight: 600; color: var(--ink-soft); }
+.report-counts dd { margin: 0; font-size: var(--fs-title); font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.report-counts dd.report-hint { font-size: var(--fs-small); font-weight: 400; color: var(--muted); }
+
+.report-chart { margin-top: 22px; }
+.report-chart-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.report-bars { display: flex; align-items: flex-end; gap: 2px; height: 140px; padding-top: 8px; border-bottom: 1px solid var(--line); }
+.report-bar-col { position: relative; flex: 1 1 0; height: 100%; display: flex; align-items: flex-end; justify-content: center; min-width: 0; }
+.report-bar { width: 100%; max-width: 14px; min-height: 2px; border-radius: 4px 4px 0 0; background: #a0466a; transition: background .15s; }
+.report-bar.is-zero { background: var(--nude-200); }
+.report-bar-col:hover .report-bar:not(.is-zero) { background: var(--burgundy); }
+.report-bar-tip { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); display: none; flex-direction: column; align-items: center; gap: 1px;
+  padding: 5px 9px; border-radius: 8px; background: var(--ink); color: #fff; font-size: var(--fs-caption); white-space: nowrap; z-index: 2; pointer-events: none; }
+.report-bar-col:hover .report-bar-tip { display: flex; }
+.report-bar-col:nth-child(-n+4) .report-bar-tip { left: 0; transform: none; }
+.report-bar-col:nth-last-child(-n+4) .report-bar-tip { left: auto; right: 0; transform: none; }
+.report-bar-axis { display: flex; gap: 2px; margin-top: 4px; font-size: var(--fs-caption); color: var(--muted); font-variant-numeric: tabular-nums; }
+.report-bar-axis span { flex: 1 1 0; min-width: 0; text-align: center; }
+
+@media (max-width: 760px) {
+  .report-money { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .report-counts { grid-template-columns: minmax(0, 1fr); }
+  .report-counts > div + div { border-left: 0; border-top: 1px solid var(--line); }
+  .report-counts > div { display: grid; grid-template-columns: 1fr auto; align-items: center; }
+  .report-counts dd.report-hint { grid-column: 1 / -1; }
+}

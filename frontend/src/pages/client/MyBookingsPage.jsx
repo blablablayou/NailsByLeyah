@@ -4,7 +4,7 @@ import { api } from '../../api'
 import { useAsync } from '../../hooks/useAsync'
 import { errorMessage } from '../../api/errors'
 import { formatDate, formatTime } from '../../lib/format'
-import { hoursUntil, startsAt } from '../../lib/dates'
+import { hoursUntil, startsAt, today } from '../../lib/dates'
 import { Alert, Button, EmptyState, Money, PageHeader, PageLoader, Spinner, StatusBadge } from '../../components/ui'
 import { CancelBookingDialog, RescheduleDialog } from '../../components/BookingDialogs'
 import { Modal } from '../../components/Modal'
@@ -14,6 +14,7 @@ import { canDownloadReceipt } from '../../lib/receiptPdf'
 import { colorLabel, colorRequestLabel, perNailText } from '../../lib/shades'
 import { ReferenceImageGallery } from '../../components/ReferenceImageGallery'
 import { clearBookingDraft, draftHasProgress, loadBookingDraft } from '../../lib/bookingDraft'
+import { downloadIcs } from '../../lib/calendar'
 
 const RESCHEDULE_HOURS = 24
 
@@ -131,17 +132,45 @@ function DraftCard({ draft, catalog, onDiscard }) {
   )
 }
 
+/** "Today", "Tomorrow", "In 5 days" for an upcoming appointment. */
+function daysLeft(date) {
+  const days = Math.round((new Date(`${date}T00:00:00`) - new Date(`${today()}T00:00:00`)) / 86_400_000)
+  return days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : `In ${days} days`
+}
+
+/** Add-ons grouped by hand: "Left hand: French Tip × 5, Cat Eye Polish × 5". */
+function addOnsByHand(addOns) {
+  const groups = new Map()
+  for (const a of addOns) groups.set(a.handLabel, [...(groups.get(a.handLabel) ?? []), a])
+  return [...groups]
+}
+
 function BookingCard({ booking: b, onAction }) {
   const upcoming = isUpcoming(b)
   const inTime = hoursUntil(b.bookingDate, b.startTime) >= RESCHEDULE_HOURS
   const usedUp = b.rescheduleLimit > 0 && b.rescheduleCount >= b.rescheduleLimit
   const canReschedule = upcoming && inTime && !usedUp
+  const day = new Date(`${b.bookingDate}T00:00:00`)
+  const closed = b.status === 'NoShow' || b.status === 'Cancelled'
   return (
-    <li className="booking-card">
+    <li className="booking-card" aria-label={`${formatDate(b.bookingDate)} · ${formatTime(b.startTime)}`}>
       <div className="booking-card-head">
-        <div>
+        {/* A small calendar leaf: the day, month and weekday at a glance. */}
+        <span className="booking-date" aria-hidden="true">
+          <span className="booking-date-month">{day.toLocaleDateString('en-PH', { month: 'short' })}</span>
+          <span className="booking-date-day">{day.getDate()}</span>
+          <span className="booking-date-week">{day.toLocaleDateString('en-PH', { weekday: 'short' })}</span>
+        </span>
+        <div className="booking-card-title">
           <div className="booking-when">{formatDate(b.bookingDate)} · {formatTime(b.startTime)}</div>
           <div className="booking-what">{b.serviceName}{b.removalServiceName && ` + Removal (${b.removalServiceName})`}</div>
+          {upcoming && <span className="booking-countdown">{daysLeft(b.bookingDate)}</span>}
+        </div>
+        <StatusBadge status={b.status} />
+      </div>
+
+      {(b.nailColor || b.perNailColors || b.colorRequest || b.addOns.length > 0) && (
+        <div className="booking-card-details">
           {b.nailColor && <div className="muted small">Colour: {colorLabel(b.nailColor)}</div>}
           {b.perNailColors && <div className="muted small">Each nail: {perNailText(b.perNailColors)}</div>}
           {b.colorRequest && (
@@ -149,20 +178,26 @@ function BookingCard({ booking: b, onAction }) {
               Colour: {b.colorRequest} <span className={`color-request-badge is-${(b.colorRequestStatus ?? 'Pending').toLowerCase()}`}>{colorRequestLabel(b.colorRequestStatus)}</span>
             </div>
           )}
+          {b.addOns.length > 0 && (
+            <ul className="booking-addons" aria-label="Add-ons">
+              {addOnsByHand(b.addOns).map(([hand, items]) => (
+                <li key={hand}>
+                  <span className="booking-addons-hand">{hand}</span>
+                  <span>{items.map((a) => `${a.name} × ${a.nailCount}`).join(', ')}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        <StatusBadge status={b.status} />
-      </div>
-      {b.addOns.length > 0 && (
-        <p className="muted small">
-          Add-ons: {b.addOns.map((a) => `${a.name} — ${a.handLabel} × ${a.nailCount}`).join(', ')}
-        </p>
       )}
-      <div className="booking-card-meta">
-        <span>Total <Money amount={b.totalPrice} /></span>
-        <span>Paid <Money amount={b.payment?.amountPaid ?? b.depositAmount} />{b.payment?.option === 'Full' ? ' (full)' : ' (deposit)'}</span>
-        {b.status !== 'NoShow' && b.status !== 'Cancelled' && <span>Balance <Money amount={b.balanceDue} /></span>}
-        <span>Note: {b.note ?? 'No note'}</span>
-      </div>
+
+      <dl className="booking-money" role="group" aria-label="Payment">
+        <div><dt>Total</dt><dd><Money amount={b.totalPrice} /></dd></div>
+        <div><dt>Paid</dt><dd><Money amount={b.payment?.amountPaid ?? b.depositAmount} /> <small>{b.payment?.option === 'Full' ? '(full)' : '(deposit)'}</small></dd></div>
+        {!closed && <div><dt>Balance</dt><dd><Money amount={b.balanceDue} /></dd></div>}
+      </dl>
+
+      {b.note && <p className="booking-note"><span className="booking-note-label">Note</span> <span>{b.note}</span></p>}
       <ReferenceImageGallery images={b.referenceImages} />
       {b.cancellation && (
         <p className="muted small">
@@ -180,8 +215,11 @@ function BookingCard({ booking: b, onAction }) {
         <Button variant="ghost" size="sm" onClick={() => onAction('receipt')}>Receipt</Button>
         {upcoming && (
           <>
-            <Button variant="secondary" size="sm" disabled={!canReschedule} onClick={() => onAction('reschedule')}>Reschedule</Button>
-            <Button variant="danger-ghost" size="sm" onClick={() => onAction('cancel')}>Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={() => downloadIcs(b)}>Add to calendar</Button>
+            <span className="booking-card-actions-end">
+              <Button variant="secondary" size="sm" disabled={!canReschedule} onClick={() => onAction('reschedule')}>Reschedule</Button>
+              <Button variant="danger-ghost" size="sm" onClick={() => onAction('cancel')}>Cancel</Button>
+            </span>
           </>
         )}
       </div>

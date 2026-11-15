@@ -1,17 +1,20 @@
-// The sales report as an Excel file (.xlsx), for Leyah's records. Built in the browser from the figures on the page.
+// The sales report as an Excel file (.xlsx), for Leyah's records, laid out like a printed Crystal Reports report: a
+// report header band, column headings (repeated on every printed page), one detail row per day, a grand total, a
+// summary band, and a page footer with page numbers. Built in the browser from the figures on the page.
 
 export const totalReceived = (report) => report.depositsCollected + report.balancesReceived
 
+const INK = 'FF000000'
+const GREY_BAND = 'FFD9D9D9'
+const GREY_LIGHT = 'FFF2F2F2'
+const MUTED = 'FF595959'
 const BURGUNDY = 'FF7A2E4C'
-const ROSE = 'FFF8E1E8'
-const ROSE_LIGHT = 'FFFDF4F6'
-const LINE = 'FFEACDD6'
-const MUTED = 'FF7A6A70'
-const PESO = '"₱"#,##0.00'
+const PESO = '#,##0.00'
 const COUNT = '#,##0'
+const FONT = 'Arial'
 
-const thin = { style: 'thin', color: { argb: LINE } }
-const box = { top: thin, left: thin, bottom: thin, right: thin }
+const thin = { style: 'thin', color: { argb: INK } }
+const double = { style: 'double', color: { argb: INK } }
 const fill = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } })
 
 /** "Tue, Nov 3" for a yyyy-mm-dd date. */
@@ -22,167 +25,158 @@ const dayLabel = (iso) => {
 
 const hasActivity = (d) => d.bookingsMade || d.bookingsCompleted || d.bookingsCancelled || d.bookingsNoShow || d.depositsCollected || d.balancesReceived
 
+const COLUMNS = [
+  { header: 'Date', key: 'date', width: 16 },
+  { header: 'Made', key: 'bookingsMade', width: 9, format: COUNT },
+  { header: 'Completed', key: 'bookingsCompleted', width: 12, format: COUNT },
+  { header: 'Cancelled', key: 'bookingsCancelled', width: 12, format: COUNT },
+  { header: 'No-show', key: 'bookingsNoShow', width: 10, format: COUNT },
+  { header: 'Paid online', key: 'depositsCollected', width: 15, format: PESO },
+  { header: 'Balances received', key: 'balancesReceived', width: 19, format: PESO },
+  { header: 'Total received', key: 'total', width: 17, format: PESO },
+]
+const LAST = COLUMNS.length // column H
+
 /**
- * Builds the workbook. `period` is the report's title, e.g. "November 2026" or "Fri, Nov 13, 2026".
- * Sheet "Summary": the money and the booking counts. A monthly report also gets "Days": every day with activity, with totals.
+ * Builds the workbook. `period` is the report's title, e.g. "November 2026" or "Fri, Nov 13, 2026". A monthly report
+ * lists every day with activity; a daily report has one detail row for its day (`report.date`).
  */
 export function buildSalesReportWorkbook(ExcelJS, { period, report, generatedAt = new Date() }) {
   const book = new ExcelJS.Workbook()
   book.creator = 'Nails by Leyah'
   book.created = generatedAt
-  // Excel works out every formula (the Days totals) when the file opens, so a saved zero result can't be left blank.
+  // Excel works out every formula (the row and grand totals) when the file opens.
   book.calcProperties.fullCalcOnLoad = true
 
-  const sheet = book.addWorksheet('Summary', {
+  const sheet = book.addWorksheet('Sales Report', {
     views: [{ showGridLines: false }],
-    pageSetup: { orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.6, right: 0.6, top: 0.7, bottom: 0.7, header: 0.3, footer: 0.3 } },
+    pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+      margins: { left: 0.5, right: 0.5, top: 0.6, bottom: 0.7, header: 0.3, footer: 0.3 } },
   })
-  sheet.columns = [{ width: 4 }, { width: 60 }, { width: 24 }, { width: 4 }]
+  sheet.columns = COLUMNS.map(({ key, width }) => ({ key, width }))
+  const font = (extra = {}) => ({ name: FONT, size: 10, color: { argb: INK }, ...extra })
 
-  // Title block
-  sheet.mergeCells('B2:C2')
-  Object.assign(sheet.getCell('B2'), { value: 'Nails by Leyah' })
-  sheet.getCell('B2').font = { name: 'Georgia', size: 26, bold: true, color: { argb: BURGUNDY } }
-  sheet.getRow(2).height = 38
-  sheet.mergeCells('B3:C3')
-  sheet.getCell('B3').value = `Sales report · ${period}`
-  sheet.getCell('B3').font = { name: 'Calibri', size: 16, bold: true, color: { argb: 'FF3B2A30' } }
-  sheet.getRow(3).height = 24
-  sheet.mergeCells('B4:C4')
-  sheet.getCell('B4').value = `Generated ${generatedAt.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}`
-  sheet.getCell('B4').font = { name: 'Calibri', size: 11, italic: true, color: { argb: MUTED } }
+  // ---- Report header band ----
+  sheet.mergeCells(1, 1, 1, 5)
+  sheet.getCell('A1').value = 'NAILS BY LEYAH'
+  sheet.getCell('A1').font = font({ size: 16, bold: true, color: { argb: BURGUNDY } })
+  sheet.mergeCells(1, 6, 1, LAST)
+  sheet.getCell(1, 6).value = `Printed: ${generatedAt.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}`
+  sheet.getCell(1, 6).font = font({ size: 9, color: { argb: MUTED } })
+  sheet.getCell(1, 6).alignment = { horizontal: 'right', vertical: 'middle' }
+  sheet.getRow(1).height = 24
+  sheet.mergeCells(2, 1, 2, LAST)
+  sheet.getCell('A2').value = 'Sales Report'
+  sheet.getCell('A2').font = font({ size: 13, bold: true })
+  sheet.mergeCells(3, 1, 3, LAST)
+  sheet.getCell('A3').value = `Period: ${period}`
+  sheet.getCell('A3').font = font({ color: { argb: MUTED } })
+  for (let c = 1; c <= LAST; c += 1) sheet.getCell(3, c).border = { bottom: { style: 'medium', color: { argb: INK } } }
 
-  let r = 6
-  const section = (title, valueLabel) => {
-    const row = sheet.getRow(r)
-    row.getCell(2).value = title
-    row.getCell(3).value = valueLabel
-    row.height = 28
-    for (const c of [2, 3]) {
-      const cell = row.getCell(c)
-      cell.fill = fill(BURGUNDY)
-      cell.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } }
-      cell.alignment = { vertical: 'middle', horizontal: c === 3 ? 'right' : 'left', indent: 1 }
-      cell.border = box
-    }
+  // ---- Column headings (page header), repeated on every printed page ----
+  const head = 5
+  const headRow = sheet.getRow(head)
+  COLUMNS.forEach((col, i) => {
+    const cell = headRow.getCell(i + 1)
+    cell.value = col.header
+    cell.font = font({ bold: true })
+    cell.fill = fill(GREY_BAND)
+    cell.border = { top: thin, bottom: thin }
+    cell.alignment = { horizontal: i === 0 ? 'left' : 'right', vertical: 'middle', wrapText: true }
+  })
+  headRow.height = 20
+  sheet.pageSetup.printTitlesRow = `${head}:${head}`
+  sheet.views = [{ state: 'frozen', ySplit: head, showGridLines: false }]
+
+  // ---- Details ----
+  const rows = report.days ? report.days.filter(hasActivity) : [{ ...report, date: report.date }]
+  let r = head + 1
+  if (rows.length === 0 || (!report.days && !hasActivity(report))) {
+    sheet.mergeCells(r, 1, r, LAST)
+    sheet.getCell(r, 1).value = 'No activity in this period.'
+    sheet.getCell(r, 1).font = font({ italic: true, color: { argb: MUTED } })
+    r += 1
+  } else {
+    const first = r
+    rows.forEach((d, i) => {
+      const row = sheet.getRow(r)
+      row.values = [d.date ? dayLabel(d.date) : period, d.bookingsMade, d.bookingsCompleted, d.bookingsCancelled, d.bookingsNoShow,
+        d.depositsCollected, d.balancesReceived, { formula: `F${r}+G${r}`, result: d.depositsCollected + d.balancesReceived }]
+      COLUMNS.forEach((col, c) => {
+        const cell = row.getCell(c + 1)
+        cell.font = font()
+        if (col.format) cell.numFmt = col.format
+        cell.alignment = { horizontal: c === 0 ? 'left' : 'right' }
+        if (i % 2) cell.fill = fill(GREY_LIGHT)
+      })
+      r += 1
+    })
+
+    // ---- Grand total (report footer): adds up the rows above, so the sheet stays right if Leyah edits a figure ----
+    const last = r - 1
+    const total = sheet.getRow(r)
+    total.values = ['Grand Total', ...COLUMNS.slice(1).map((col, i) => {
+      const letter = String.fromCharCode(66 + i) // B, C, ...
+      return { formula: `SUM(${letter}${first}:${letter}${last})`,
+        result: rows.reduce((sum, d) => sum + (col.key === 'total' ? d.depositsCollected + d.balancesReceived : d[col.key]), 0) }
+    })]
+    COLUMNS.forEach((col, c) => {
+      const cell = total.getCell(c + 1)
+      cell.font = font({ bold: true })
+      if (col.format) cell.numFmt = col.format
+      cell.alignment = { horizontal: c === 0 ? 'left' : 'right' }
+      cell.border = { top: thin, bottom: double }
+    })
     r += 1
   }
+
+  // ---- Summary band ----
+  r += 1
+  sheet.mergeCells(r, 1, r, LAST)
+  sheet.getCell(r, 1).value = 'Summary'
+  sheet.getCell(r, 1).font = font({ bold: true })
+  sheet.getCell(r, 1).fill = fill(GREY_BAND)
+  sheet.getCell(r, 1).border = { top: thin, bottom: thin }
+  r += 1
   const line = (label, value, format, { strong = false, note } = {}) => {
-    const row = sheet.getRow(r)
-    row.getCell(2).value = note ? { richText: [{ text: label }, { text: `  ${note}`, font: { size: 11, italic: true, color: { argb: MUTED } } }] } : label
-    row.getCell(3).value = value
-    row.getCell(3).numFmt = format
-    row.height = 26
-    for (const c of [2, 3]) {
-      const cell = row.getCell(c)
-      cell.fill = fill(strong ? ROSE : (r % 2 ? 'FFFFFFFF' : ROSE_LIGHT))
-      cell.font = { name: 'Calibri', size: 14, bold: strong, color: { argb: strong ? BURGUNDY : 'FF3B2A30' } }
-      cell.alignment = { vertical: 'middle', horizontal: c === 3 ? 'right' : 'left', indent: 1 }
-      cell.border = box
-    }
+    sheet.mergeCells(r, 2, r, LAST - 1)
+    sheet.getCell(r, 1).value = label
+    sheet.getCell(r, 1).font = font({ bold: strong })
+    sheet.getCell(r, 2).value = note ?? null
+    sheet.getCell(r, 2).font = font({ italic: true, size: 9, color: { argb: MUTED } })
+    const cell = sheet.getCell(r, LAST)
+    cell.value = value
+    cell.numFmt = format
+    cell.font = font({ bold: strong })
+    cell.alignment = { horizontal: 'right' }
     r += 1
   }
-
-  section('Sales', 'Amount')
   line('Total received', totalReceived(report), PESO, { strong: true, note: 'online payments plus balances' })
   line('Paid online', report.depositsCollected, PESO, { note: 'deposits and full payments' })
   line('Balances received', report.balancesReceived, PESO, { note: 'paid after the service' })
   line('Completed services', report.completedServicesValue, PESO, { note: 'full price of appointments completed' })
   line('Balances unpaid', report.balancesUnpaid, PESO, { note: 'completed, not recorded yet' })
-  r += 1
-  section('Bookings', 'Count')
-  line('Made', report.bookingsMade, COUNT, { note: 'new bookings placed' })
+  line('Bookings made', report.bookingsMade, COUNT, { note: 'new bookings placed' })
   line('Completed', report.bookingsCompleted, COUNT, { note: 'appointments finished' })
   line('Cancelled', report.bookingsCancelled, COUNT, { note: 'by clients or the salon' })
   line('No-show', report.bookingsNoShow, COUNT, { note: 'client did not come' })
+  for (let c = 1; c <= LAST; c += 1) sheet.getCell(r - 1, c).border = { bottom: thin }
 
   r += 1
-  for (const text of [
-    'Payments count on the day they were paid; everything else on the day it happened.',
-    "For the salon's records; this is not an official receipt.",
-  ]) {
-    sheet.mergeCells(`B${r}:C${r}`)
-    sheet.getCell(`B${r}`).value = text
-    sheet.getCell(`B${r}`).font = { name: 'Calibri', size: 11, italic: true, color: { argb: MUTED } }
+  sheet.mergeCells(r, 1, r, LAST)
+  sheet.getCell(r, 1).value = "Amounts in Philippine pesos (PHP). For the salon's records; this is not an official receipt."
+  sheet.getCell(r, 1).font = font({ italic: true, size: 9, color: { argb: MUTED } })
+  if (report.days) {
     r += 1
+    sheet.mergeCells(r, 1, r, LAST)
+    sheet.getCell(r, 1).value = 'Days with no activity are not listed.'
+    sheet.getCell(r, 1).font = font({ italic: true, size: 9, color: { argb: MUTED } })
   }
 
-  if (report.days) addDaysSheet(book, period, report.days)
+  // ---- Page footer (printed): the note and the page numbers ----
+  sheet.headerFooter.oddFooter = '&L&"Arial,Italic"&8Payments count on the day they were paid; everything else on the day it happened.&R&"Arial"&8Page &P of &N'
+  sheet.headerFooter.evenFooter = sheet.headerFooter.oddFooter
   return book
-}
-
-/** Every day of the month with activity, newest last, with a totals row that adds them up. */
-function addDaysSheet(book, period, days) {
-  const sheet = book.addWorksheet('Days', {
-    views: [{ state: 'frozen', ySplit: 3, showGridLines: false }],
-    pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
-  })
-  const columns = [
-    { header: 'Date', key: 'date', width: 19, format: null },
-    { header: 'Made', key: 'bookingsMade', width: 11, format: COUNT },
-    { header: 'Completed', key: 'bookingsCompleted', width: 14, format: COUNT },
-    { header: 'Cancelled', key: 'bookingsCancelled', width: 14, format: COUNT },
-    { header: 'No-show', key: 'bookingsNoShow', width: 12, format: COUNT },
-    { header: 'Paid online', key: 'depositsCollected', width: 19, format: PESO },
-    { header: 'Balances received', key: 'balancesReceived', width: 23, format: PESO },
-    { header: 'Total received', key: 'total', width: 20, format: PESO },
-  ]
-  sheet.columns = columns.map(({ key, width }) => ({ key, width }))
-
-  sheet.mergeCells(1, 1, 1, columns.length)
-  sheet.getCell('A1').value = `Days with activity · ${period}`
-  sheet.getCell('A1').font = { name: 'Georgia', size: 18, bold: true, color: { argb: BURGUNDY } }
-  sheet.getRow(1).height = 30
-
-  const header = sheet.getRow(3)
-  columns.forEach((c, i) => {
-    const cell = header.getCell(i + 1)
-    cell.value = c.header
-    cell.fill = fill(BURGUNDY)
-    cell.font = { name: 'Calibri', size: 13, bold: true, color: { argb: 'FFFFFFFF' } }
-    cell.alignment = { vertical: 'middle', horizontal: i === 0 ? 'left' : 'right', indent: i === 0 ? 1 : 0 }
-    cell.border = box
-  })
-  header.height = 28
-
-  const active = days.filter(hasActivity)
-  if (active.length === 0) {
-    sheet.mergeCells(4, 1, 4, columns.length)
-    sheet.getCell('A4').value = 'No activity this month.'
-    sheet.getCell('A4').font = { italic: true, color: { argb: MUTED } }
-    return
-  }
-
-  active.forEach((d, i) => {
-    const rowNumber = 4 + i
-    const row = sheet.getRow(rowNumber)
-    row.values = [dayLabel(d.date), d.bookingsMade, d.bookingsCompleted, d.bookingsCancelled, d.bookingsNoShow, d.depositsCollected, d.balancesReceived,
-      { formula: `F${rowNumber}+G${rowNumber}`, result: d.depositsCollected + d.balancesReceived }]
-    style(row, columns, i % 2 ? ROSE_LIGHT : 'FFFFFFFF', false)
-  })
-
-  // Totals add up the rows above, so the sheet stays right if Leyah edits a figure.
-  const first = 4
-  const last = 3 + active.length
-  const totals = sheet.getRow(last + 1)
-  totals.values = ['Total', ...columns.slice(1).map((c, i) => {
-    const col = String.fromCharCode(66 + i) // B, C, ...
-    return { formula: `SUM(${col}${first}:${col}${last})`, result: active.reduce((sum, d) => sum + (c.key === 'total' ? d.depositsCollected + d.balancesReceived : d[c.key]), 0) }
-  })]
-  style(totals, columns, ROSE, true)
-  sheet.autoFilter = { from: { row: 3, column: 1 }, to: { row: last, column: columns.length } }
-}
-
-function style(row, columns, background, strong) {
-  row.height = 24
-  columns.forEach((c, i) => {
-    const cell = row.getCell(i + 1)
-    if (c.format) cell.numFmt = c.format
-    cell.fill = fill(background)
-    cell.font = { name: 'Calibri', size: 13, bold: strong, color: { argb: strong ? BURGUNDY : 'FF3B2A30' } }
-    cell.alignment = { vertical: 'middle', horizontal: i === 0 ? 'left' : 'right', indent: i === 0 ? 1 : 0 }
-    cell.border = box
-  })
 }
 
 /** Builds the file and hands it to the browser to save. */
