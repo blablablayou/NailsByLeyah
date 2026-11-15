@@ -99,6 +99,33 @@ All settings are in `appsettings.json`. Override any of them with user secrets o
 | `AdminSeed` | First administrator (user secrets only) |
 | `ForwardedHeaders` | Reading the visitor's real address behind the host's proxy. On the host: `Enabled` true. `ForwardLimit` is how many `X-Forwarded-For` entries to believe, counted from the right (2 on Render) |
 | `RateLimits` | How many requests one visitor or client may make per time window (see [Security](#security)). `Enabled: false` only in tests |
+| `Payments:AllowSimulated` | Test deployments only: lets the site start with the simulated gateway, which approves every payment without money moving. Off by default, so the live site refuses to start without a real gateway. Remove it before real clients book |
+
+## Test deployment on Render
+
+One **Web Service** from this repository: Runtime **Docker** (the root `Dockerfile` builds the website and the API
+together), Region **Singapore**, branch `main` (every push redeploys), Health Check Path `/api/health`.
+Environment variables (secrets are pasted in Render's dashboard, never committed):
+
+| Variable | Value |
+|---|---|
+| `ConnectionStrings__Default` | The Supabase session-pooler .NET connection string (the same one as in user secrets) |
+| `Database__ApplyMigrationsOnStartup` | `true` |
+| `AllowedHosts` | The service's address without `https://`, for example `nailsbyleyah.onrender.com` |
+| `Frontend__BaseUrl` | The same address with `https://` |
+| `ForwardedHeaders__Enabled` | `true` |
+| `Brevo__ApiKey` | The Brevo API key |
+| `Email__FromAddress` | `nailsbyleyah.bookings@gmail.com` |
+| `Notifications__SalonEmail` | Where new-booking alerts go |
+| `Alerts__Email` | Who is told about serious problems |
+| `Supabase__Url`, `Supabase__SecretKey` | The Supabase project's address and secret key (design photos) |
+| `AdminSeed__Username`, `AdminSeed__Email`, `AdminSeed__Password`, `AdminSeed__PhoneNumber` | First administrator, created only if that username doesn't exist yet |
+| `Payments__AllowSimulated` | `true` while payments are simulated; delete it before real clients book |
+
+A keep-awake ping (cron-job.org or UptimeRobot) opens `https://<address>/api/health/database` every 10 minutes, so
+the free service doesn't sleep and the free database doesn't pause. After the first deploy, check the time zone
+(booking times), the links in emails, the visitor address in the Activity log (`ForwardLimit`, see Security) and
+that signing in survives a restart.
 
 ## Project layout
 

@@ -128,6 +128,18 @@ public sealed class DatabaseOptions
     public bool ApplyMigrationsOnStartup { get; set; }
 }
 
+/// <summary>Payments on a test deployment.</summary>
+public sealed class PaymentOptions
+{
+    public const string Section = "Payments";
+
+    /// <summary>
+    /// Lets a test deployment start with the simulated gateway, which approves every payment without money moving.
+    /// Off by default, so the live site still refuses to start without a real gateway. Remove it before real clients book.
+    /// </summary>
+    public bool AllowSimulated { get; set; }
+}
+
 /// <summary>Optional first administrator account, created on startup if it does not exist.</summary>
 public sealed class AdminSeedOptions
 {

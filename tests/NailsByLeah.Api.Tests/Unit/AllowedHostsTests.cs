@@ -34,4 +34,18 @@ public sealed class AllowedHostsTests
     [Fact]
     public void A_real_https_address_works_for_emailed_links() =>
         Assert.Null(StartupTasks.WebsiteAddressProblem("https://nailsbyleyah.onrender.com"));
+
+    [Fact]
+    public void The_live_site_refuses_simulated_payments_unless_a_test_deployment_allows_them() =>
+        Assert.NotNull(StartupTasks.PaymentGatewayProblem(isSimulated: true, allowSimulated: false));
+
+    [Fact]
+    public void A_test_deployment_may_start_with_simulated_payments() =>
+        Assert.Null(StartupTasks.PaymentGatewayProblem(isSimulated: true, allowSimulated: true));
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_real_gateway_always_starts(bool allowSimulated) =>
+        Assert.Null(StartupTasks.PaymentGatewayProblem(isSimulated: false, allowSimulated));
 }

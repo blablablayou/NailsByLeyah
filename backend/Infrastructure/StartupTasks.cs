@@ -17,7 +17,7 @@ public static class StartupTasks
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
 
         if (!app.Environment.IsDevelopment())
-            EnsureProductionReady(services);
+            EnsureProductionReady(services, logger);
 
         var db = services.GetRequiredService<AppDbContext>();
         if (services.GetRequiredService<IOptions<DatabaseOptions>>().Value.ApplyMigrationsOnStartup)
@@ -30,12 +30,16 @@ public static class StartupTasks
     }
 
     /// <summary>Refuses to start a non-development environment with development-only stand-ins.</summary>
-    private static void EnsureProductionReady(IServiceProvider services)
+    private static void EnsureProductionReady(IServiceProvider services, ILogger logger)
     {
         if (!services.GetRequiredService<IOptions<BrevoOptions>>().Value.IsConfigured)
             throw new InvalidOperationException("Brevo:ApiKey must be configured outside Development; emails would otherwise only be logged.");
-        if (services.GetRequiredService<IPaymentGateway>() is SimulatedPaymentGateway)
-            throw new InvalidOperationException("The simulated payment gateway cannot be used outside Development. Register a real GCash/Maya gateway.");
+        var simulated = services.GetRequiredService<IPaymentGateway>() is SimulatedPaymentGateway;
+        var allowSimulated = services.GetRequiredService<IOptions<PaymentOptions>>().Value.AllowSimulated;
+        if (PaymentGatewayProblem(simulated, allowSimulated) is { } paymentProblem)
+            throw new InvalidOperationException(paymentProblem);
+        if (simulated)
+            logger.LogWarning("TEST DEPLOYMENT: payments are simulated (Payments:AllowSimulated is on). Every payment is approved without money moving. Remove the setting before real clients book.");
         if (!services.GetRequiredService<IOptions<SupabaseOptions>>().Value.IsConfigured)
             throw new InvalidOperationException("Supabase:Url and Supabase:SecretKey must be set outside Development: hosts wipe their disk, so clients' photos would be lost.");
         if (!services.GetRequiredService<IOptions<ProxyOptions>>().Value.Enabled)
@@ -45,6 +49,15 @@ public static class StartupTasks
         if (WebsiteAddressProblem(services.GetRequiredService<IOptions<FrontendOptions>>().Value.BaseUrl) is { } addressProblem)
             throw new InvalidOperationException(addressProblem);
     }
+
+    /// <summary>
+    /// Why the site can't start with this payment gateway, or null if it can. The simulated gateway is allowed outside
+    /// Development only when a test deployment asks for it with Payments:AllowSimulated.
+    /// </summary>
+    public static string? PaymentGatewayProblem(bool isSimulated, bool allowSimulated) =>
+        isSimulated && !allowSimulated
+            ? "The simulated payment gateway cannot be used outside Development. Register a real GCash/Maya gateway, or set Payments:AllowSimulated=true on a test deployment only."
+            : null;
 
     /// <summary>Why this address can't be used in emailed links on the live site, or null if it can.</summary>
     public static string? WebsiteAddressProblem(string? baseUrl)

@@ -31,6 +31,7 @@ public static class ServiceRegistration
         services.AddOptions<BrevoOptions>().Bind(configuration.GetSection(BrevoOptions.Section));
         services.AddOptions<NotificationOptions>().Bind(configuration.GetSection(NotificationOptions.Section));
         services.AddOptions<DatabaseOptions>().Bind(configuration.GetSection(DatabaseOptions.Section));
+        services.AddOptions<PaymentOptions>().Bind(configuration.GetSection(PaymentOptions.Section));
         services.AddOptions<AdminSeedOptions>().Bind(configuration.GetSection(AdminSeedOptions.Section));
         services.AddOptions<UploadOptions>().Bind(configuration.GetSection(UploadOptions.Section));
         services.AddOptions<SupabaseOptions>().Bind(configuration.GetSection(SupabaseOptions.Section));
