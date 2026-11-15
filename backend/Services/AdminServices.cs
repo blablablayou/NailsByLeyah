@@ -116,6 +116,8 @@ public sealed class ReportService(IBookingRepository bookings, IPaymentRepositor
     /// <summary>
     /// "Made" and "cancelled" count by the day it happened; deposits and balances by the day they were paid;
     /// completed services, no-shows and unpaid balances by appointment date. All days are salon-local.
+    /// Everything is read for the whole period first (five queries) and then sorted into days, so a month costs the same
+    /// few round trips to the database as a single day.
     /// </summary>
     private async Task<List<DailySalesReport>> BuildAsync(DateOnly from, DateOnly to, CancellationToken ct)
     {
@@ -123,6 +125,8 @@ public sealed class ReportService(IBookingRepository bookings, IPaymentRepositor
         var appointments = await bookings.GetInDateRangeAsync(from, to, ct);
         var paid = await payments.GetSucceededBetweenAsync(fromUtc, toUtc, ct);
         var cancelled = await bookings.GetCancelledBetweenAsync(fromUtc, toUtc, ct);
+        var made = await bookings.GetCreatedTimesBetweenAsync(fromUtc, toUtc, ct);
+        var balances = await bookings.GetBalancesReceivedBetweenAsync(fromUtc, toUtc, ct);
 
         var reports = new List<DailySalesReport>();
         for (var day = from; day <= to; day = day.AddDays(1))
@@ -131,12 +135,12 @@ public sealed class ReportService(IBookingRepository bookings, IPaymentRepositor
             var completed = appointments.Where(b => b.BookingDate == day && b.Status == BookingStatus.Completed).ToList();
             reports.Add(new DailySalesReport(
                 day,
-                await bookings.CountCreatedBetweenAsync(dayFrom, dayTo, ct),
+                made.Count(at => at >= dayFrom && at < dayTo),
                 completed.Count,
                 cancelled.Count(b => b.Cancellation!.CancelledAt >= dayFrom && b.Cancellation.CancelledAt < dayTo),
                 appointments.Count(b => b.BookingDate == day && b.Status == BookingStatus.NoShow),
                 paid.Where(p => p.PaidAt >= dayFrom && p.PaidAt < dayTo).Sum(p => p.Amount),
-                await bookings.SumBalancesReceivedAsync(dayFrom, dayTo, ct),
+                balances.Where(b => b.ReceivedAt >= dayFrom && b.ReceivedAt < dayTo).Sum(b => b.Amount),
                 completed.Sum(b => b.BalanceDue),
                 completed.Sum(b => b.TotalPrice)));
         }

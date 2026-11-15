@@ -50,6 +50,9 @@ public interface IServiceCatalogRepository
 /// <summary>The part of a booking the schedule needs.</summary>
 public sealed record ScheduledAppointment(int BookingId, DateOnly Date, TimeOnly StartTime, int DurationMinutes);
 
+/// <summary>A balance paid at the salon and when Leyah recorded it (UTC).</summary>
+public sealed record BalanceReceipt(DateTime ReceivedAt, decimal Amount);
+
 public sealed record BookingSearchCriteria(DateOnly? Date, BookingStatus? Status, string? ClientName, int Page, int PageSize, int? ServiceId = null,
     bool OpenOnly = false);
 
@@ -74,6 +77,10 @@ public interface IBookingRepository
     Task<int> CountCreatedBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
     Task<List<Booking>> GetCancelledBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
     Task<decimal> SumBalancesReceivedAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
+    /// <summary>When each booking in the range was made (UTC), for reports that sort them into days in one query.</summary>
+    Task<List<DateTime>> GetCreatedTimesBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
+    /// <summary>Each balance received in the range, with when it was recorded (UTC), for reports that sort them into days.</summary>
+    Task<List<BalanceReceipt>> GetBalancesReceivedBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
 
     /// <summary>Pending or Confirmed bookings between the dates, soonest first, with their details.</summary>
     Task<List<Booking>> GetUpcomingAsync(DateOnly from, DateOnly to, CancellationToken ct = default);
@@ -335,6 +342,14 @@ internal sealed class BookingRepository(AppDbContext db) : IBookingRepository
 
     public async Task<decimal> SumBalancesReceivedAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct) =>
         await Live.Where(b => b.BalanceReceivedAt >= fromUtc && b.BalanceReceivedAt < toUtc).SumAsync(b => (decimal?)b.BalanceReceived, ct) ?? 0;
+
+    public Task<List<DateTime>> GetCreatedTimesBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct) =>
+        Live.Where(b => b.CreatedAt >= fromUtc && b.CreatedAt < toUtc).Select(b => b.CreatedAt).ToListAsync(ct);
+
+    public Task<List<BalanceReceipt>> GetBalancesReceivedBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct) =>
+        Live.Where(b => b.BalanceReceivedAt >= fromUtc && b.BalanceReceivedAt < toUtc)
+            .Select(b => new BalanceReceipt(b.BalanceReceivedAt!.Value, b.BalanceReceived))
+            .ToListAsync(ct);
 
     public Task<List<Booking>> GetUpcomingAsync(DateOnly from, DateOnly to, CancellationToken ct) =>
         WithDetails.Where(b => (b.Status == BookingStatus.Pending || b.Status == BookingStatus.Confirmed) && b.BookingDate >= from && b.BookingDate <= to)

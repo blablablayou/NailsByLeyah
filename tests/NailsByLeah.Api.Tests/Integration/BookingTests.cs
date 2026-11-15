@@ -321,6 +321,12 @@ public sealed class BookingTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.True(daily.BookingsMade >= 1);
         var monthly = await admin.GetAsync<MonthlySalesReport>("/api/admin/reports/monthly?year=2026&month=11");
         Assert.Equal(30, monthly.Days.Count);
+        // The month is built in one pass (a handful of queries, not two per day): the day inside it must match the daily
+        // report exactly, and the month's totals must be the sum of its days.
+        Assert.Equal(daily, monthly.Days.Single(d => d.Date == ApiFactory.StartDate));
+        Assert.Equal(monthly.Days.Sum(d => d.BookingsMade), monthly.BookingsMade);
+        Assert.Equal(monthly.Days.Sum(d => d.DepositsCollected), monthly.DepositsCollected);
+        Assert.Equal(monthly.Days.Sum(d => d.BalancesReceived), monthly.BalancesReceived);
 
         var logs = await admin.GetAsync<PagedResponse<ActivityLogResponse>>("/api/admin/activity-logs?action=BookingCreated&pageSize=200");
         var entry = Assert.Single(logs.Items, l => l.EntityId == booking.Booking.Id.ToString());
