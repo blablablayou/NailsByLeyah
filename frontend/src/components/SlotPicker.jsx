@@ -78,7 +78,7 @@ export function SlotPicker({ date, onDateChange, selectedTime, onTimeChange, ser
       <DateCalendar value={date} maxDaysAhead={maxDaysAhead} error={error} closedDates={closedDates.data ?? []} onChange={goTo} />
 
       <div className="pick-column">
-        <span className="field-label pick-title" id="time-label">Choose a time <span className="required" aria-hidden="true">*</span></span>
+        <h2 className="field-label pick-title" id="time-label">Choose a time <span className="required" aria-hidden="true">*</span></h2>
         <div className="pick-card" role="group" aria-labelledby="time-label">
           {date && <div className="pick-card-head"><span className="pick-card-title">{longDate(date)}</span></div>}
           {!date && <p className="muted pick-empty">Choose a date to see available times.</p>}
@@ -246,7 +246,7 @@ export function DateCalendar({ value, onChange, maxDaysAhead, error, closedDates
 
   return (
     <div className={error ? 'pick-column field-invalid' : 'pick-column'}>
-      <span className="field-label pick-title" id="book-cal-label">Choose a date <span className="required" aria-hidden="true">*</span></span>
+      <h2 className="field-label pick-title" id="book-cal-label">Choose a date <span className="required" aria-hidden="true">*</span></h2>
       <div className="pick-card">
         <div className="pick-card-head">
           <button type="button" onClick={() => changeMonth(-1)} disabled={month <= first.slice(0, 7)} aria-label="Previous month">‹</button>

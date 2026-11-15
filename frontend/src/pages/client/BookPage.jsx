@@ -233,6 +233,25 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
     setStep((s) => s - 1)
   }
 
+  // A finished step in the step bar, or an edit link in Your total: earlier steps open directly; the next step only
+  // through the same checks as "Next". `section` is scrolled into view once the step shows.
+  const [scrollTo, setScrollTo] = useState(null)
+  const goTo = (target, section = null) => {
+    if (target > step + 1) return
+    if (target === step + 1) {
+      if (!next()) return
+    } else if (target < step) {
+      setStepError(null)
+      setStep(target)
+    }
+    setScrollTo(section)
+  }
+  useEffect(() => {
+    if (!scrollTo) return
+    document.getElementById(scrollTo)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+    setScrollTo(null)
+  }, [scrollTo, step])
+
   const handProblem = () => {
     for (const { addOn, nailCount } of selectedAddOns) {
       const problem = validateHand(hands[addOn.id], nailCount)
@@ -255,10 +274,11 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
     ][step]
     if (problem) {
       setStepError(problem)
-      return
+      return false
     }
     setStepError(null)
     setStep((s) => s + 1)
+    return true
   }
 
   const pay = async (paymentMethod) => {
@@ -310,7 +330,7 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
   }
 
   return (
-    <div className="stack">
+    <div className="stack book">
       <PageHeader title="Book an appointment" />
       {restored && draft?.repeatOf && (
         <Alert kind="info" onClose={() => setRestored(false)}>
@@ -329,7 +349,14 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
       <ol className="stepper" aria-label="Booking steps">
         {STEPS.map((label, i) => (
           <li key={label} className={i === step ? 'current' : i < step ? 'done' : ''} aria-current={i === step ? 'step' : undefined}>
-            <span className="step-number">{i + 1}</span> <span className="step-label">{label}</span>
+            {/* A finished step can be opened again; the current and later ones can't (nothing is skipped). */}
+            {i < step ? (
+              <button type="button" className="step-link" onClick={() => goTo(i)} aria-label={`Go back to ${label}`}>
+                <span className="step-number">{i + 1}</span> <span className="step-label">{label}</span>
+              </button>
+            ) : (
+              <><span className="step-number">{i + 1}</span> <span className="step-label">{label}</span></>
+            )}
           </li>
         ))}
       </ol>
@@ -351,7 +378,7 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
               nails={nails} onNails={setNails} hands={hands} onHands={setHands} />
           )}
           {step === 1 && (
-            <div className="stack">
+            <div className="stack" id="book-when">
               <SlotPicker date={date} onDateChange={setDate} selectedTime={time} onTimeChange={setTime} serviceId={service?.id}
                 removalServiceId={removalFirst?.id} />
               <NoteStep suggestions={lookups.noteSuggestions} value={note} onChange={setNote} />
@@ -378,10 +405,15 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
         {step < 2 && (
           <aside className="booking-aside">
             <Card title="Your total" className="your-total">
-              <Summary quote={shownQuote} hands={hands} color={needsColor ? colorText : null} swatchOf={needsColor && colorRequest === null ? color : null} durationMinutes={durationMinutes} date={date} time={time} />
+              <Summary quote={shownQuote} hands={hands} color={needsColor ? colorText : null} swatchOf={needsColor && colorRequest === null ? color : null} durationMinutes={durationMinutes} date={date} time={time}
+                onEdit={goTo} />
               {/* The way forward sits under the total; going back is the "← Back to…" link at the top of each step.
                   On phones it becomes a bar fixed to the bottom of the screen. */}
               <div className="summary-next">
+                {/* On phones this is a bar fixed to the bottom of the screen; the total rides along with the button. */}
+                {quote.lines.length > 0 && (
+                  <span className="summary-next-total"><strong><Money amount={quote.total} /></strong><small>total</small></span>
+                )}
                 <Button onClick={next}>
                   Next: {STEPS[step + 1]}
                   <svg className="summary-next-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
@@ -434,10 +466,11 @@ function DesignOption({ cards, chosen, baseOf, designOf, onService, children }) 
     <div className="service-group">
       <h3 className="group-title">Design <span className="group-optional">(optional)</span></h3>
       {/* Full width, so a long set name never wraps and pushes the card down. */}
-      <p className="muted small design-hint">{hint}</p>
-      {/* The With Design card, with the design photos beside it; each column has one line above it so both line up. */}
-      <div className="design-row">
-        <div className="pick-column design-card">
+      <p className={design ? 'muted small design-hint' : 'book-folded'}>{hint}</p>
+      {/* The With Design card, with the design photos beside it. When the chosen set has no design (Plain), only the line
+          above says so and the photos stay (they help Leyah with any set). */}
+      <div className={design ? 'design-row' : 'design-row is-folded'}>
+        {design && <div className="pick-column design-card">
           <label className={`choice has-photo${on ? ' selected' : ''}${design ? '' : ' is-disabled'}`}>
           <img className="choice-photo" src={DESIGN_PHOTO} alt="" width="640" height="640" loading="lazy" />
           <input type="checkbox" name="design" checked={on} disabled={!design}
@@ -448,7 +481,7 @@ function DesignOption({ cards, chosen, baseOf, designOf, onService, children }) 
             {extraMinutes > 0 && <span className="choice-meta muted">+{formatDuration(extraMinutes)}</span>}
           </span>
           </label>
-        </div>
+        </div>}
         {children}
       </div>
     </div>
@@ -524,12 +557,12 @@ function ServiceStep({
 
       {/* Always shown, so clients see a colour comes next; greyed out until a set is chosen (a removal alone needs none). */}
       {colors.length > 0 && (
-        <fieldset className="choice-fieldset" disabled={!softGel}>
+        <fieldset className="choice-fieldset" disabled={!softGel} id="book-colour">
           <legend className="step-heading">
             <span><h2>Choose a colour</h2><span className="step-hint">Pick a shade from the colour chart for your {softGel ? setPhrase(catalog, softGel) : 'set'}.</span></span>
           </legend>
-          {!softGel && <p className="muted small addon-note">Choose a service to pick a colour.</p>}
-          <div className={softGel ? 'stack' : 'stack is-disabled'}>
+          {!softGel && <p className="book-folded">Choose a service to pick a colour.</p>}
+          {softGel && <div className="stack">
             <ColorChooser colors={colors} value={colorRequest === null ? color : ''}
               onChange={(c) => { onColorRequest(null); onColor(c) }}
               request={colorRequest} onRequest={(text) => { onColor(''); onColorRequest(text) }}
@@ -537,7 +570,7 @@ function ServiceStep({
             {colorRequest !== null && (
               <ColorRequestPhoto images={colorImages} onImages={onColorImages} />
             )}
-          </div>
+          </div>}
         </fieldset>
       )}
 
@@ -546,17 +579,17 @@ function ServiceStep({
           <span><h2>Nail Art (add-ons)</h2><span className="step-hint">Optional · priced per nail, so choose as many as you like.</span></span>
         </legend>
         {!addOnsAllowed && (
-          <p className="muted small addon-note">
+          <p className="book-folded">
             {softGel ? (designOf(baseOf(softGel))
               ? `Nail art isn't available with ${baseOf(softGel).name} on its own. Tick "With Design" or choose another service to add it.`
               : `Nail art isn't available with ${baseOf(softGel)?.name ?? softGel.name}. Choose another service to add it.`)
               : 'Choose a service to add nail art.'}
           </p>
         )}
-        <div className={addOnsAllowed ? 'addon-list' : 'addon-list is-disabled'}>
+        {addOnsAllowed && <div className="addon-list">
           {catalog.addOns.map((a) => {
             const photo = addOnPhotoFor(a)
-            const count = addOnsAllowed ? nails[a.id] ?? 0 : 0
+            const count = nails[a.id] ?? 0
             return (
               <label key={a.id} className={count ? 'addon addon-check selected' : 'addon addon-check'}>
                 {photo
@@ -568,7 +601,7 @@ function ServiceStep({
               </label>
             )
           })}
-        </div>
+        </div>}
 
         {addOnsAllowed && chosen.length > 0 && (
           <div className="addon-panel">
@@ -669,7 +702,10 @@ const SummaryIcon = ({ children }) => (
 )
 
 /** The "Your total" card beside each step: prices, total, deposit and balance, then time, colour and appointment. */
-function Summary({ quote, hands = {}, color, swatchOf, durationMinutes, date, time }) {
+function Summary({ quote, hands = {}, color, swatchOf, durationMinutes, date, time, onEdit }) {
+  const edit = (step, section, what) => onEdit && (
+    <button type="button" className="yt-edit" onClick={() => onEdit(step, section)} aria-label={`Change ${what}`}>Change</button>
+  )
   if (!quote.lines.length) return <p className="muted">Choose a service to see your total.</p>
   const lines = [...quote.lines].sort((a, b) => (LINE_ORDER[a.category] ?? 0) - (LINE_ORDER[b.category] ?? 0))
   const swatch = swatchOf ? colorFor(swatchOf) : null
@@ -704,7 +740,7 @@ function Summary({ quote, hands = {}, color, swatchOf, durationMinutes, date, ti
         )}
         {color && (
           <div>
-            <dt><SummaryIcon><path d="M12 3.5c3 3.6 5.5 6.6 5.5 9.6a5.5 5.5 0 0 1-11 0c0-3 2.5-6 5.5-9.6z" /></SummaryIcon>Colour</dt>
+            <dt><SummaryIcon><path d="M12 3.5c3 3.6 5.5 6.6 5.5 9.6a5.5 5.5 0 0 1-11 0c0-3 2.5-6 5.5-9.6z" /></SummaryIcon>Colour{edit(0, 'book-colour', 'colour')}</dt>
             <dd className="yt-color">
               <span className={swatch ? 'yt-swatch' : 'yt-swatch yt-swatch-unknown'} style={swatch ? { background: swatch } : undefined} aria-hidden="true" />
               {color}
@@ -713,7 +749,7 @@ function Summary({ quote, hands = {}, color, swatchOf, durationMinutes, date, ti
         )}
         {date && time && (
           <div>
-            <dt><SummaryIcon><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></SummaryIcon>Appointment</dt>
+            <dt><SummaryIcon><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></SummaryIcon>Appointment{edit(1, 'book-when', 'appointment')}</dt>
             <dd title={formatDate(date)}>{formatDate(date).replace(/^\w+, /, '').replace(/, \d{4}$/, '')} · {formatTime(time)}</dd>
           </div>
         )}
@@ -733,6 +769,7 @@ function Review({ quote, option, hands, durationMinutes, color, date, time, note
   )
   return (
     <div className="review">
+      <div className="review-card">
       <section className="review-section" aria-label="Appointment">
         <div className="review-head"><h3>Appointment</h3>{change(1, 'date and time')}</div>
         <dl className="review-details">
@@ -771,6 +808,7 @@ function Review({ quote, option, hands, durationMinutes, color, date, time, note
           <div className="summary-row muted"><span>Balance at the salon</span><Money amount={balanceAfter(quote, option)} /></div>
         </div>
       </section>
+      </div>
 
       <section className="review-section" aria-label="Design and note">
         <div className="review-head"><h3>Design photos &amp; note</h3></div>
