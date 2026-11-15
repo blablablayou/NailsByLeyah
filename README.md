@@ -1,11 +1,41 @@
-# NailsByLeah
+# Nails by Leyah
 
-Nail salon booking and management system.
+Booking and management website for **Nails by Leyah**, a one-person nail studio: clients book and pay a deposit
+online, and Leyah runs her day, her bookings and her sales from one admin area.
 
 - `backend/` — C# ASP.NET Core Web API (.NET 10) with PostgreSQL (Supabase). Setup, configuration and API reference: [backend/README.md](backend/README.md)
 - `tests/` — backend unit and integration tests ([backend/TESTING.md](backend/TESTING.md))
-- `frontend/` — React (Vite). [frontend/README.md](frontend/README.md)
-- `docs/` — the plan for going live (Supabase Postgres, hosting, PayMongo): [docs/GO-LIVE-PLAN.md](docs/GO-LIVE-PLAN.md)
+- `frontend/` — React 19 (Vite). [frontend/README.md](frontend/README.md)
+- `docs/` — the plan for going live: [docs/GO-LIVE-PLAN.md](docs/GO-LIVE-PLAN.md); design notes and plans for each
+  piece of work in [docs/superpowers/](docs/superpowers/)
+
+## What it does
+
+**For clients**
+- Landing page with services and prices, a gallery of Leyah's work, FAQ, and "Meet Leyah".
+- Sign up with email verification; profile with photo.
+- **Book an appointment** in three steps: service, removal, design and nail art (per hand, per nail); a colour from the
+  salon's 58-shade chart (one shade, a colour for each nail, "not sure yet", or a colour request); design reference
+  photos and a note; date and time from the real schedule; then a summary and the payment step (deposit or full
+  payment, GCash or Maya, Booking & Payment Policy read and agreed). Unfinished bookings are saved as drafts.
+- **My bookings**: upcoming, completed and cancelled appointments; reschedule (24 h rule) and cancel; payment receipt
+  with a PDF once the payment is verified; **Add to calendar**.
+
+**For Leyah (admin)**
+- **Dashboard**: what needs her (payments to check, balances, open bookings), today's schedule, the next client,
+  this month and the next 7 days; quick New booking and Block time.
+- Bookings (find, filter, confirm, reschedule, cancel with refunds, no-show, balance received), schedule and blocked
+  times, services and prices, nail art, colour stock, gallery, feedback, client directory and client data erasure,
+  activity log, salon profile.
+- **Sales reports**: daily and monthly figures, a day-by-day chart, comparison with the day or month before, and an
+  **Excel download** laid out like a printed report.
+
+## Status
+
+- Runs locally against the Supabase **test** project; not deployed yet (Render is planned).
+- **Payments are simulated**: the Pay button approves every charge so the flow can be tested. The next piece of work is
+  real payments (the client sends the deposit by GCash or Maya and gives the reference number and a receipt screenshot;
+  Leyah confirms it), then the deployment and database backups. See [docs/GO-LIVE-PLAN.md](docs/GO-LIVE-PLAN.md).
 
 ## Run (frontend connected to the backend)
 
