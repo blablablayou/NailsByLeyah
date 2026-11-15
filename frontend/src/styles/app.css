@@ -2473,3 +2473,22 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
   .report-counts > div { display: grid; grid-template-columns: 1fr auto; align-items: center; }
   .report-counts dd.report-hint { grid-column: 1 / -1; }
 }
+
+/* ---- Phones with large text (2026-11-16): nothing squeezed to one word a line, nothing off the screen ---- */
+/* The policy button: the book sits in the line of text, so a label that wraps stays centred with it. */
+.pay-read { display: block; padding: 10px 16px; text-align: center; line-height: 1.3; }
+.pay-read-icon { display: inline-block; margin-right: 8px; vertical-align: -3px; }
+
+@media (max-width: 899px) {
+  /* The bar's button shrinks and wraps instead of running past the edge; the total keeps its size. */
+  .book .summary-next .btn { flex: 0 1 auto; min-width: 0; white-space: normal; text-align: center; line-height: 1.2; }
+  .book .summary-next .btn > span { min-width: 0; text-align: center; }
+  .book .summary-next .summary-next-arrow { flex: none; }
+  .book .summary-next-total { flex: none; }
+}
+
+@media (max-width: 560px) {
+  /* The colour card: chart (or nails) and text side by side, the button under the text. */
+  .cc-card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; row-gap: 8px; }
+  .cc-card .cc-action { grid-column: 2; justify-self: start; }
+}
