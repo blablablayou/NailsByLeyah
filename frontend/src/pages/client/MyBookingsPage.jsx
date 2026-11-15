@@ -18,6 +18,7 @@ import { clearBookingDraft, draftHasProgress, loadBookingDraft } from '../../lib
 import { downloadIcs } from '../../lib/calendar'
 
 const RESCHEDULE_HOURS = 24
+const SAME_PAGE_MIN_MS = 10 * 60_000
 
 const isActive = (b) => b.status === 'Pending' || b.status === 'Confirmed'
 const isUpcoming = (b) => isActive(b) && startsAt(b.bookingDate, b.startTime) > new Date()
@@ -121,6 +122,12 @@ function HoldCard({ booking, onCancel }) {
   const [error, setError] = useState(null)
   const continuePayment = async () => {
     setError(null)
+    // The page Xendit already made stays usable while the hold runs; a new one (Xendit needs 10 minutes ahead) only near the end.
+    const left = booking.paymentHoldUntil ? new Date(booking.paymentHoldUntil).getTime() - Date.now() : 0
+    if (booking.checkoutUrl && left > SAME_PAGE_MIN_MS) {
+      goToExternal(booking.checkoutUrl)
+      return
+    }
     setOpening(true)
     try {
       const { checkoutUrl } = await api.bookings.retryCheckout(booking.id)

@@ -2512,3 +2512,8 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 .hold-card .row { align-items: center; }
 .payment-return { display: grid; gap: 14px; }
 .payment-return p { margin: 0; }
+/* Leyah's day view: a time held while a client pays online — faint and dashed, like the client's own hold card. */
+.fb-held { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.fb-held li { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 8px 12px; border: 1px dashed var(--line); border-radius: var(--radius);
+  color: var(--ink-soft); font-size: var(--fs-caption); background: transparent; }
+.fb-held-time { font-weight: 600; font-variant-numeric: tabular-nums; }

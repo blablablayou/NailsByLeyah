@@ -59,6 +59,9 @@ public sealed class CheckoutConfirmationService(
                 $"Xendit payment amount mismatch: {status.Currency} {status.Amount:0.00} reported, PHP {expected:0.00} expected. Not accepted.");
             await unitOfWork.SaveChangesAsync(ct);
             logger.LogWarning("Xendit payment for booking {BookingId} did not match the expected amount", bookingId);
+            await background.EnqueueAsync((n, stop) => n.SendSalonCancellationAsync(found,
+                $"A Xendit payment for this booking did not match: {status.Currency} {status.Amount:0.00} reported, PHP {expected:0.00} expected. It was not accepted. Check Xendit, and refund it if money was taken.", stop),
+                $"payment mismatch alert for booking {bookingId}");
             return ConfirmationOutcome.Ignored;
         }
 

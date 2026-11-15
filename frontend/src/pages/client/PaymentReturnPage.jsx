@@ -45,7 +45,10 @@ export default function PaymentReturnPage() {
         if (next) setState(next)
         else timer = setTimeout(run, CHECK_EVERY_MS)
       } catch (err) {
-        if (!stopped) setState({ kind: 'error', message: errorMessage(err) })
+        if (stopped) return
+        // A passing problem (network, the server restarting): keep trying for the rest of the minute.
+        if (Date.now() - startedAt.current < CHECK_FOR_MS) timer = setTimeout(run, CHECK_EVERY_MS)
+        else setState({ kind: 'error', message: errorMessage(err) })
       }
     }
     run()

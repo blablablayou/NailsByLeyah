@@ -1130,6 +1130,11 @@ const routes = [
   ['GET', '/bookings/:id/payment-status', (db, { params }) => {
     const user = requireUser(db, 'Client')
     const booking = ownedBooking(db, user, params.id)
+    if (db.flags.failNextPaymentStatus) {
+      db.flags.failNextPaymentStatus = false // a passing problem (network, a restart)
+      saveDb()
+      fail(503, 'The service is restarting. Please try again.', 'unavailable')
+    }
     if (booking.status === 'AwaitingPayment' && (db.flags.paidHolds ?? []).includes(booking.id)) {
       const amount = booking.paymentOption === 'Full' ? booking.servicePrice : booking.depositAmount
       const payment = { id: nextId('payments'), bookingId: booking.id, clientId: user.id, method: booking.paymentMethod ?? 'GCash',

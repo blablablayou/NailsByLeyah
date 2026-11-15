@@ -170,3 +170,63 @@ describe('Paying on Xendit when something goes wrong', () => {
     expect(screen.queryByText(/deposit is non-refundable/)).not.toBeInTheDocument()
   })
 })
+
+describe('Paying on Xendit: small touches', () => {
+  it('Continue payment goes back to the same page while there is time, and only makes a new one near the end', async () => {
+    const held = holdForKyla()
+    const firstPage = held.checkoutUrl
+    const user = userEvent.setup()
+    await signIn(CLIENT)
+    const first = renderApp('/bookings')
+    const card = (await screen.findByText('Awaiting payment', { selector: '.badge' })).closest('li')
+    await user.click(within(card).getByRole('button', { name: 'Continue payment' }))
+    expect(goToExternal).toHaveBeenLastCalledWith(firstPage) // same page, hold not stretched
+    first.unmount()
+
+    held.paymentHoldUntil = new Date(Date.now() + 5 * 60_000).toISOString() // Xendit needs 10 minutes for a page
+    saveDb()
+    vi.mocked(goToExternal).mockClear()
+    renderApp('/bookings')
+    const again = (await screen.findByText('Awaiting payment', { selector: '.badge' })).closest('li')
+    await user.click(within(again).getByRole('button', { name: 'Continue payment' }))
+    const newPage = getDb().bookings.find((b) => b.id === held.id).checkoutUrl
+    expect(newPage).not.toBe(firstPage)
+    expect(goToExternal).toHaveBeenLastCalledWith(newPage)
+  })
+
+  it('return page keeps checking after a passing error', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const held = holdForKyla()
+    getDb().flags.failNextPaymentStatus = true
+    saveDb()
+    await signIn(CLIENT)
+    renderApp(`/bookings/payment?booking=${held.id}`)
+
+    await act(() => vi.advanceTimersByTimeAsync(100))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    getDb().flags.paidHolds = [held.id]
+    saveDb()
+    await act(() => vi.advanceTimersByTimeAsync(3_000))
+
+    expect(await screen.findByRole('heading', { name: 'Booking received!' })).toBeInTheDocument()
+  })
+})
+
+describe("Leyah's day view and held slots", () => {
+  it('shows a slot held for an online payment as a faint line, with no client or actions', async () => {
+    const held = holdForKyla()
+    Object.assign(held, { bookingDate: dateFromToday(0), startTime: '20:00:00' })
+    saveDb()
+    const { ADMIN } = await import('./helpers')
+    const user = userEvent.setup()
+    await signIn(ADMIN)
+    renderApp('/admin/bookings')
+
+    await user.click(await screen.findByRole('button', { name: 'Show booking details' }))
+    const day = await screen.findByRole('region', { name: 'Bookings on the chosen day' })
+    const line = await within(day).findByText(/Held — a client is paying online until/)
+    expect(line.closest('li')).toHaveTextContent('8:00 PM')
+    expect(within(line.closest('li')).queryByRole('button')).toBeNull()
+    expect(within(day).queryByText('Kyla Santos')).toBeNull()
+  })
+})

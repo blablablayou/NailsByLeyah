@@ -121,6 +121,7 @@ public sealed class XenditWebhookTests(XenditApiFactory factory) : IClassFixture
         Assert.Equal(BookingStatus.AwaitingPayment, factory.Load(id).Status);
         Assert.Empty(factory.PaymentsOf(id));
         Assert.True(factory.WithDb(db => db.AuditLogs.Any(a => a.EntityId == id.ToString() && a.Details!.Contains("amount mismatch"))));
+        Assert.Contains("did not match", factory.Notifications.SalonCancellationReasons[id], StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -265,5 +266,30 @@ public sealed class XenditWebhookAfterSwitchBackTests(SimulatedWithXenditKeysApi
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(BookingStatus.Pending, factory.Load(id).Status);
+    }
+
+    [Fact]
+    public async Task The_same_pay_click_after_switching_back_returns_its_hold()
+    {
+        var user = await factory.CreateClientAsync();
+        var request = TestHelpers.NewBooking(factory.NextSlot());
+        var booked = await user.Client.BookAsync(TestHelpers.NewBooking(factory.NextSlot()));
+        var id = booked.Booking.Id;
+        factory.WithDb(db =>
+        {
+            db.Payments.RemoveRange(db.Payments.Where(p => p.BookingId == id));
+            var b = db.Bookings.Single(x => x.Id == id);
+            b.HoldForPayment(request.IdempotencyKey, PaymentMethod.GCash, PaymentOption.Deposit, DateTime.UtcNow.AddMinutes(15));
+            b.AmountPaid = 0;
+            b.CheckoutSessionId = "ps-held-before-switch";
+            b.CheckoutUrl = "https://checkout.test/ps-held-before-switch";
+            return db.SaveChanges();
+        });
+
+        var again = await user.Client.PostJsonAsync("/api/bookings", request);
+
+        await again.ShouldHaveStatus(HttpStatusCode.OK);
+        var result = await again.ReadAsync<CreateBookingResponse>();
+        Assert.Equal((id, "https://checkout.test/ps-held-before-switch"), (result.Booking.Id, result.CheckoutUrl));
     }
 }

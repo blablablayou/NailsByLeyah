@@ -76,6 +76,19 @@ public sealed class XenditReturnTests(XenditApiFactory factory) : IClassFixture<
     }
 
     [Fact]
+    public async Task Try_again_after_a_wrong_amount_on_the_earlier_page_opens_a_new_page()
+    {
+        var (id, session, user, _) = await factory.HoldAsync();
+        factory.Checkout.MarkPaid(session, 1m); // not what the booking costs: not accepted
+
+        var response = await user.Client.PostAsync($"/api/bookings/{id}/checkout", null);
+
+        await response.ShouldHaveStatus(HttpStatusCode.OK);
+        Assert.Equal(BookingStatus.AwaitingPayment, factory.Load(id).Status);
+        Assert.Equal(2, factory.Checkout.CreatedFor(id));
+    }
+
+    [Fact]
     public async Task Try_again_after_the_hold_ended_is_refused()
     {
         var (id, _, user, _) = await factory.HoldAsync();

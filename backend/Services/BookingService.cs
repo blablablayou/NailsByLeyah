@@ -103,9 +103,10 @@ public sealed class BookingService(
         // A repeated Pay click after the first request finished returns the original result (Ref 12.4).
         if (await payments.FindByIdempotencyKeyAsync(request.IdempotencyKey, ct) is { } earlier)
             return (await BuildCreateResponseAsync(clientId, earlier, ct), false);
-        // With Xendit the Pay click holds the slot first; the same click again returns that hold and its checkout.
+        // With Xendit the Pay click holds the slot first; the same click again returns that hold and its checkout,
+        // even after a switch back to Simulated (the hold is still on Xendit's page).
         var hosted = paymentOptions.Value.Provider == PaymentProvider.Xendit;
-        if (hosted && await bookings.FindByPaymentIdempotencyKeyAsync(request.IdempotencyKey, ct) is { } held)
+        if (await bookings.FindByPaymentIdempotencyKeyAsync(request.IdempotencyKey, ct) is { } held)
             return (await ReplayHoldAsync(clientId, held, ct), false);
 
         // The client must have agreed to the Terms version in force now, not one shown before an update.
@@ -133,7 +134,7 @@ public sealed class BookingService(
             // taking the slot; return the first result instead of "slot taken".
             if (await payments.FindByIdempotencyKeyAsync(request.IdempotencyKey, ct) is { } committed)
                 return (await BuildCreateResponseAsync(clientId, committed, ct), false);
-            if (hosted && await bookings.FindByPaymentIdempotencyKeyAsync(request.IdempotencyKey, ct) is { } heldNow)
+            if (await bookings.FindByPaymentIdempotencyKeyAsync(request.IdempotencyKey, ct) is { } heldNow)
                 return (await ReplayHoldAsync(clientId, heldNow, ct), false);
             throw;
         }
@@ -150,7 +151,7 @@ public sealed class BookingService(
                 // A duplicate click that arrived at the same time waited on the lock above; return the first result.
                 if (await payments.FindByIdempotencyKeyAsync(request.IdempotencyKey, tx) is { } concurrent)
                     return new CreateOutcome(concurrent, null);
-                if (hosted && await bookings.FindByPaymentIdempotencyKeyAsync(request.IdempotencyKey, tx) is { } concurrentHold)
+                if (await bookings.FindByPaymentIdempotencyKeyAsync(request.IdempotencyKey, tx) is { } concurrentHold)
                     return new CreateOutcome(null, null, concurrentHold);
 
                 await slots.EnsureFreeAsync(request.BookingDate, request.StartTime, duration, movingBookingId: null, tx);
@@ -765,13 +766,13 @@ public sealed class BookingService(
         if (booking.CheckoutSessionId is { } previous)
         {
             // The client may have paid on the earlier page after all: never open a second page for money already taken.
-            if (await TryGetStatusAsync(previous, ct) is { State: CheckoutState.Paid } paid)
-            {
-                await confirmations.ApplyAsync(booking.Id, paid, ct);
+            var earlier = await TryGetStatusAsync(previous, ct);
+            if (earlier is { State: CheckoutState.Paid } paid
+                && await confirmations.ApplyAsync(booking.Id, paid, ct) is not ConfirmationOutcome.Ignored)
                 throw new ConflictException("This booking has already been paid.", "already_paid");
-            }
-            if (!await TryExpireAsync(previous, ct)
-                && await TryGetStatusAsync(previous, ct) is not { State: CheckoutState.Expired or CheckoutState.Failed })
+            // A page whose payment wasn't accepted (wrong amount) is finished too; Leyah has been told about it.
+            if (earlier is not { State: CheckoutState.Paid } && !await TryExpireAsync(previous, ct)
+                && await TryGetStatusAsync(previous, ct) is not { State: CheckoutState.Expired or CheckoutState.Failed or CheckoutState.Paid })
                 throw new ConflictException(
                     "Your earlier payment page is still open. Finish paying there, or try again in a few minutes.", "payment_in_progress");
         }

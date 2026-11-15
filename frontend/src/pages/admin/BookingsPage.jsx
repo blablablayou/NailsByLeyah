@@ -4,7 +4,7 @@ import { api } from '../../api'
 import { useAsync, useDebouncedValue } from '../../hooks/useAsync'
 import { errorMessage } from '../../api/errors'
 import { addDays, daysInMonth, toIsoDate, today } from '../../lib/dates'
-import { formatDate } from '../../lib/format'
+import { formatClock, formatDate, formatTime } from '../../lib/format'
 import { Alert, Button, Card, PageLoader, Spinner } from '../../components/ui'
 import { AdminBookingTable } from './AdminBookingTable'
 import { bookingClientName } from '../../lib/bookingClient'
@@ -325,6 +325,9 @@ function MonthCalendar({ value, onChange, refresh }) {
 /** Every booking on one day, by time, with the same actions as the list. Independent of the list's filters. */
 function DayBookings({ date, refresh, onChanged }) {
   const day = useAsync(() => api.admin.searchBookings({ date, page: 1, pageSize: 100 }), [date, refresh])
+  // Slots held while a client pays on Xendit: not bookings, but they explain why a time shows as taken.
+  const held = useAsync(() => api.admin.searchBookings({ date, status: 'AwaitingPayment', page: 1, pageSize: 100 }), [date, refresh])
+  const holds = [...(held.data?.items ?? [])].sort((a, b) => a.startTime.localeCompare(b.startTime))
   const items = [...(day.data?.items ?? [])].sort((a, b) => a.startTime.localeCompare(b.startTime))
   const count = day.data?.totalCount ?? 0
   return (
@@ -338,6 +341,16 @@ function DayBookings({ date, refresh, onChanged }) {
       {day.data && (
         <AdminBookingTable bookings={items} onChanged={onChanged} dayView
           emptyTitle="No bookings scheduled for this date." emptyText="Pick another day on the calendar." />
+      )}
+      {holds.length > 0 && (
+        <ul className="fb-held" aria-label="Times held for online payments">
+          {holds.map((h) => (
+            <li key={h.id}>
+              <span className="fb-held-time">{formatTime(h.startTime)} – {formatTime(h.endTime)}</span>
+              <span>Held — a client is paying online until {formatClock(h.paymentHoldUntil)}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   )
