@@ -47,7 +47,7 @@ export default function GalleryPage() {
       <AddPhoto onAdded={(photo) => { photos.setData((list) => [photo, ...list]); setMessage('Photo added to the home page.') }} />
       <Card title={`Your photos (${photos.data.length})`}>
         {photos.data.length === 0 ? (
-          <EmptyState title="No photos yet">Until you add some, the home page shows its own sample photos.</EmptyState>
+          <EmptyState title="No photos added yet">The home page already shows the photos of your work that came with the site. Photos you add here show first, newest on top.</EmptyState>
         ) : (
           <ul className="gallery-admin">
             {photos.data.map((p) => (
