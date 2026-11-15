@@ -21,6 +21,8 @@ const CheckIcon = () => <Icon><circle cx="12" cy="12" r="9" /><path d="M8 12.5l2
 const CrossIcon = () => <Icon><circle cx="12" cy="12" r="9" /><path d="M9 9l6 6M15 9l-6 6" /></Icon>
 const BanIcon = () => <Icon><circle cx="12" cy="12" r="9" /><path d="M6 6l12 12" /></Icon>
 const ClockIcon = () => <Icon><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></Icon>
+// An hourglass: time held while the client pays online.
+const HourglassIcon = () => <Icon><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9" /></Icon>
 const SearchIcon = () => <Icon><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></Icon>
 const DownloadIcon = () => <Icon><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></Icon>
 
@@ -33,8 +35,9 @@ const STATUSES = [
   { value: 'Cancelled', label: 'Cancelled', title: 'Cancelled bookings', icon: <CrossIcon /> },
   { value: 'NoShow', label: 'No-show', title: 'No-shows', icon: <BanIcon /> },
   // Held while the client pays on Xendit's page; not a booking until paid, so only listed here.
-  { value: 'AwaitingPayment', label: 'Awaiting payment', title: 'Awaiting payment (held while the client pays)', icon: <ClockIcon /> },
+  { value: 'AwaitingPayment', label: 'Awaiting payment', title: 'Awaiting payment (held while the client pays)', icon: <HourglassIcon /> },
 ]
+const WAITING_TABS = ['Pending', 'AwaitingPayment']
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const PANELS_KEY = 'nbl.bookingPanels'
 
@@ -82,6 +85,9 @@ export default function BookingsPage() {
   const { page, goTo: goToPage } = usePageParam('.fb-list')
   const results = useAsync(() => api.admin.searchBookings({ date, status, clientName: debouncedSearch, serviceId, page, pageSize: LIST_PAGE_SIZE }),
     [date, status, debouncedSearch, serviceId, page, refresh])
+  // How many are waiting on the two tabs that need Leyah (or a client) to act; the other tabs are history.
+  const waiting = useAsync(() => Promise.all(WAITING_TABS.map((s) => api.admin.searchBookings({ status: s, page: 1, pageSize: 1 })))
+    .then((pages) => Object.fromEntries(pages.map((p, i) => [WAITING_TABS[i], p.totalCount]))), [refresh])
 
   const update = (changes) => {
     const next = new URLSearchParams(params)
@@ -136,12 +142,17 @@ export default function BookingsPage() {
       </div>
 
       <div className="fb-tabs" role="tablist" aria-label="Booking status">
-        {STATUSES.map((s) => (
-          <button key={s.label} type="button" role="tab" aria-selected={status === s.value}
-            className={status === s.value ? 'fb-tab selected' : 'fb-tab'} onClick={() => update({ status: s.value, date, clientName: search, serviceId })}>
-            {s.icon} {s.label}
-          </button>
-        ))}
+        {STATUSES.map((s) => {
+          const count = waiting.data?.[s.value] ?? 0
+          return (
+            <button key={s.label} type="button" role="tab" aria-selected={status === s.value}
+              aria-label={count > 0 ? `${s.label}, ${count} waiting` : undefined}
+              className={status === s.value ? 'fb-tab selected' : 'fb-tab'} onClick={() => update({ status: s.value, date, clientName: search, serviceId })}>
+              {s.icon} {s.label}
+              {count > 0 && <span className="fb-tab-count" aria-hidden="true">{count}</span>}
+            </button>
+          )
+        })}
       </div>
 
       <Card className="fb-list" title={tab.title} actions={

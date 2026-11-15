@@ -5,7 +5,7 @@ import { useAsync } from '../../hooks/useAsync'
 import { errorMessage } from '../../api/errors'
 import { formatDate, formatTime } from '../../lib/format'
 import { startsAt, today } from '../../lib/dates'
-import { Alert, Button, EmptyState, Money, STATUS_LABELS } from '../../components/ui'
+import { Alert, Button, EmptyState, Money, STATUS_LABELS, StatusBadge } from '../../components/ui'
 import { BalanceDialog, CancelBookingDialog, NoShowDialog, RefundDialog, RescheduleDialog } from '../../components/BookingDialogs'
 import { refundOwed } from '../../lib/refunds'
 import { BookingDetails } from './BookingDetails'
@@ -14,6 +14,38 @@ const isActive = (b) => b.status === 'Pending' || b.status === 'Confirmed'
 const hasStarted = (b) => startsAt(b.bookingDate, b.startTime) <= new Date()
 // A cancelled booking or a no-show owes nothing more, so no balance is shown for them.
 const isClosed = (b) => b.status === 'Cancelled' || b.status === 'NoShow'
+// Paid and waiting for Leyah to check the payment: the one row that needs her before anything else.
+const needsAction = (b) => b.status === 'Pending' && (b.payment?.amountPaid ?? 0) > 0
+
+const HAND_ORDER = ['Left', 'Right', 'Both']
+const HAND_NAME = { Left: 'Left', Right: 'Right', Both: 'Both hands' }
+const FULL_HAND = { Left: 5, Right: 5, Both: 10 }
+const ADD_ONS_SHOWN = 4
+
+/**
+ * Add-ons grouped by hand, e.g. "Left: French Tip, Cat Eye ×3 · Right: Chrome". A count shows only when it isn't the
+ * whole hand. Long sets show the first few with "+N more".
+ */
+function AddOnSummary({ addOns }) {
+  const [open, setOpen] = useState(false)
+  const lines = HAND_ORDER.map((hand) => ({ hand, items: addOns.filter((a) => (a.hand ?? 'Both') === hand) })).filter((g) => g.items.length)
+  const limit = open ? Infinity : ADD_ONS_SHOWN
+  const shown = lines.reduce((acc, g) => {
+    const items = g.items.slice(0, Math.max(0, limit - acc.used))
+    return { used: acc.used + items.length, groups: items.length ? [...acc.groups, { ...g, items }] : acc.groups }
+  }, { used: 0, groups: [] }).groups
+  const hidden = addOns.length - shown.reduce((n, g) => n + g.items.length, 0)
+  return (
+    <span className="addon-summary muted small">
+      {shown.map((g) => (
+        <span key={g.hand} className="addon-hand">
+          {HAND_NAME[g.hand]}: {g.items.map((a) => (a.nailCount === FULL_HAND[g.hand] ? a.name : `${a.name} ×${a.nailCount}`)).join(', ')}
+        </span>
+      ))}
+      {hidden > 0 && <button type="button" className="link-button addon-more" onClick={() => setOpen(true)}>+{hidden} more</button>}
+    </span>
+  )
+}
 
 /** Booking status as a small coloured dot and its name, kept apart from the payment pill. */
 export const StatusDot = ({ status }) => (
@@ -70,7 +102,8 @@ export function AdminBookingTable({ bookings, onChanged, emptyTitle = 'No bookin
               const day = new Date(`${b.bookingDate}T00:00:00`)
               const fullyPaid = b.payment?.option === 'Full' || b.balanceDue === 0
               return (
-                <tr key={b.id} className={`booking-row booking-row-${b.status.toLowerCase()}`}>
+                <tr key={b.id} data-booking-id={b.id}
+                  className={`booking-row booking-row-${b.status.toLowerCase()}${needsAction(b) ? ' needs-action' : ''}`}>
                   <td data-label={dayView ? 'Time' : 'When'}>
                     {dayView ? (
                       <span className="time-pill">
@@ -83,22 +116,22 @@ export function AdminBookingTable({ bookings, onChanged, emptyTitle = 'No bookin
                           <small>{day.toLocaleDateString('en-PH', { month: 'short' })}</small>
                           <b>{day.getDate()}</b>
                         </span>
-                        <span>
-                          <span className="when-day">{day.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                          <span className="muted small">{formatTime(b.startTime)} – {formatTime(b.endTime)}</span>
+                        {/* The tile already shows the date; the text adds the weekday and the time. */}
+                        <span className="when-day" title={formatDate(b.bookingDate)}>
+                          {day.toLocaleDateString('en-PH', { weekday: 'short' })} · {formatTime(b.startTime)} – {formatTime(b.endTime)}
                         </span>
                       </div>
                     )}
                   </td>
                   <td data-label="Client">
                     <span className="cell-main">{bookingClientName(b)}</span>
-                    <span className="muted small">{bookingClientHandle(b)}</span>
+                    <span className="muted small client-handle" title={bookingClientHandle(b)}>{bookingClientHandle(b)}</span>
                   </td>
                   <td data-label="Service">
                     <span className="cell-main">{serviceName(b)}</span>
                     {b.removalServiceName && <span className="muted small">+ Removal ({b.removalServiceName}) first</span>}
                     {b.colorRequestStatus === 'Pending' && <span className="color-request-badge">Colour request</span>}
-                    {b.addOns.length > 0 && <span className="muted small">+ {b.addOns.map((a) => `${a.name} (${a.handLabel.toLowerCase()} ×${a.nailCount})`).join(', ')}</span>}
+                    {b.addOns.length > 0 && <AddOnSummary addOns={b.addOns} />}
                     {b.referenceImages?.length > 0 && (
                       <span className="muted small">📎 {b.referenceImages.length} design {b.referenceImages.length === 1 ? 'photo' : 'photos'}</span>
                     )}
@@ -112,7 +145,8 @@ export function AdminBookingTable({ bookings, onChanged, emptyTitle = 'No bookin
                     )}
                   </td>
                   <td data-label="Status">
-                    <StatusDot status={b.status} />
+                    <StatusBadge status={b.status} />
+                    {needsAction(b) && <span className="action-note">Check payment</span>}
                     {b.cancellation && <span className="muted small status-note">{b.cancellation.reasonLabel}</span>}
                   </td>
                   <td className="actions-cell">

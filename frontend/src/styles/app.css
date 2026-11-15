@@ -2517,3 +2517,41 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 .fb-held li { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 8px 12px; border: 1px dashed var(--line); border-radius: var(--radius);
   color: var(--ink-soft); font-size: var(--fs-caption); background: transparent; }
 .fb-held-time { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ---- Find bookings polish (2026-11-16) ---- */
+/* 1. The status tabs stay on one row; when they don't fit (phones, narrow laptops) the row scrolls sideways. */
+.fb-tabs { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(max-content, 1fr);
+  overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; scroll-snap-type: x proximity; }
+.fb-tabs::-webkit-scrollbar { display: none; }
+.fb-tab { scroll-snap-align: start; padding: 0 14px; }
+@media (max-width: 860px) { .fb-tabs { grid-template-columns: none; } .fb-tab .fb-icon, .fb-tab svg { display: inline-block; } }
+/* A. How many are waiting: a small number in the tab, readable on the selected (filled) tab too. */
+.fb-tab-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; display: inline-grid; place-items: center;
+  background: var(--rose-100); color: var(--burgundy); font-size: var(--fs-caption); font-weight: 700; font-variant-numeric: tabular-nums; }
+.fb-tab.selected .fb-tab-count { background: var(--white); color: var(--rose-700); }
+
+/* 2. The username stays on one line; a long one ends in … (the full name is in the tooltip). */
+.bookings-table .client-handle { display: block; max-width: 16ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* A first and last name fit on one line on a laptop; a very long name still wraps rather than squeezing the service. */
+.bookings-table td[data-label="Client"] { min-width: 15ch; }
+
+/* 3. Add-ons by hand, two short lines at most before "+N more". */
+.bookings-table .addon-summary { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.bookings-table .addon-summary .addon-hand { display: block; }
+.bookings-table .addon-summary .addon-more { font-size: var(--fs-caption); }
+
+/* 5. Weekday and time on one line next to the date tile. */
+.bookings-table .when-day { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* B. Paid and waiting for Leyah: a soft amber row (no side stripe) and a short note under the status. */
+.bookings-table .booking-row.needs-action > td { background: color-mix(in srgb, var(--amber-100) 45%, var(--white)); }
+.bookings-table .action-note { display: block; margin-top: 4px; color: var(--amber-700); font-size: var(--fs-caption); font-weight: 600; white-space: nowrap; }
+
+/* The client's hold card: a 1px amber outline instead of a thick side stripe. */
+.hold-card { border-left: 1px solid var(--line); border-color: color-mix(in srgb, var(--amber-700) 35%, var(--line)); }
+/* On phones each booking is a card: the weekday and time may wrap, and the whole "needs action" card is tinted. */
+@media (max-width: 759px) {
+  .bookings-table .when-day { white-space: normal; }
+  .bookings-table .booking-row.needs-action { background: color-mix(in srgb, var(--amber-100) 45%, var(--white)); }
+  .bookings-table .booking-row.needs-action > td { background: transparent; }
+}
