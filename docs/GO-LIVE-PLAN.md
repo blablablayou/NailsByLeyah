@@ -1,6 +1,12 @@
 # Go-live plan: Supabase Postgres, email, hosting, payments (PayMongo, or HitPay as the fallback)
 
-Saved 2026-11-03. Nothing below is implemented yet. It lists what must change so the four services work together.
+Saved 2026-11-03. It lists what must change so the four services work together.
+
+> **Update 2026-11-16.** Done since: Postgres on Supabase, Brevo email, photos in Supabase Storage, the Render test
+> deployment (https://nailsbyleyah.onrender.com), and payments through **Xendit in test mode** instead of PayMongo or
+> HitPay (both need business documents). Xendit uses the same hosted-checkout + webhook shape described below
+> (design: `docs/superpowers/specs/2026-11-16-render-and-xendit-test-design.md`). Still to do before real clients:
+> Xendit live mode, database backups (`pg_dump`), connection retries, a separate live Supabase project, own domain.
 
 ## Target setup
 

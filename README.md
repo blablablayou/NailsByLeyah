@@ -32,10 +32,15 @@ online, and Leyah runs her day, her bookings and her sales from one admin area.
 
 ## Status
 
-- Runs locally against the Supabase **test** project; not deployed yet (Render is planned).
-- **Payments are simulated**: the Pay button approves every charge so the flow can be tested. The next piece of work is
-  real payments (the client sends the deposit by GCash or Maya and gives the reference number and a receipt screenshot;
-  Leyah confirms it), then the deployment and database backups. See [docs/GO-LIVE-PLAN.md](docs/GO-LIVE-PLAN.md).
+- **Test deployment** on Render: https://nailsbyleyah.onrender.com, using the Supabase **test** project (set-up in
+  [backend/README.md](backend/README.md#test-deployment-on-render)).
+- **Payments: Xendit in test mode** (no real money). Pressing Pay holds the time slot for 15 minutes and sends the
+  client to Xendit's GCash or Maya page; Xendit's webhook (or the site asking Xendit) marks it paid, and Leyah confirms
+  it as before. Unpaid holds are released automatically and never show in Leyah's dashboard or reports.
+- **Fallback:** setting `Payments__Provider=Simulated` on Render switches back to the simulated payment (approves at
+  once) without a code change; payments already started on Xendit still finish.
+- Before real clients: Xendit live mode (business verification), database backups, connection retries, a separate live
+  Supabase project. See [docs/GO-LIVE-PLAN.md](docs/GO-LIVE-PLAN.md).
 
 ## Run (frontend connected to the backend)
 
