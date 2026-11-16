@@ -1316,8 +1316,7 @@ namespace NailsByLeah.Api.Data.Migrations
                         .HasName("pk_user_tokens");
 
                     b.HasIndex("TokenHash")
-                        .IsUnique()
-                        .HasDatabaseName("ux_user_tokens_token_hash");
+                        .HasDatabaseName("ix_user_tokens_token_hash");
 
                     b.HasIndex("UserId", "Purpose")
                         .HasDatabaseName("ix_user_tokens_user_purpose");

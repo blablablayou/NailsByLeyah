@@ -220,7 +220,8 @@ internal sealed class UserTokenConfiguration : IEntityTypeConfiguration<UserToke
         b.ToTable("user_tokens");
         b.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
         b.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
-        b.HasIndex(x => x.TokenHash).IsUnique().HasDatabaseName("ux_user_tokens_token_hash");
+        // Not unique: a six-digit sign-up code repeats across people over time, and codes are always looked up for one user.
+        b.HasIndex(x => x.TokenHash).HasDatabaseName("ix_user_tokens_token_hash");
         b.HasIndex(x => new { x.UserId, x.Purpose }).HasDatabaseName("ix_user_tokens_user_purpose");
     }
 }
