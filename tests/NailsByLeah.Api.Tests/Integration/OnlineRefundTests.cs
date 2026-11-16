@@ -64,8 +64,10 @@ public sealed class OnlineRefundTests(XenditApiFactory factory) : IClassFixture<
         Assert.Null(processing.Payment.RefundSentAt);
         var refundId = processing.Payment.RefundReference!;
         Assert.StartsWith("rfd-test-", refundId);
+        Assert.DoesNotContain(id, factory.Notifications.RefundSentIds); // not told while it is still on its way
 
         var notified = await factory.PostWebhookAsync(RefundEvent("refund.succeeded", refundId, id, "SUCCEEDED"));
+        await factory.PostWebhookAsync(RefundEvent("refund.succeeded", refundId, id, "SUCCEEDED")); // Xendit sending it again
 
         Assert.Equal(HttpStatusCode.OK, notified.StatusCode);
         var done = await admin.GetAsync<BookingResponse>($"/api/admin/bookings/{id}");
@@ -73,6 +75,7 @@ public sealed class OnlineRefundTests(XenditApiFactory factory) : IClassFixture<
         Assert.NotNull(done.Payment.RefundSentAt);
         Assert.DoesNotContain((await admin.GetAsync<DashboardResponse>("/api/admin/dashboard")).Attention, a => a.Booking.Id == id);
         Assert.True(factory.WithDb(db => db.AuditLogs.Any(a => a.Action == "RefundSent" && a.EntityId == id.ToString())));
+        Assert.Single(factory.Notifications.RefundSentIds, x => x == id); // told once, when it arrived
     }
 
     [Fact]
@@ -99,6 +102,7 @@ public sealed class OnlineRefundTests(XenditApiFactory factory) : IClassFixture<
 
         Assert.Equal("Failed", failed.Payment!.RefundStatus);
         Assert.Null(failed.Payment.RefundSentAt);
+        Assert.DoesNotContain(id, factory.Notifications.RefundSentIds);
         Assert.Contains((await admin.GetAsync<DashboardResponse>("/api/admin/dashboard")).Attention, a => a.Kind == "RefundDue" && a.Booking.Id == id);
 
         var sent = await (await admin.PostJsonAsync($"/api/admin/bookings/{id}/refund", new RecordRefundRequest("GC-BYHAND-1"))).ReadAsync<BookingResponse>();

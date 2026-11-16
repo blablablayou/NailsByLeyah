@@ -20,6 +20,17 @@ public interface INotificationService
     Task SendBookingApprovedAsync(Booking booking, CancellationToken ct = default);
     Task SendAppointmentReminderAsync(Booking booking, CancellationToken ct = default);
 
+    // To the client, about what the salon did (they did not do it themselves, so they would not otherwise know).
+
+    /// <summary>Leyah cancelled the booking: the reason, her explanation if any, and what happens to the money.</summary>
+    Task SendBookingCancelledBySalonAsync(Booking booking, string reasonLabel, string? explanation, CancellationToken ct = default);
+
+    /// <summary>Leyah moved the booking; <paramref name="fromDate"/> and <paramref name="fromTime"/> are the old slot.</summary>
+    Task SendBookingMovedBySalonAsync(Booking booking, DateOnly fromDate, TimeOnly fromTime, CancellationToken ct = default);
+
+    /// <summary>The refund owed has been sent (by Leyah by hand, or back online to the account the client paid from).</summary>
+    Task SendRefundSentAsync(Booking booking, CancellationToken ct = default);
+
     // Alerts to the salon (Notifications:SalonEmail), so Leyah hears about changes without opening the admin pages.
 
     /// <summary>A client booked and paid; the booking waits for the salon to confirm it.</summary>
@@ -182,6 +193,71 @@ public sealed class EmailNotificationService(
 
             See you soon!
             """, ct);
+
+    public Task SendBookingCancelledBySalonAsync(Booking booking, string reasonLabel, string? explanation, CancellationToken ct = default)
+    {
+        var method = PaidWith(booking);
+        var money = booking.RefundDue > 0
+            ? $"PHP {booking.RefundDue:0.00} will be sent back to the {method} account you paid from. You will get another email when it is sent."
+            : booking.AmountPaid > 0
+                ? $"The PHP {Math.Min(booking.AmountPaid, booking.DepositAmount):0.00} deposit is kept, so nothing is refunded."
+                : "Nothing was paid, so there is nothing to refund.";
+        var note = string.IsNullOrWhiteSpace(explanation) ? "" : $"{Environment.NewLine}Leyah's note: {explanation}";
+        return email.SendAsync(booking.Client.Email, FullName(booking.Client), "Your Nails by Leyah appointment was cancelled",
+            $"""
+            Hi {booking.Client.FirstName},
+
+            Leyah had to cancel your appointment.
+
+            Service: {booking.Service.CategoryLabel} - {booking.ServiceDescription}
+            Date: {booking.BookingDate:dddd, MMMM d, yyyy}
+            Time: {booking.StartTime:h\:mm tt}
+            Reason: {reasonLabel}{note}
+
+            {money}
+
+            You can book a new time anytime on the website. We're sorry for the trouble.
+            """, ct);
+    }
+
+    public Task SendBookingMovedBySalonAsync(Booking booking, DateOnly fromDate, TimeOnly fromTime, CancellationToken ct = default) =>
+        email.SendAsync(booking.Client.Email, FullName(booking.Client), "Your Nails by Leyah appointment was moved",
+            $"""
+            Hi {booking.Client.FirstName},
+
+            Leyah moved your appointment to a new time.
+
+            Service: {booking.Service.CategoryLabel} - {booking.ServiceDescription}
+            Was: {fromDate:dddd, MMMM d, yyyy} at {fromTime:h\:mm tt}
+            Now: {booking.BookingDate:dddd, MMMM d, yyyy} at {booking.StartTime:h\:mm tt}
+            Balance due at the salon: PHP {booking.BalanceDue:0.00}
+
+            If the new time doesn't work for you, you can reschedule or contact us.
+            """, ct);
+
+    public Task SendRefundSentAsync(Booking booking, CancellationToken ct = default)
+    {
+        var method = PaidWith(booking);
+        var how = booking.RefundStatus == OnlineRefundStatus.Succeeded
+            ? $"PHP {booking.RefundDue:0.00} was sent back to the {method} account you paid from. It can take a little while to show in your {method} app."
+            : $"Leyah sent your refund of PHP {booking.RefundDue:0.00} by GCash or Maya." +
+              (booking.RefundReference is { } reference ? $"{Environment.NewLine}Reference: {reference}" : "");
+        return email.SendAsync(booking.Client.Email, FullName(booking.Client), "Your Nails by Leyah refund was sent",
+            $"""
+            Hi {booking.Client.FirstName},
+
+            {how}
+
+            Booking: {booking.Service.CategoryLabel} - {booking.ServiceDescription}, {booking.BookingDate:MMMM d, yyyy}
+
+            Thank you, and we hope to see you again.
+            """, ct);
+    }
+
+    /// <summary>GCash or Maya, as the client paid; GCash when the payment isn't known.</summary>
+    private static string PaidWith(Booking booking) =>
+        booking.Payments.Where(p => p.Status == PaymentStatus.Succeeded).OrderBy(p => p.PaidAt).FirstOrDefault()?.Method == PaymentMethod.Maya
+            ? "Maya" : "GCash";
 
     private static string FullName(User user) => $"{user.FirstName} {user.LastName}";
 }

@@ -3,6 +3,7 @@ using NailsByLeah.Api.Data;
 using NailsByLeah.Api.Domain;
 using NailsByLeah.Api.Errors;
 using NailsByLeah.Api.Infrastructure;
+using NailsByLeah.Api.Notifications;
 using NailsByLeah.Api.Payments;
 
 namespace NailsByLeah.Api.Services;
@@ -30,6 +31,7 @@ public sealed class OnlineRefundService(
     IUnitOfWork unitOfWork,
     IAuditLogger audit,
     ISalonClock clock,
+    IBackgroundNotifications background,
     ILogger<OnlineRefundService> logger) : IOnlineRefundService
 {
     /// <summary>How long a refund the provider never answered about stays Processing before Leyah may send it herself.</summary>
@@ -76,6 +78,7 @@ public sealed class OnlineRefundService(
             logger.LogWarning("Online refund for booking {BookingId} got no clear answer: {Reason}", booking.Id, ex.Message);
         }
         await unitOfWork.SaveChangesAsync(CancellationToken.None); // whatever happened at the provider is kept
+        await TellClientIfSentAsync(booking);
         return BookingMapper.ToResponse(booking, includeClient: true);
     }
 
@@ -96,6 +99,7 @@ public sealed class OnlineRefundService(
             audit.Record(AuditActions.RefundFailed, nameof(Booking), booking.Id, "No answer about the online refund after an hour");
         }
         await unitOfWork.SaveChangesAsync(ct);
+        await TellClientIfSentAsync(booking);
         return BookingMapper.ToResponse(booking, includeClient: true);
     }
 
@@ -106,7 +110,10 @@ public sealed class OnlineRefundService(
             return false;
         var changed = Settle(booking, outcome);
         if (changed)
+        {
             await unitOfWork.SaveChangesAsync(ct);
+            await TellClientIfSentAsync(booking);
+        }
         return changed;
     }
 
@@ -132,6 +139,7 @@ public sealed class OnlineRefundService(
             case ProviderRefundState.Succeeded when booking.CompleteOnlineRefund(outcome.RefundId, now):
                 audit.Record(AuditActions.RefundSent, nameof(Booking), booking.Id,
                     $"PHP {booking.RefundDue:0.00} sent back online ({outcome.RefundId})");
+                _sentNow = true;
                 return true;
             case ProviderRefundState.Failed when booking.FailOnlineRefund(outcome.RefundId, now):
                 audit.Record(AuditActions.RefundFailed, nameof(Booking), booking.Id,
@@ -140,6 +148,18 @@ public sealed class OnlineRefundService(
             default:
                 return false;
         }
+    }
+
+    // Settle only turns a booking to Succeeded once, so a repeated notification never sends a second email.
+    private bool _sentNow;
+
+    /// <summary>Emails the client once their refund has gone back online, after the change is saved.</summary>
+    private async Task TellClientIfSentAsync(Booking booking)
+    {
+        if (!_sentNow || booking.Client is null || booking.GuestName is not null) // a walk-in sits on Leyah's own account
+            return;
+        _sentNow = false;
+        await background.EnqueueAsync((n, stop) => n.SendRefundSentAsync(booking, stop), $"refund-sent email for booking {booking.Id}");
     }
 
     private async Task<Booking> LoadAsync(int bookingId, CancellationToken ct) =>

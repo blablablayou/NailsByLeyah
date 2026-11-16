@@ -582,6 +582,8 @@ public sealed class BookingService(
         audit.Record(AuditActions.RefundSent, nameof(Booking), booking.Id,
             $"PHP {amount:0.00}{(reference is null ? "" : $" (reference {reference})")}");
         await unitOfWork.SaveChangesAsync(ct);
+        if (booking.GuestName is null && booking.Client is not null) // a walk-in sits on Leyah's own account: no email
+            await background.EnqueueAsync((n, stop) => n.SendRefundSentAsync(booking, stop), $"refund-sent email for booking {booking.Id}");
         return Map(booking, includeClient: true);
     }
 
@@ -623,8 +625,17 @@ public sealed class BookingService(
         return cleaned;
     }
 
-    public async Task<BookingResponse> RescheduleAsync(int bookingId, RescheduleRequest request, CancellationToken ct = default) =>
-        await MoveAsync(await ReloadAsync(bookingId, ct), request, ct, includeClient: true);
+    public async Task<BookingResponse> RescheduleAsync(int bookingId, RescheduleRequest request, CancellationToken ct = default)
+    {
+        var booking = await ReloadAsync(bookingId, ct);
+        var (fromDate, fromTime) = (booking.BookingDate, booking.StartTime);
+        var moved = await MoveAsync(booking, request, ct, includeClient: true);
+        // Leyah moved it, so the client wouldn't otherwise know. A walk-in without an account has no email.
+        if (booking.GuestName is null && booking.Client is not null && (moved.BookingDate, moved.StartTime) != (fromDate, fromTime))
+            await background.EnqueueAsync((n, stop) => n.SendBookingMovedBySalonAsync(booking, fromDate, fromTime, stop),
+                $"moved-by-salon email for booking {booking.Id}");
+        return moved;
+    }
 
     public async Task<BookingResponse> CancelAsync(int adminId, int bookingId, AdminCancelRequest request, CancellationToken ct = default)
     {
@@ -633,7 +644,13 @@ public sealed class BookingService(
         // usual rule (the deposit is kept).
         var fullRefund = request.Reason != AdminCancellationReason.ClientDidNotRespond;
         await CancelCoreAsync(booking, adminId, request.Reason.ToString(), request.Explanation, fullRefund, ct);
-        return Map(await ReloadAsync(bookingId, ct), includeClient: true);
+        var cancelled = await ReloadAsync(bookingId, ct);
+        // Leyah cancelled it, so the client wouldn't otherwise know. A walk-in without an account has no email.
+        if (cancelled.GuestName is null && cancelled.Client is not null) // a walk-in sits on Leyah's own account: no email
+            await background.EnqueueAsync((n, stop) => n.SendBookingCancelledBySalonAsync(cancelled,
+                    Labels.ForCancellationReason(request.Reason.ToString()), cancelled.Cancellation?.Explanation, stop),
+                $"cancelled-by-salon email for booking {bookingId}");
+        return Map(cancelled, includeClient: true);
     }
 
     // ---- Shared ----
