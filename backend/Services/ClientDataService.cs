@@ -129,6 +129,7 @@ public sealed class ClientDataService(
         {
             feedback.Comment = null; // the star rating stays in the salon's totals, no longer tied to anyone
             feedback.Reply = null;
+            feedback.ShowOnHome = false;
         }
 
         foreach (var entry in await clientData.GetAuditLogsAsync(clientId, ct))

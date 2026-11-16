@@ -74,7 +74,8 @@ export default function FeedbackPage() {
             {failure && <Alert kind="error">{failure}</Alert>}
             <StarRating value={rating} onChange={(n) => { setRating(n); setErrors((x) => ({ ...x, rating: undefined })) }}
               error={errors.rating} disabled={submitting} />
-            <Field label="Comments or suggestions (optional)" error={errors.comment} counter={`${comment.length}/${LIMITS.feedbackCommentMax}`}>
+            <Field label="Comments or suggestions (optional)" error={errors.comment} counter={`${comment.length}/${LIMITS.feedbackCommentMax}`}
+              hint="Leyah may show your comment on the home page with your first name and last initial.">
               {(aria) => (
                 <textarea className="input textarea" rows={3} maxLength={LIMITS.feedbackCommentMax} value={comment}
                   placeholder="What did you love? Anything we could do better?" onChange={(e) => setComment(e.target.value)} {...aria} />

@@ -98,6 +98,8 @@ export const api = {
   feedback: {
     submit: (body) => post('/feedback', body),
     mine: () => get('/feedback'),
+    /** The home page's "What clients say" (no sign-in needed). */
+    home: () => get('/feedback/home'),
   },
   referenceImages: {
     upload: (file) => upload('/reference-images', file),
@@ -156,6 +158,7 @@ export const api = {
     updateBookingRules: (body) => put('/admin/booking-rules', body),
     setColorStock: (color, inStock) => put('/admin/booking-rules/colors', { color, inStock }),
     replyToFeedback: (id, reply) => put(`/admin/feedback/${id}/reply`, { reply }),
+    showFeedbackOnHome: (id, show) => put(`/admin/feedback/${id}/home`, { show }),
     gallery: () => get('/admin/gallery'),
     addGalleryPhoto: (file, caption) => upload('/admin/gallery', file, { caption }),
     removeGalleryPhoto: (id) => del(`/admin/gallery/${id}`),

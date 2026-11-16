@@ -157,6 +157,9 @@ public interface IFeedbackRepository
 
     /// <summary>Number of ratings per star value (1-5).</summary>
     Task<Dictionary<int, int>> CountByRatingAsync(CancellationToken ct = default);
+
+    /// <summary>The comments Leyah chose for the home page, newest first, leaving out deleted clients.</summary>
+    Task<List<Feedback>> GetShownOnHomeAsync(CancellationToken ct = default);
 }
 
 public sealed record AuditLogCriteria(int? UserId, string? Action, DateTime? FromUtc, DateTime? ToUtc, int Page, int PageSize);
@@ -530,6 +533,12 @@ internal sealed class FeedbackRepository(AppDbContext db) : IFeedbackRepository
 
     public Task<Dictionary<int, int>> CountByRatingAsync(CancellationToken ct) =>
         db.Feedback.GroupBy(f => f.Rating).Select(g => new { Rating = g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Rating, g => g.Count, ct);
+
+    public Task<List<Feedback>> GetShownOnHomeAsync(CancellationToken ct) =>
+        db.Feedback.Include(f => f.Client)
+            .Where(f => f.ShowOnHome && f.Comment != null && !f.Client.IsDeleted)
+            .OrderByDescending(f => f.CreatedAt).ThenByDescending(f => f.Id)
+            .ToListAsync(ct);
 }
 
 public interface IGalleryPhotoRepository

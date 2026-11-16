@@ -166,6 +166,7 @@ public static class AuditActions
     public const string ColorStockChanged = "ColorStockChanged";
     public const string ClientNoteChanged = "ClientNoteChanged";
     public const string FeedbackReplied = "FeedbackReplied";
+    public const string FeedbackShownOnHome = "FeedbackShownOnHome";
     public const string GalleryPhotoAdded = "GalleryPhotoAdded";
     public const string GalleryPhotoRemoved = "GalleryPhotoRemoved";
     public const string BookingCreatedByAdmin = "BookingCreatedByAdmin";

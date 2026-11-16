@@ -402,6 +402,7 @@ const newestFirst = (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a
 function feedbackResponse(db, f, includeClient) {
   const client = includeClient ? db.users.find((u) => u.id === f.clientId) : null
   return { id: f.id, rating: f.rating, comment: f.comment, createdAt: f.createdAt, reply: f.reply ?? null, repliedAt: f.repliedAt ?? null,
+    showOnHome: Boolean(f.showOnHome),
     client: client ? { id: client.id, firstName: client.firstName, lastName: client.lastName, username: client.username,
       email: client.email, phoneNumber: client.phoneNumber } : null }
 }
@@ -1037,6 +1038,19 @@ const routes = [
     const user = requireUser(db, 'Client')
     return db.feedback.filter((f) => f.clientId === user.id).sort(newestFirst).map((f) => feedbackResponse(db, f, false))
   }],
+  ['GET', '/feedback/home', (db) => {
+    const ratings = db.feedback.map((f) => f.rating)
+    const average = ratings.length ? Math.round((ratings.reduce((s, r) => s + r, 0) / ratings.length) * 10) / 10 : null
+    const items = db.feedback
+      .filter((f) => f.showOnHome && f.comment && !db.users.find((u) => u.id === f.clientId)?.isDeleted)
+      .sort(newestFirst)
+      .map((f) => {
+        const client = db.users.find((u) => u.id === f.clientId)
+        return { id: f.id, rating: f.rating, comment: f.comment, createdAt: f.createdAt,
+          name: client.lastName ? `${client.firstName} ${client.lastName[0].toUpperCase()}.` : client.firstName }
+      })
+    return { averageRating: average, ratingCount: ratings.length, items }
+  }],
   ['GET', '/admin/feedback', (db, { query }) => {
     requireUser(db, 'Administrator')
     const page = Math.max(1, Number(query.page) || 1)
@@ -1083,7 +1097,7 @@ const routes = [
     bookings.forEach((b) => { b.note = null })
     db.cancellations.filter((c) => bookings.some((b) => b.id === c.bookingId)).forEach((c) => { c.explanation = null })
     db.referenceImages.filter((r) => r.clientId === client.id).forEach((r) => { r.isDeleted = true })
-    db.feedback.filter((f) => f.clientId === client.id).forEach((f) => { f.comment = null })
+    db.feedback.filter((f) => f.clientId === client.id).forEach((f) => { f.comment = null; f.showOnHome = false })
     db.userTokens = db.userTokens.filter((t) => t.userId !== client.id)
     db.bookingDrafts = db.bookingDrafts.filter((d) => d.clientId !== client.id)
     db.auditLogs.filter((a) => a.userId === client.id).forEach((a) => { a.details = null; a.ipAddress = null })
@@ -1462,6 +1476,19 @@ const routes = [
     client.adminNote = note
     saveDb()
     return clientSummary(db, client)
+  }],
+  ['PUT', '/admin/feedback/:id/home', (db, { params, body }) => {
+    requireUser(db, 'Administrator')
+    const item = db.feedback.find((f) => f.id === Number(params.id)) ?? notFound('This feedback no longer exists.')
+    const show = Boolean(body.show)
+    if (show && !item.showOnHome) {
+      if (!item.comment) conflict('Only a rating with a comment can go on the home page.', 'feedback_has_no_comment')
+      const shown = db.feedback.filter((f) => f.showOnHome && f.comment && !db.users.find((u) => u.id === f.clientId)?.isDeleted)
+      if (shown.length >= 6) conflict('The home page shows up to 6 comments. Take one off to show this one.', 'home_feedback_full')
+    }
+    item.showOnHome = show
+    saveDb()
+    return feedbackResponse(db, item, true)
   }],
   ['PUT', '/admin/feedback/:id/reply', (db, { params, body }) => {
     requireUser(db, 'Administrator')

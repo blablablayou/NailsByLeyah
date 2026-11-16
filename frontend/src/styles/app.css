@@ -795,6 +795,9 @@ select.input { appearance: auto; }
 .feedback-meta .stars { margin-left: auto; }
 .feedback-body p { margin: 0; }
 .feedback-comment { color: var(--ink); line-height: 1.5; overflow-wrap: anywhere; }
+.feedback-home { margin-top: 2px; }
+.feedback-home .field-error { margin-top: 4px; }
+.feedback-home-count { margin: -6px 0 4px; }
 
 .pager { margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--line); }
 

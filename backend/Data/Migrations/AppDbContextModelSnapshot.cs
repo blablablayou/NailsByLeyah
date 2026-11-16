@@ -664,6 +664,12 @@ namespace NailsByLeah.Api.Data.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("reply");
 
+                    b.Property<bool>("ShowOnHome")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("show_on_home");
+
                     b.Property<Guid>("SubmissionKey")
                         .HasColumnType("uuid")
                         .HasColumnName("submission_key");

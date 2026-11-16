@@ -84,6 +84,12 @@ public interface IFeedbackService
 
     /// <summary>Leyah's reply, shown to the client on their Feedback page; empty removes it.</summary>
     Task<FeedbackResponse> ReplyAsync(int feedbackId, FeedbackReplyRequest request, CancellationToken ct = default);
+
+    /// <summary>Leyah shows a comment on the home page (at most <see cref="Feedback.MaxOnHome"/>), or takes it off.</summary>
+    Task<FeedbackResponse> ShowOnHomeAsync(int feedbackId, ShowOnHomeRequest request, CancellationToken ct = default);
+
+    /// <summary>"What clients say" on the home page, for anyone.</summary>
+    Task<HomeFeedbackResponse> GetForHomeAsync(CancellationToken ct = default);
 }
 
 /// <summary>Star ratings (1-5) with optional comments. Clients rate the salon; the administrator reads them.</summary>
@@ -148,6 +154,43 @@ public sealed class FeedbackService(IFeedbackRepository feedback, IUnitOfWork un
         return ToResponse(item, includeClient: true);
     }
 
+    public async Task<FeedbackResponse> ShowOnHomeAsync(int feedbackId, ShowOnHomeRequest request, CancellationToken ct = default)
+    {
+        var item = await feedback.GetByIdAsync(feedbackId, ct) ?? throw new NotFoundException("This feedback no longer exists.");
+        if (request.Show && !item.ShowOnHome)
+        {
+            if (item.Comment is null)
+                throw new ConflictException("Only a rating with a comment can go on the home page.", "feedback_has_no_comment");
+            if ((await feedback.GetShownOnHomeAsync(ct)).Count >= Feedback.MaxOnHome)
+                throw new ConflictException($"The home page shows up to {Feedback.MaxOnHome} comments. Take one off to show this one.", "home_feedback_full");
+        }
+        if (item.ShowOnHome != request.Show)
+        {
+            item.ShowOnHome = request.Show;
+            audit.Record(AuditActions.FeedbackShownOnHome, nameof(Feedback), item.Id, request.Show ? "Shown on the home page" : "Taken off the home page");
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        return ToResponse(item, includeClient: true);
+    }
+
+    public async Task<HomeFeedbackResponse> GetForHomeAsync(CancellationToken ct = default)
+    {
+        var counts = await feedback.CountByRatingAsync(ct);
+        var total = counts.Values.Sum();
+        decimal? average = total == 0 ? null : Math.Round((decimal)counts.Sum(p => p.Key * p.Value) / total, 1);
+        var shown = await feedback.GetShownOnHomeAsync(ct);
+        return new HomeFeedbackResponse(average, total,
+            shown.Select(f => new HomeFeedbackItem(f.Id, f.Rating, f.Comment!, PublicName(f.Client), f.CreatedAt)).ToList());
+    }
+
+    /// <summary>"Kyla S.": the first name and the last initial, nothing that finds the person.</summary>
+    private static string PublicName(User client)
+    {
+        var first = client.FirstName.Trim();
+        var last = client.LastName.Trim();
+        return last.Length == 0 ? first : $"{first} {char.ToUpperInvariant(last[0])}.";
+    }
+
     private static FeedbackResponse Replay(Feedback earlier, int clientId) =>
         earlier.ClientId == clientId
             ? ToResponse(earlier, includeClient: false)
@@ -156,5 +199,5 @@ public sealed class FeedbackService(IFeedbackRepository feedback, IUnitOfWork un
     private static FeedbackResponse ToResponse(Feedback f, bool includeClient) => new(
         f.Id, f.Rating, f.Comment, f.CreatedAt,
         includeClient ? new ClientSummaryResponse(f.Client.Id, f.Client.FirstName, f.Client.LastName, f.Client.Username, f.Client.Email, f.Client.PhoneNumber) : null,
-        f.Reply, f.RepliedAt);
+        f.Reply, f.RepliedAt, f.ShowOnHome);
 }

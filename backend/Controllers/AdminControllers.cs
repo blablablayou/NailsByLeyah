@@ -244,6 +244,10 @@ public sealed class AdminFeedbackController(IFeedbackService feedback) : Control
     /// <summary>Leyah's reply, shown to the client on their Feedback page; an empty reply removes it.</summary>
     [HttpPut("{id:int}/reply")]
     public Task<FeedbackResponse> Reply(int id, FeedbackReplyRequest request, CancellationToken ct) => feedback.ReplyAsync(id, request, ct);
+
+    /// <summary>Shows a comment in the home page's "What clients say", or takes it off.</summary>
+    [HttpPut("{id:int}/home")]
+    public Task<FeedbackResponse> ShowOnHome(int id, ShowOnHomeRequest request, CancellationToken ct) => feedback.ShowOnHomeAsync(id, request, ct);
 }
 
 /// <summary>The deposit, reschedule rules, how far ahead clients can book, and which shades are out of stock.</summary>

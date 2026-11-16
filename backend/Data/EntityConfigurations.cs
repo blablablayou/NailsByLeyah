@@ -266,6 +266,7 @@ internal sealed class FeedbackConfiguration : IEntityTypeConfiguration<Feedback>
             t.HasCheckConstraint("ck_feedback_rating", $"rating BETWEEN {Feedback.MinRating} AND {Feedback.MaxRating}"));
         b.Property(x => x.Comment).HasMaxLength(InputLimits.FeedbackCommentMaxLength);
         b.Property(x => x.Reply).HasMaxLength(InputLimits.FeedbackReplyMaxLength);
+        b.Property(x => x.ShowOnHome).HasDefaultValue(false);
         b.HasOne(x => x.Client).WithMany().HasForeignKey(x => x.ClientId);
         b.HasIndex(x => x.SubmissionKey).IsUnique().HasDatabaseName(IndexNames.FeedbackSubmissionKey);
         b.HasIndex(x => x.CreatedAt).HasDatabaseName("ix_feedback_created_at");

@@ -12,6 +12,7 @@ import { PricingSection } from './home/PricingSection'
 import { FaqSection, RulesSection } from './home/RulesAndFaq'
 import { Location } from './home/InfoCards'
 import { MeetLeyah } from './home/MeetLeyah'
+import { ClientReviews } from './home/ClientReviews'
 import { canAnimate, peso, planIntro, scrollToSection } from './home/motion'
 import '../../styles/home.css'
 
@@ -91,6 +92,7 @@ export default function HomePage() {
       <Hero bookTo={bookTo} revealAfter={intro.play ? intro.lettersDone + 500 : 0} />
       <PricingSection catalog={catalog} bookTo={bookTo} />
       <WorksGallery onOpen={openPhoto} />
+      <ClientReviews />
       <MeetLeyah />
       <RulesSection deposit={deposit} />
       <FaqSection deposit={deposit} hours={hours} />

@@ -9,17 +9,23 @@ import { LIMITS } from '../../validation/rules'
 import { Stars } from '../../components/StarRating'
 
 const PAGE_SIZE = 20
+/** How many comments the home page shows at once (the backend's Feedback.MaxOnHome). */
+const HOME_LIMIT = 6
 
 /** Client ratings and comments, newest first, with the average and how the ratings are spread. */
 export default function AdminFeedbackPage() {
   const [page, setPage] = useState(1)
   const list = useAsync(() => api.admin.feedback({ page, pageSize: PAGE_SIZE }), [page])
+  // How many are on the home page right now, across every page of the list.
+  const home = useAsync(() => api.feedback.home().catch(() => null), [])
+  const shownOnHome = home.data?.items.length
 
   if (list.loading && !list.data) return <PageLoader label="Loading feedback…" />
   if (list.error) return <Alert kind="error">{errorMessage(list.error)}</Alert>
 
   const { items, totalCount, averageRating, countsByRating } = list.data
   const pages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const replace = (next) => list.setData((d) => ({ ...d, items: d.items.map((x) => (x.id === next.id ? next : x)) }))
 
   return (
     <div className="stack-lg">
@@ -49,7 +55,10 @@ export default function AdminFeedbackPage() {
       </Card>
 
       <Card title="All feedback" actions={list.loading ? <Spinner small label="Refreshing" /> : null}>
-        <p className="card-intro">Newest first.</p>
+        <p className="card-intro">
+          Newest first. Switch a comment on to show it on the home page under What clients say, with the client&apos;s first name and last initial.
+        </p>
+        {shownOnHome != null && <p className="muted small feedback-home-count">{shownOnHome} of {HOME_LIMIT} shown on the home page.</p>}
         {items.length === 0 ? (
           <EmptyState title="No feedback yet">When clients leave a rating, it shows up here.</EmptyState>
         ) : (
@@ -66,7 +75,8 @@ export default function AdminFeedbackPage() {
                       <Stars rating={f.rating} size="sm" />
                     </div>
                     {f.comment ? <p className="feedback-comment">{f.comment}</p> : <p className="muted small">No comment</p>}
-                    <FeedbackReply item={f} onSaved={(next) => list.setData((d) => ({ ...d, items: d.items.map((x) => (x.id === next.id ? next : x)) }))} />
+                    {f.comment && <ShowOnHome item={f} onSaved={(next) => { replace(next); home.reload() }} />}
+                    <FeedbackReply item={f} onSaved={replace} />
                   </div>
                 </li>
               )
@@ -75,6 +85,37 @@ export default function AdminFeedbackPage() {
         )}
         <Pager page={page} pages={pages} onChange={setPage} />
       </Card>
+    </div>
+  )
+}
+
+/**
+ * Puts a comment on the home page, or takes it off. The switch only moves once the server agrees, so a refusal (the
+ * home page is full) leaves it off, with the reason under it.
+ */
+function ShowOnHome({ item, onSaved }) {
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const change = async (e) => {
+    const show = e.target.checked
+    setSaving(true)
+    setError(null)
+    try {
+      onSaved(await api.admin.showFeedbackOnHome(item.id, show))
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+  return (
+    <div className="feedback-home">
+      <label className="switch">
+        <input type="checkbox" aria-label="Show on home page" checked={item.showOnHome} disabled={saving} onChange={change} />
+        <span className="switch-track" aria-hidden="true" />
+        <span className="switch-text" aria-hidden="true">{item.showOnHome ? 'On the home page' : 'Show on home page'}</span>
+      </label>
+      {error && <p className="field-error" role="alert">{error}</p>}
     </div>
   )
 }

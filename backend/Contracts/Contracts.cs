@@ -356,7 +356,16 @@ public sealed record SaveBookingDraftRequest(System.Text.Json.JsonElement Data);
 public sealed record SubmitFeedbackRequest(int Rating, string? Comment, Guid SubmissionKey);
 
 public sealed record FeedbackResponse(int Id, int Rating, string? Comment, DateTime CreatedAt, ClientSummaryResponse? Client,
-    string? Reply = null, DateTime? RepliedAt = null);
+    string? Reply = null, DateTime? RepliedAt = null, bool ShowOnHome = false);
+
+/// <summary>Leyah shows a comment on the home page, or takes it off.</summary>
+public sealed record ShowOnHomeRequest(bool Show);
+
+/// <summary>A comment on the home page: the client's first name and last initial only.</summary>
+public sealed record HomeFeedbackItem(int Id, int Rating, string Comment, string Name, DateTime CreatedAt);
+
+/// <summary>The home page's "What clients say": the average of every rating, and the comments Leyah chose, newest first.</summary>
+public sealed record HomeFeedbackResponse(decimal? AverageRating, int RatingCount, IReadOnlyList<HomeFeedbackItem> Items);
 
 /// <summary>Leyah's reply to a piece of feedback; empty removes it.</summary>
 public sealed record FeedbackReplyRequest(string? Reply);

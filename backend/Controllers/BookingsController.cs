@@ -94,4 +94,9 @@ public sealed class FeedbackController(IFeedbackService feedback) : ControllerBa
 
     [HttpGet]
     public Task<IReadOnlyList<FeedbackResponse>> Mine(CancellationToken ct) => feedback.GetMineAsync(User.GetUserId(), ct);
+
+    /// <summary>The home page's "What clients say", for anyone: the average rating and the comments Leyah chose.</summary>
+    [AllowAnonymous]
+    [HttpGet("home")]
+    public Task<HomeFeedbackResponse> Home(CancellationToken ct) => feedback.GetForHomeAsync(ct);
 }

@@ -368,6 +368,8 @@ public class Feedback
 {
     public const int MinRating = 1;
     public const int MaxRating = 5;
+    /// <summary>How many comments Leyah can show on the home page at once.</summary>
+    public const int MaxOnHome = 6;
 
     public int Id { get; set; }
     public int ClientId { get; set; }
@@ -383,6 +385,9 @@ public class Feedback
     /// <summary>Leyah's answer, shown to the client on their Feedback page.</summary>
     public string? Reply { get; set; }
     public DateTime? RepliedAt { get; set; }
+
+    /// <summary>Leyah chose this comment for the home page's "What clients say".</summary>
+    public bool ShowOnHome { get; set; }
 }
 
 /// <summary>A photo of Leyah's work for the home page's Our Works gallery, in the same private storage as design photos.</summary>
