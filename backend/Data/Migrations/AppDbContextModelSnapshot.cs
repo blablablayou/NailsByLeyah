@@ -292,9 +292,18 @@ namespace NailsByLeah.Api.Data.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("refund_reference");
 
+                    b.Property<DateTime?>("RefundRequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("refund_requested_at");
+
                     b.Property<DateTime?>("RefundSentAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("refund_sent_at");
+
+                    b.Property<string>("RefundStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("refund_status");
 
                     b.Property<DateTime?>("ReminderSentAt")
                         .HasColumnType("timestamp with time zone")

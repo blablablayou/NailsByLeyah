@@ -37,6 +37,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         configurationBuilder.Properties<NailHand>().HaveConversion<string>().HaveMaxLength(10);
         configurationBuilder.Properties<PaymentOption>().HaveConversion<string>().HaveMaxLength(10);
         configurationBuilder.Properties<ColorRequestStatus>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<OnlineRefundStatus>().HaveConversion<string>().HaveMaxLength(20);
 
         configurationBuilder.Properties<decimal>().HavePrecision(10, 2);
 

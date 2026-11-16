@@ -32,6 +32,32 @@ public static class XenditWebhook
         Text(session, "currency"),
         Text(session, "reference_id"));
 
+    /// <summary>
+    /// Xendit's refund events (docs.xendit.co/apidocs/refund-webhook-notification): { "event": "refund.succeeded" |
+    /// "refund.failed", "data": { "refund_id", "reference_id", "status", "failure_code", ... } }. Null for anything else.
+    /// </summary>
+    public static RefundOutcome? ParseRefund(JsonElement body)
+    {
+        if (body.ValueKind != JsonValueKind.Object || Text(body, "event") is not ("refund.succeeded" or "refund.failed")
+            || !body.TryGetProperty("data", out var data))
+            return null;
+        return FromRefund(data);
+    }
+
+    /// <summary>A refund object as Xendit returns it (its answer, GET /v3/refunds/{id}, or webhook data).</summary>
+    public static RefundOutcome? FromRefund(JsonElement refund)
+    {
+        if (refund.ValueKind != JsonValueKind.Object || Text(refund, "refund_id") is not { Length: > 0 } id)
+            return null;
+        var state = Text(refund, "status") switch
+        {
+            "SUCCEEDED" => ProviderRefundState.Succeeded,
+            "FAILED" => ProviderRefundState.Failed,
+            _ => ProviderRefundState.Pending,
+        };
+        return new RefundOutcome(id, state, Text(refund, "reference_id"), Text(refund, "failure_code"));
+    }
+
     /// <summary>Xendit's session status: ACTIVE, COMPLETED, EXPIRED or CANCELED.</summary>
     public static CheckoutState StateOf(string? status) => status switch
     {

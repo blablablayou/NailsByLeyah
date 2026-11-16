@@ -15,5 +15,14 @@ export function refundFor(booking, { bySalon = false, reason = null } = {}) {
   return Math.max(0, paid - booking.depositAmount)
 }
 
-/** A refund the salon still has to send. */
+/** A refund the salon still has to send (or one on its way back online). */
 export const refundOwed = (booking) => (booking.payment?.refundDue ?? 0) > 0 && !booking.payment?.refundSentAt
+
+/** On its way back to the client's GCash or Maya, waiting for the payment service to say it arrived. */
+export const refundProcessing = (booking) => booking.payment?.refundStatus === 'Processing'
+
+/** What opening the refund window does, for its menu item. */
+export function refundActionLabel(booking) {
+  if (refundProcessing(booking)) return 'Refund processing'
+  return booking.payment?.canRefundOnline ? 'Send refund' : 'Record refund sent'
+}

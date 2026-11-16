@@ -13,7 +13,7 @@ namespace NailsByLeah.Api.Payments;
 /// Xendit Payment Sessions in hosted PAYMENT_LINK mode (https://docs.xendit.co/docs/payment-sessions-overview):
 /// POST /sessions creates the page, GET /sessions/{id} reports it, POST /sessions/{id}/cancel closes it
 /// (https://docs.xendit.co/apidocs/create-session, get-session, cancel-session). Basic auth: the secret key as the
-/// username, no password. Every failure becomes <see cref="HostedCheckoutException"/>, never carrying the key.
+/// username, no password. Refunds go to POST /v3/refunds and GET /v3/refunds/{id}, which need the api-version header. Every failure becomes <see cref="HostedCheckoutException"/>, never carrying the key.
 /// </summary>
 public sealed class XenditCheckout(HttpClient http, IOptions<XenditOptions> options, ILogger<XenditCheckout> logger) : IHostedCheckout
 {
@@ -54,9 +54,36 @@ public sealed class XenditCheckout(HttpClient http, IOptions<XenditOptions> opti
         using var _ = await SendAsync(HttpMethod.Post, $"sessions/{Uri.EscapeDataString(sessionId)}/cancel", null, ct);
     }
 
-    private async Task<JsonDocument> SendAsync(HttpMethod method, string path, HttpContent? content, CancellationToken ct)
+    /// <summary>Xendit's refund API version (header api-version), docs.xendit.co/apidocs/create-a-refund.</summary>
+    public const string RefundApiVersion = "2024-11-11";
+
+    public async Task<RefundOutcome> RefundAsync(RefundRequest request, CancellationToken ct)
+    {
+        var body = new
+        {
+            reference_id = request.Reference,
+            payment_id = request.PaymentId,
+            amount = request.Amount,
+            currency = "PHP",
+            reason = request.Reason == RefundReason.NoShow ? "OTHERS" : "CANCELLATION",
+        };
+        using var json = await SendAsync(HttpMethod.Post, "v3/refunds", JsonContent.Create(body), ct, RefundApiVersion);
+        return XenditWebhook.FromRefund(json.RootElement)
+               ?? throw new HostedCheckoutException("Xendit's answer had no refund id.");
+    }
+
+    public async Task<RefundOutcome> GetRefundAsync(string refundId, CancellationToken ct)
+    {
+        using var json = await SendAsync(HttpMethod.Get, $"v3/refunds/{Uri.EscapeDataString(refundId)}", null, ct, RefundApiVersion);
+        return XenditWebhook.FromRefund(json.RootElement)
+               ?? throw new HostedCheckoutException("Xendit's answer had no refund id.");
+    }
+
+    private async Task<JsonDocument> SendAsync(HttpMethod method, string path, HttpContent? content, CancellationToken ct, string? apiVersion = null)
     {
         using var message = new HttpRequestMessage(method, path) { Content = content };
+        if (apiVersion is not null)
+            message.Headers.Add("api-version", apiVersion);
         var key = options.Value.SecretKey ?? throw new HostedCheckoutException("Xendit:SecretKey is not set.");
         message.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes(key + ":")));
 
@@ -76,8 +103,8 @@ public sealed class XenditCheckout(HttpClient http, IOptions<XenditOptions> opti
             {
                 // Only Xendit's error code is kept: the message could echo what was sent.
                 var code = await ErrorCodeAsync(response, ct);
-                logger.LogWarning("Xendit answered {Status} {ErrorCode} for {Method} {Path}", (int)response.StatusCode, code, method, path.Split('/')[0]);
-                throw new HostedCheckoutException($"Xendit refused the request ({(int)response.StatusCode} {code}).");
+                logger.LogWarning("Xendit answered {Status} {ErrorCode} for {Method} {Path}", (int)response.StatusCode, code, method, path.StartsWith("v3/", StringComparison.Ordinal) ? path.Split('/')[1] : path.Split('/')[0]);
+                throw new HostedCheckoutException($"Xendit refused the request ({(int)response.StatusCode} {code}).") { Refused = true };
             }
             try
             {

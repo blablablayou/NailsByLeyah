@@ -149,4 +149,102 @@ public sealed class XenditCheckoutTests
 
         Assert.DoesNotContain(Key, error.ToString());
     }
+
+    // ---- Refunds (POST /v3/refunds, GET /v3/refunds/{id}; docs.xendit.co/apidocs/create-a-refund) ----
+
+    private static readonly RefundRequest Refund = new("py-9", "booking-42-refund-20261116090000", 949m, RefundReason.Cancellation);
+
+    [Fact]
+    public async Task Refund_sends_the_payment_amount_reference_reason_and_api_version()
+    {
+        var (client, server) = Create((_, _) => Json(HttpStatusCode.OK,
+            """{"refund_id":"rfd-1","reference_id":"booking-42-refund-20261116090000","payment_id":"py-9","status":"PENDING","amount":949,"currency":"PHP"}"""));
+
+        var outcome = await client.RefundAsync(Refund, CancellationToken.None);
+
+        var (request, body) = server.Calls.Single();
+        Assert.Equal((HttpMethod.Post, "https://api.xendit.co/v3/refunds"), (request.Method, request.RequestUri!.ToString()));
+        Assert.Equal("2024-11-11", request.Headers.GetValues("api-version").Single());
+        Assert.Equal($"{Key}:", Encoding.UTF8.GetString(Convert.FromBase64String(request.Headers.Authorization!.Parameter!)));
+        using var json = JsonDocument.Parse(body);
+        var root = json.RootElement;
+        Assert.Equal("py-9", root.GetProperty("payment_id").GetString());
+        Assert.Equal("booking-42-refund-20261116090000", root.GetProperty("reference_id").GetString());
+        Assert.Equal(949m, root.GetProperty("amount").GetDecimal());
+        Assert.Equal("CANCELLATION", root.GetProperty("reason").GetString());
+        Assert.Equal(new RefundOutcome("rfd-1", ProviderRefundState.Pending, "booking-42-refund-20261116090000"), outcome);
+    }
+
+    [Fact]
+    public async Task A_no_show_refund_gives_the_reason_OTHERS()
+    {
+        var (client, server) = Create((_, _) => Json(HttpStatusCode.OK, """{"refund_id":"rfd-2","status":"SUCCEEDED"}"""));
+
+        var outcome = await client.RefundAsync(Refund with { Reason = RefundReason.NoShow }, CancellationToken.None);
+
+        using var json = JsonDocument.Parse(server.Calls.Single().Body);
+        Assert.Equal("OTHERS", json.RootElement.GetProperty("reason").GetString());
+        Assert.Equal(ProviderRefundState.Succeeded, outcome.State);
+    }
+
+    [Fact]
+    public async Task A_refused_refund_becomes_HostedCheckoutException_with_xendits_code()
+    {
+        var (client, _) = Create((_, _) => Json(HttpStatusCode.BadRequest, """{"error_code":"INSUFFICIENT_BALANCE","message":"x"}"""));
+
+        var error = await Assert.ThrowsAsync<HostedCheckoutException>(() => client.RefundAsync(Refund, CancellationToken.None));
+
+        Assert.Contains("INSUFFICIENT_BALANCE", error.Message);
+        Assert.True(error.Refused); // Xendit answered no, so nothing was sent
+    }
+
+    [Theory]
+    [InlineData("PENDING", ProviderRefundState.Pending)]
+    [InlineData("SUCCEEDED", ProviderRefundState.Succeeded)]
+    [InlineData("FAILED", ProviderRefundState.Failed)]
+    public async Task Get_refund_reads_its_status(string xenditStatus, ProviderRefundState expected)
+    {
+        var (client, server) = Create((_, _) => Json(HttpStatusCode.OK,
+            $$"""{"refund_id":"rfd-1","reference_id":"booking-42-refund-1","status":"{{xenditStatus}}","failure_code":null}"""));
+
+        var outcome = await client.GetRefundAsync("rfd-1", CancellationToken.None);
+
+        var (request, _) = server.Calls.Single();
+        Assert.Equal((HttpMethod.Get, "https://api.xendit.co/v3/refunds/rfd-1"), (request.Method, request.RequestUri!.ToString()));
+        Assert.Equal("2024-11-11", request.Headers.GetValues("api-version").Single());
+        Assert.Equal(new RefundOutcome("rfd-1", expected, "booking-42-refund-1"), outcome);
+    }
+
+    [Fact]
+    public void The_refund_webhook_is_read_and_payment_events_are_not_mistaken_for_it()
+    {
+        using var succeeded = JsonDocument.Parse("""
+            {"event":"refund.succeeded","api_version":"v3","data":{"refund_id":"rfd-1","reference_id":"booking-42-refund-1","status":"SUCCEEDED"}}
+            """);
+        using var failed = JsonDocument.Parse("""
+            {"event":"refund.failed","data":{"refund_id":"rfd-2","reference_id":"booking-42-refund-2","status":"FAILED","failure_code":"ACCOUNT_NOT_FOUND"}}
+            """);
+        using var paid = JsonDocument.Parse("""{"event":"payment_session.completed","data":{"payment_session_id":"ps-1"}}""");
+
+        Assert.Equal(new RefundOutcome("rfd-1", ProviderRefundState.Succeeded, "booking-42-refund-1"), XenditWebhook.ParseRefund(succeeded.RootElement));
+        Assert.Equal(new RefundOutcome("rfd-2", ProviderRefundState.Failed, "booking-42-refund-2", "ACCOUNT_NOT_FOUND"), XenditWebhook.ParseRefund(failed.RootElement));
+        Assert.Null(XenditWebhook.ParseRefund(paid.RootElement));
+        Assert.Null(XenditWebhook.Parse(succeeded.RootElement));
+    }
+
+    [Fact]
+    public void Refund_references_carry_the_booking_and_are_new_on_each_try()
+    {
+        var at = new DateTime(2026, 11, 16, 9, 0, 0, DateTimeKind.Utc);
+        var first = HostedCheckoutReference.ForRefund(42, at);
+        var second = HostedCheckoutReference.ForRefund(42, at); // tried again within the same second
+
+        Assert.StartsWith("booking-42-refund-20261116090000-", first);
+        Assert.NotEqual(first, second);
+        Assert.True(first.Length <= 64);
+        Assert.True(HostedCheckoutReference.TryParseRefund(first, out var id));
+        Assert.Equal(42, id);
+        Assert.False(HostedCheckoutReference.TryParseRefund("booking-42", out _));
+        Assert.False(HostedCheckoutReference.TryParse(first, out _)); // never mistaken for a payment session
+    }
 }

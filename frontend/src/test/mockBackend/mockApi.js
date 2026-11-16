@@ -384,8 +384,12 @@ function paymentInfo(db, b) {
   return { option, optionLabel: PAYMENT_OPTION_LABELS[option], amountPaid: b.amountPaid ?? b.depositAmount,
     referenceNumber: p?.referenceNumber ?? null, method: p?.method ?? null, paidAt: p?.paidAt ?? null, verified: Boolean(p?.verifiedAt),
     confirmedAt: b.confirmedAt ?? null, confirmedBy: admin ? `${admin.firstName} ${admin.lastName}` : null,
-    refundDue: b.refundDue ?? 0, refundSentAt: b.refundSentAt ?? null, refundReference: b.refundReference ?? null }
+    refundDue: b.refundDue ?? 0, refundSentAt: b.refundSentAt ?? null, refundReference: b.refundReference ?? null,
+    refundStatus: b.refundStatus ?? null, canRefundOnline: Boolean(onlinePaymentOf(db, b)) }
 }
+
+// Same rule as OnlineRefundService.OnlinePaymentOf: a payment taken on the provider's page (ids start "py-").
+const onlinePaymentOf = (db, b) => db.payments.find((x) => x.bookingId === b.id && x.status === 'Succeeded' && x.referenceNumber?.startsWith('py-'))
 
 // Same rule as Booking.MarkCancelled on the server: the deposit is kept unless the salon cancels.
 const paidOf = (b) => b.amountPaid ?? b.depositAmount
@@ -459,7 +463,8 @@ function receipt(db, payment) {
       ...view.addOns.map((a) => ({ description: `${a.name} (${a.handLabel.toLowerCase()}, ${a.nailCount} ${a.nailCount === 1 ? 'nail' : 'nails'})`, amount: a.linePrice })),
     ],
     verified: Boolean(payment.verifiedAt), verifiedAt: payment.verifiedAt ?? null, amountPaid: b.amountPaid ?? payment.amount,
-    refundDue: b.refundDue ?? 0, refundSentAt: b.refundSentAt ?? null, refundReference: b.refundReference ?? null }
+    refundDue: b.refundDue ?? 0, refundSentAt: b.refundSentAt ?? null, refundReference: b.refundReference ?? null,
+    refundStatus: b.refundStatus ?? null }
 }
 
 const findBooking = (db, id) => db.bookings.find((b) => b.id === Number(id) && !b.isDeleted) ?? notFound('Booking not found.')
@@ -1304,9 +1309,40 @@ const routes = [
     const booking = findBooking(db, params.id)
     if (!(booking.refundDue > 0)) conflict('No refund is owed on this booking.', 'no_refund_due')
     if (booking.refundSentAt) conflict('This refund has already been recorded.', 'refund_already_sent')
-    Object.assign(booking, { refundSentAt: nowIso(), refundReference: reference, updatedAt: nowIso() })
+    if (booking.refundStatus === 'Processing') conflict('This refund is already being sent back online. Wait for it to finish.', 'refund_in_progress')
+    Object.assign(booking, { refundSentAt: nowIso(), refundReference: reference, refundStatus: null, updatedAt: nowIso() })
     audit(db, admin.id, 'RefundSent', 'Booking', booking.id, `PHP ${booking.refundDue.toFixed(2)}`)
     saveDb()
+    return bookingResponse(db, booking, true)
+  }],
+  // Online refunds, like OnlineRefundService. The payment service is played by db.mockRefund: 'refuse' (it says no),
+  // 'succeed' (done at once), or nothing (Processing until a check finds it through).
+  ['POST', '/admin/bookings/:id/refund/online', (db, { params }) => {
+    const admin = requireUser(db, 'Administrator')
+    const booking = findBooking(db, params.id)
+    if (!onlinePaymentOf(db, booking)) conflict("This booking wasn't paid online, so its refund can't go back online. Send it yourself and record it.", 'online_refund_unavailable')
+    if (!(booking.refundDue > 0)) conflict('No refund is owed on this booking.', 'no_refund_due')
+    if (booking.refundSentAt) conflict('This refund has already been recorded.', 'refund_already_sent')
+    if (booking.refundStatus === 'Processing') conflict('This refund is already being sent back online. Wait for it to finish.', 'refund_in_progress')
+    const outcome = db.mockRefund
+    if (outcome === 'refuse') {
+      Object.assign(booking, { refundStatus: 'Failed', refundReference: null, updatedAt: nowIso() })
+      audit(db, admin.id, 'RefundFailed', 'Booking', booking.id, `PHP ${booking.refundDue.toFixed(2)} could not be sent back online`)
+    } else {
+      Object.assign(booking, { refundStatus: 'Processing', refundRequestedAt: nowIso(), refundReference: `rfd-mock-${randomHex(4)}`, updatedAt: nowIso() })
+      audit(db, admin.id, 'RefundRequested', 'Booking', booking.id, `PHP ${booking.refundDue.toFixed(2)} sent back online`)
+      if (outcome === 'succeed') Object.assign(booking, { refundStatus: 'Succeeded', refundSentAt: nowIso() })
+    }
+    saveDb()
+    return bookingResponse(db, booking, true)
+  }],
+  ['POST', '/admin/bookings/:id/refund/check', (db, { params }) => {
+    requireUser(db, 'Administrator')
+    const booking = findBooking(db, params.id)
+    if (booking.refundStatus === 'Processing' && db.mockRefund !== 'pending') {
+      Object.assign(booking, { refundStatus: 'Succeeded', refundSentAt: nowIso(), updatedAt: nowIso() })
+      saveDb()
+    }
     return bookingResponse(db, booking, true)
   }],
   ['POST', '/admin/bookings/:id/no-show', (db, { params }) => {

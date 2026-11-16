@@ -60,6 +60,11 @@ public sealed class PaymentUnavailableException()
     : AppException(StatusCodes.Status502BadGateway, "Payment unavailable",
         "The payment couldn't be started. You have not been charged. Please try again.", "payment_unavailable");
 
+/// <summary>The payment provider couldn't be asked about a refund just now; nothing changed.</summary>
+public sealed class RefundCheckUnavailableException()
+    : AppException(StatusCodes.Status502BadGateway, "Refund check unavailable",
+        "We couldn't check this refund just now. Try again in a minute.", "refund_check_unavailable");
+
 public sealed class PaymentFailedException(string detail)
     : AppException(StatusCodes.Status402PaymentRequired, "Payment failed", detail, "payment_failed");
 

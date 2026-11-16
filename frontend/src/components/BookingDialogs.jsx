@@ -3,7 +3,7 @@ import { Modal } from './Modal'
 import { SlotPicker } from './SlotPicker'
 import { Alert, Button, Field, Money, SelectField } from './ui'
 import { errorMessage, fieldErrors } from '../api/errors'
-import { formatDate, formatTime } from '../lib/format'
+import { formatDate, formatMoney, formatTime } from '../lib/format'
 import { LIMITS } from '../validation/rules'
 import { amountPaid, depositKept, refundFor } from '../lib/refunds'
 import { bookingClientName } from '../lib/bookingClient'
@@ -175,16 +175,53 @@ function RefundNote({ booking, bySalon, reason }) {
   )
 }
 
-/** Leyah sent a refund by GCash or Maya; the reference is optional. */
-export function RefundDialog({ booking, onSubmit, onClose }) {
+/**
+ * The refund owed after a cancellation or no-show. Paid online: Leyah sends it back to the client's GCash or Maya in one
+ * click, and it shows as processing until the payment service says it arrived. Otherwise, or if that didn't go through,
+ * she sends it herself and records it (the reference is optional). The payment service is never named here.
+ */
+export function RefundDialog({ booking, onSubmit, onRefundOnline, onCheck, onSettled, onClose }) {
+  const [current, setCurrent] = useState(booking)
+  const [changed, setChanged] = useState(false)
+  const [busy, setBusy] = useState(null) // 'online' | 'check' | 'manual'
+  const [checkedAt, setCheckedAt] = useState(null)
   const [reference, setReference] = useState('')
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [fieldError, setFieldError] = useState(null)
 
-  const submit = async (e) => {
+  const pay = current.payment ?? {}
+  const amount = pay.refundDue ?? 0
+  const method = pay.method === 'Maya' ? 'Maya' : 'GCash'
+  const status = pay.refundStatus ?? null
+  const online = Boolean(pay.canRefundOnline) && status !== 'Succeeded'
+  const kept = Math.max(0, (pay.amountPaid ?? 0) - amount)
+  const sentMessage = `Refund of ${formatMoney(amount)} for booking #${current.id}`
+
+  const close = () => {
+    if (!changed) return onClose()
+    if (status === 'Succeeded') return onSettled(`${sentMessage} sent back to their ${method}.`)
+    if (status === 'Processing') return onSettled(`${sentMessage} is processing.`)
+    return onSettled(null)
+  }
+
+  const run = async (kind, action) => {
+    setBusy(kind)
+    setError(null)
+    try {
+      const updated = await action()
+      setCurrent(updated)
+      setChanged(true)
+      if (kind === 'check') setCheckedAt(new Date())
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const recordByHand = async (e) => {
     e.preventDefault()
-    setSaving(true)
+    setBusy('manual')
     setError(null)
     setFieldError(null)
     try {
@@ -193,27 +230,90 @@ export function RefundDialog({ booking, onSubmit, onClose }) {
       const problem = fieldErrors(err).refundReference
       if (problem) setFieldError(problem)
       else setError(errorMessage(err))
-      setSaving(false)
+      setBusy(null)
     }
   }
 
+  const manualForm = (
+    <form onSubmit={recordByHand} noValidate className="stack refund-manual">
+      <Field label="GCash or Maya reference (optional)" error={fieldError}>
+        {(aria) => <input className="input" maxLength={LIMITS.balanceReferenceMax} value={reference} onChange={(e) => setReference(e.target.value)} {...aria} />}
+      </Field>
+      <div className="modal-actions">
+        {!pay.canRefundOnline && <Button variant="secondary" onClick={onClose} disabled={busy !== null}>Back</Button>}
+        <Button type="submit" variant={pay.canRefundOnline ? 'secondary' : 'primary'} loading={busy === 'manual'} disabled={busy !== null && busy !== 'manual'}>
+          Record refund sent
+        </Button>
+      </div>
+    </form>
+  )
+
   return (
-    <Modal title="Record refund" onClose={onClose}>
-      <form onSubmit={submit} noValidate className="stack">
-        <p>
-          {bookingClientName(booking)}, booking #{booking.id}<br />
-          Refund owed: <strong><Money amount={booking.payment?.refundDue ?? 0} /></strong>
+    <Modal title={pay.canRefundOnline ? 'Send refund' : 'Record refund'} onClose={close}>
+      <div className="stack">
+        <p className="muted small refund-who">
+          {bookingClientName(current)} · booking #{current.id} · {current.status === 'NoShow' ? 'no-show' : 'cancelled'}
         </p>
-        <p className="muted small">Send it to the client by GCash or Maya first, then record it here.</p>
+        <ul className="summary-lines refund-sum" aria-label="Refund">
+          <li><span>Paid{pay.method ? ` by ${pay.method}` : ''}</span><Money amount={pay.amountPaid ?? 0} /></li>
+          {kept > 0 && <li className="muted"><span>Deposit kept</span><span>−<Money amount={kept} /></span></li>}
+          <li className="summary-total"><span>To refund</span><Money amount={amount} /></li>
+        </ul>
+
         {error && <Alert kind="error">{error}</Alert>}
-        <Field label="GCash or Maya reference (optional)" error={fieldError}>
-          {(aria) => <input className="input" maxLength={LIMITS.balanceReferenceMax} value={reference} onChange={(e) => setReference(e.target.value)} {...aria} />}
-        </Field>
-        <div className="modal-actions">
-          <Button variant="secondary" onClick={onClose} disabled={saving}>Back</Button>
-          <Button type="submit" loading={saving}>Record refund sent</Button>
-        </div>
-      </form>
+
+        {status === 'Succeeded' && (
+          <>
+            <Alert kind="success" title="Refund sent">
+              <Money amount={amount} /> went back to their {method}.
+              {pay.refundReference && <> Reference <span className="mono">{pay.refundReference}</span></>}
+            </Alert>
+            <div className="modal-actions"><Button onClick={close}>Done</Button></div>
+          </>
+        )}
+
+        {status === 'Processing' && (
+          <>
+            <Alert kind="info" title="Refund processing">
+              <Money amount={amount} /> is on its way back to their {method}. This can take a few minutes; you can close this
+              window, and the booking will show when it&apos;s through.
+            </Alert>
+            {checkedAt && <p className="muted small" role="status">Still processing as of {checkedAt.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })}.</p>}
+            <div className="modal-actions">
+              <Button variant="secondary" loading={busy === 'check'} onClick={() => run('check', onCheck)}>Check again</Button>
+              <Button onClick={close} disabled={busy !== null}>Close</Button>
+            </div>
+          </>
+        )}
+
+        {online && status !== 'Processing' && (
+          <>
+            {status === 'Failed' && (
+              <Alert kind="warning" title="The refund didn't go through">
+                Nothing was sent. Try again, or send it yourself by GCash or Maya and record it below.
+              </Alert>
+            )}
+            <div className="refund-online">
+              <Button className="refund-send" loading={busy === 'online'} disabled={busy !== null && busy !== 'online'}
+                onClick={() => run('online', onRefundOnline)}>
+                Refund <Money amount={amount} /> to their {method}
+              </Button>
+              <p className="muted small">It goes back to the {method} account they paid from.</p>
+            </div>
+            <details className="refund-other" open={status === 'Failed' || undefined}>
+              <summary>I sent it myself</summary>
+              {manualForm}
+            </details>
+          </>
+        )}
+
+        {!pay.canRefundOnline && (
+          <>
+            <p className="muted small">Send it to the client by GCash or Maya first, then record it here.</p>
+            {manualForm}
+          </>
+        )}
+      </div>
     </Modal>
   )
 }

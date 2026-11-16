@@ -114,9 +114,16 @@ public class Booking : IPayable, ICancellable, ISoftDeletable
     /// cancels; otherwise everything above the deposit, which is kept (it is also the late-cancellation and no-show fee).
     /// </summary>
     public decimal RefundDue { get; set; }
-    /// <summary>When Leyah sent the refund (by GCash or Maya, outside the website), and its reference if she gave one.</summary>
+    /// <summary>
+    /// When the refund was sent, and its reference: Leyah's GCash or Maya reference when she sent it herself, or the
+    /// provider's refund id when it went back online.
+    /// </summary>
     public DateTime? RefundSentAt { get; set; }
     public string? RefundReference { get; set; }
+
+    /// <summary>Set only for a refund sent back online through the payment provider; null when Leyah sends it herself.</summary>
+    public OnlineRefundStatus? RefundStatus { get; set; }
+    public DateTime? RefundRequestedAt { get; set; }
 
     // ---- Paying on Xendit's hosted page (Payments:Provider=Xendit) ----
 
@@ -209,17 +216,62 @@ public class Booking : IPayable, ICancellable, ISoftDeletable
         UpdatedAt = utcNow;
     }
 
-    /// <summary>Leyah sent the refund. Always the whole amount owed, so it can only happen once.</summary>
+    /// <summary>Leyah sent the refund herself. Always the whole amount owed, so it can only happen once.</summary>
     public decimal RecordRefund(string? reference, DateTime utcNow)
+    {
+        EnsureRefundOwed();
+        RefundSentAt = utcNow;
+        RefundReference = reference;
+        RefundStatus = null; // sent by hand, even after an online try that didn't go through
+        UpdatedAt = utcNow;
+        return RefundDue;
+    }
+
+    /// <summary>The refund is being sent back online. Saved before the provider is asked, so a second click can't send it twice.</summary>
+    public decimal StartOnlineRefund(DateTime utcNow)
+    {
+        EnsureRefundOwed();
+        RefundStatus = OnlineRefundStatus.Processing;
+        RefundRequestedAt = utcNow;
+        RefundReference = null;
+        UpdatedAt = utcNow;
+        return RefundDue;
+    }
+
+    /// <summary>The provider says the money went back. False when nothing changes (already done, or not this refund).</summary>
+    public bool CompleteOnlineRefund(string refundId, DateTime utcNow)
+    {
+        if (RefundStatus != OnlineRefundStatus.Processing || !IsThisRefund(refundId))
+            return false;
+        RefundStatus = OnlineRefundStatus.Succeeded;
+        RefundReference = refundId;
+        RefundSentAt = utcNow;
+        UpdatedAt = utcNow;
+        return true;
+    }
+
+    /// <summary>The provider couldn't send it back. Leyah can try again or send it herself.</summary>
+    public bool FailOnlineRefund(string? refundId, DateTime utcNow)
+    {
+        if (RefundStatus != OnlineRefundStatus.Processing || (refundId is not null && !IsThisRefund(refundId)))
+            return false;
+        RefundStatus = OnlineRefundStatus.Failed;
+        RefundReference = null;
+        UpdatedAt = utcNow;
+        return true;
+    }
+
+    // The provider's id is kept as soon as it answers; before that, any refund for this booking is the one in progress.
+    private bool IsThisRefund(string refundId) => RefundReference is null || RefundReference == refundId;
+
+    private void EnsureRefundOwed()
     {
         if (RefundDue <= 0)
             throw new ConflictException("No refund is owed on this booking.", "no_refund_due");
         if (RefundSentAt is not null)
             throw new ConflictException("This refund has already been recorded.", "refund_already_sent");
-        RefundSentAt = utcNow;
-        RefundReference = reference;
-        UpdatedAt = utcNow;
-        return RefundDue;
+        if (RefundStatus == OnlineRefundStatus.Processing)
+            throw new ConflictException("This refund is already being sent back online. Wait for it to finish.", "refund_in_progress");
     }
 
     public void MarkCompleted(DateTime utcNow)

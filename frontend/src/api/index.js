@@ -118,6 +118,10 @@ export const api = {
     complete: (id, body) => post(`/admin/bookings/${id}/complete`, body),
     recordBalance: (id, body) => post(`/admin/bookings/${id}/balance`, body),
     recordRefund: (id, body) => post(`/admin/bookings/${id}/refund`, body),
+    /** Sends the refund owed back to the account the client paid from: the booking, refund Processing, Succeeded or Failed. */
+    refundOnline: (id) => post(`/admin/bookings/${id}/refund/online`),
+    /** Asks again whether a refund sent back online has arrived. */
+    checkRefund: (id) => post(`/admin/bookings/${id}/refund/check`),
     markNoShow: (id) => post(`/admin/bookings/${id}/no-show`),
     /** Leyah's answer to "Can't find your colour?": whether she has that shade. */
     decideColorRequest: (id, available) => post(`/admin/bookings/${id}/color-request`, { available }),

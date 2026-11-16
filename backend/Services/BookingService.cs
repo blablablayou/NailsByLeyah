@@ -993,7 +993,8 @@ public static class BookingMapper
             b.PaymentOption.ToString(), Labels.For(b.PaymentOption), b.AmountPaid, p?.ReferenceNumber, p?.Method.ToString(), p?.PaidAt,
             Verified: p?.VerifiedAt is not null, b.ConfirmedAt, b.ConfirmedBy is { } admin ? $"{admin.FirstName} {admin.LastName}" : null,
             b.BalanceReceived, b.BalanceReceivedAt, b.BalanceReference,
-            b.RefundDue, b.RefundSentAt, b.RefundReference);
+            b.RefundDue, b.RefundSentAt, b.RefundReference,
+            b.RefundStatus?.ToString(), CanRefundOnline: OnlineRefundService.OnlinePaymentOf(b) is not null);
     }
 
     public static ReceiptResponse ToReceipt(Payment p, Booking b) => new(
@@ -1007,7 +1008,8 @@ public static class BookingMapper
         AmountPaid: b.AmountPaid,
         RefundDue: b.RefundDue,
         RefundSentAt: b.RefundSentAt,
-        RefundReference: b.RefundReference);
+        RefundReference: b.RefundReference,
+        RefundStatus: b.RefundStatus?.ToString());
 
     /// <summary>The removal first, as in the appointment, then the service and each Stone add-on.</summary>
     private static List<ReceiptLineResponse> ReceiptLines(Booking b)

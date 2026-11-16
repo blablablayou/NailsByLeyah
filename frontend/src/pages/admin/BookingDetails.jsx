@@ -170,8 +170,10 @@ export function BookingDetails({ booking, onClose, onChanged }) {
               {b.payment?.refundDue > 0 ? (
                 <p className={b.payment.refundSentAt ? 'bd-check bd-check-ok' : 'bd-check bd-check-waiting'}>
                   {b.payment.refundSentAt
-                    ? <>✓ Refund of <Money amount={b.payment.refundDue} /> sent{b.payment.refundReference && <>, reference <span className="mono">{b.payment.refundReference}</span></>}</>
-                    : <>Refund owed to the client: <Money amount={b.payment.refundDue} /></>}
+                    ? <>✓ Refund of <Money amount={b.payment.refundDue} /> sent{b.payment.refundStatus === 'Succeeded' && <> back to their {b.payment.method}</>}{b.payment.refundReference && <>, reference <span className="mono">{b.payment.refundReference}</span></>}</>
+                    : b.payment.refundStatus === 'Processing'
+                      ? <>Refund of <Money amount={b.payment.refundDue} /> processing, on its way back to their {b.payment.method}</>
+                      : <>Refund owed to the client: <Money amount={b.payment.refundDue} />{b.payment.refundStatus === 'Failed' && <> (the online refund didn&apos;t go through)</>}</>}
                 </p>
               ) : (
                 <p className="muted small">The <Money amount={b.depositAmount} /> deposit is non-refundable unless the salon cancels.</p>

@@ -11,7 +11,7 @@ using NailsByLeah.Api.Services;
 namespace NailsByLeah.Api.Controllers;
 
 /// <summary>
-/// Xendit's notifications about payment sessions (https://docs.xendit.co/docs/handling-webhooks). Accepted only with the
+/// Xendit's notifications about payment sessions and refunds (https://docs.xendit.co/docs/handling-webhooks). Accepted only with the
 /// dashboard's verification token in x-callback-token. Answers 200 to every accepted call, duplicates and unknown events
 /// included, because Xendit retries anything else up to six times.
 /// </summary>
@@ -21,6 +21,7 @@ namespace NailsByLeah.Api.Controllers;
 public sealed class XenditWebhookController(
     IOptions<XenditOptions> xendit,
     ICheckoutConfirmationService confirmations,
+    IOnlineRefundService refunds,
     ILogger<XenditWebhookController> logger) : ControllerBase
 {
     public const string TokenHeader = "x-callback-token";
@@ -34,6 +35,12 @@ public sealed class XenditWebhookController(
         if (!TokenMatches(Request.Headers[TokenHeader].ToString(), expected))
             return Unauthorized();
 
+        if (XenditWebhook.ParseRefund(body) is { } refund)
+        {
+            var applied = await refunds.ApplyAsync(refund, ct);
+            logger.LogInformation("Xendit refund {RefundId} {State}: {Outcome}", refund.RefundId, refund.State, applied ? "applied" : "nothing to change");
+            return Ok();
+        }
         if (XenditWebhook.Parse(body) is not { } status)
             return Ok();
         if (await confirmations.FindBookingIdAsync(status, ct) is not { } bookingId)

@@ -273,7 +273,9 @@ public sealed record BookingPaymentResponse(
     string Option, string OptionLabel, decimal AmountPaid, string? ReferenceNumber, string? Method, DateTime? PaidAt,
     bool Verified, DateTime? ConfirmedAt, string? ConfirmedBy,
     decimal BalanceReceived = 0, DateTime? BalanceReceivedAt = null, string? BalanceReference = null,
-    decimal RefundDue = 0, DateTime? RefundSentAt = null, string? RefundReference = null);
+    decimal RefundDue = 0, DateTime? RefundSentAt = null, string? RefundReference = null,
+    string? RefundStatus = null, // Processing, Succeeded or Failed for a refund sent back online; null when sent by hand
+    bool CanRefundOnline = false); // paid on the provider's page, so the refund owed can go back to that account
 
 /// <summary>An uploaded design photo. The file is at GET /api/reference-images/{id}.</summary>
 public sealed record ReferenceImageResponse(int Id, string ContentType, long SizeBytes, DateTime CreatedAt, bool IsColorReference = false);
@@ -303,7 +305,8 @@ public sealed record ReceiptResponse(
     decimal AmountPaid = 0, // everything verified as paid online for the booking (deposit or full payment)
     decimal RefundDue = 0, // owed back after a cancellation or no-show; see BookingPaymentResponse
     DateTime? RefundSentAt = null,
-    string? RefundReference = null);
+    string? RefundReference = null,
+    string? RefundStatus = null); // Processing while a refund is on its way back online; see BookingPaymentResponse
 
 /// <summary>One priced line on a receipt: the service, the removal before it, or a Stone add-on.</summary>
 public sealed record ReceiptLineResponse(string Description, decimal Amount);

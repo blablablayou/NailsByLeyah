@@ -107,6 +107,7 @@ public static class ServiceRegistration
         services.AddScopedFor<ScheduleService, ISlotAvailability, IScheduleManagement>();
         services.AddScopedFor<BookingService, IClientBookingService, IAdminBookingService>();
         services.AddScoped<ICheckoutConfirmationService, CheckoutConfirmationService>();
+        services.AddScoped<IOnlineRefundService, OnlineRefundService>();
         services.AddScopedFor<ReferenceImageService, IReferenceImageService, IReferenceImageAttacher>();
 
         // External integrations

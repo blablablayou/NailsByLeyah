@@ -259,7 +259,11 @@ function BookingCard({ booking: b, onAction }) {
       {b.payment?.refundDue > 0 && (
         <p className={b.payment.refundSentAt ? 'refund-line sent' : 'refund-line'}>
           Refund <Money amount={b.payment.refundDue} />:{' '}
-          {b.payment.refundSentAt ? `sent on ${new Date(b.payment.refundSentAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Leyah will send it to the account you paid from.'}
+          {b.payment.refundSentAt
+            ? `sent on ${new Date(b.payment.refundSentAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`
+            : b.payment.refundStatus === 'Processing'
+              ? 'on its way back to the account you paid from.'
+              : 'Leyah will send it to the account you paid from.'}
         </p>
       )}
       <div className="booking-card-actions">

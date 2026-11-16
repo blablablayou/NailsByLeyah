@@ -92,7 +92,10 @@ What must change, whichever provider wins. **Today's `IPaymentGateway.ChargeAsyn
 3. Booking creation commits the booking first, then calls the provider outside the transaction and the day lock.
 4. Webhook endpoint: anonymous, signature required, safe to receive twice, checks the amount against the stored price, and handles a payment arriving after the hold expired.
 5. Website: redirect to checkout, a return page that shows "confirming payment" until the webhook lands, and cancel handling. Remove the GCash/Maya choice if the hosted page offers it.
-6. Refunds stay manual in the provider's dashboard until Leyah answers the refund questions in `frontend/src/content/legal.js`.
+6. Refunds: done (2026-11-16). A refund owed on a payment taken on Xendit's page goes back through Xendit's refunds
+   (`POST /v3/refunds`, partial when the deposit is kept) from the refund window, confirmed by `refund.succeeded` /
+   `refund.failed`; Leyah can still send any refund herself and record it. Before going live, confirm the refund
+   questions in `frontend/src/content/legal.js` and that the live Xendit balance can cover refunds (Xendit's fee is not returned).
 
 ## Free-plan limits
 - **Supabase free:** pauses after 1 week of inactivity; no automatic backups (take your own).

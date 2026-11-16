@@ -78,7 +78,7 @@ export default function PaymentReturnPage() {
           <PageHeader title="Still confirming" subtitle="Still confirming. We'll email you once it's through." />
           <Card className="payment-return">
             <p>
-              If you closed Xendit&apos;s page before paying, you can pay now
+              If you closed the payment page before paying, you can pay now
               {state.holdUntil ? <> — your time is held until <strong>{formatClock(state.holdUntil)}</strong></> : null}.
             </p>
             {error && <Alert kind="error">{error}</Alert>}

@@ -86,6 +86,7 @@ export function Receipt({ receipt, booking }) {
   const refundDue = booking?.payment?.refundDue ?? receipt.refundDue ?? 0
   const refundSentAt = booking?.payment?.refundSentAt ?? receipt.refundSentAt
   const refundReference = booking?.payment?.refundReference ?? receipt.refundReference
+  const refundProcessing = (booking?.payment?.refundStatus ?? receipt.refundStatus) === 'Processing'
   const addOns = booking?.addOns ?? []
   const refValue = useRef(null)
   return (
@@ -149,9 +150,9 @@ export function Receipt({ receipt, booking }) {
                   <>
                     <strong><Money amount={refundDue} /></strong>{' '}
                     <span className={refundSentAt ? 'refund-line sent' : 'refund-line'}>
-                      {refundSentAt ? `sent ${formatDateTime(refundSentAt)}` : 'to be sent to the account you paid from'}
+                      {refundSentAt ? `sent ${formatDateTime(refundSentAt)}` : refundProcessing ? 'on its way back to the account you paid from' : 'to be sent to the account you paid from'}
                     </span>
-                    {refundReference && <div className="muted small">Reference <span className="mono">{refundReference}</span></div>}
+                    {refundReference && refundSentAt && <div className="muted small">Reference <span className="mono">{refundReference}</span></div>}
                   </>
                 ) : 'None (the deposit is kept)'}
               </dd>

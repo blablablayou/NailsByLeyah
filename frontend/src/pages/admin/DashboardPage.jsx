@@ -8,6 +8,7 @@ import { addDays, startsAt, toIsoDate } from '../../lib/dates'
 import { formatDate, formatMoney, formatTime } from '../../lib/format'
 import { Alert, Button, PageLoader, STATUS_LABELS } from '../../components/ui'
 import { BalanceDialog, NoShowDialog, RefundDialog } from '../../components/BookingDialogs'
+import { refundProcessing } from '../../lib/refunds'
 import { BookingDetails } from './BookingDetails'
 import { NewBookingDialog } from './NewBookingDialog'
 import { Stars } from '../../components/StarRating'
@@ -315,7 +316,11 @@ function attentionLine(kind, b) {
   }
   if (kind === 'BalanceNotRecorded') return `${when} · ${formatMoney(b.balanceDue)} still to collect`
   if (kind === 'ColorRequest') return `${when} · "${b.colorRequest}" — do you have this shade?`
-  if (kind === 'RefundDue') return `${when} · ${formatMoney(b.payment?.refundDue)} to send back (${b.status === 'NoShow' ? 'no-show' : 'cancelled'})`
+  if (kind === 'RefundDue') {
+    return refundProcessing(b)
+      ? `${when} · ${formatMoney(b.payment?.refundDue)} on its way back to their ${b.payment?.method ?? 'account'}`
+      : `${when} · ${formatMoney(b.payment?.refundDue)} to send back (${b.status === 'NoShow' ? 'no-show' : 'cancelled'})`
+  }
   return `${when} · date passed, still ${(STATUS_LABELS[b.status] ?? b.status).toLowerCase()}`
 }
 
@@ -397,7 +402,9 @@ function AttentionCard({ items, onChanged }) {
                     </>
                   )}
                   {kind === 'RefundDue' && (
-                    <Button size="sm" onClick={() => setDialog({ kind: 'refund', booking: b })}>Record</Button>
+                    <Button size="sm" variant={refundProcessing(b) ? 'secondary' : 'primary'} onClick={() => setDialog({ kind: 'refund', booking: b })}>
+                      {refundProcessing(b) ? 'Check' : b.payment?.canRefundOnline ? 'Send' : 'Record'}
+                    </Button>
                   )}
                   {kind === 'BalanceNotRecorded' && (
                     <Button size="sm" onClick={() => setDialog({ kind: 'balance', booking: b })}>Record</Button>
@@ -432,7 +439,10 @@ function AttentionCard({ items, onChanged }) {
           onSubmit={async (body) => {
             await api.admin.recordRefund(dialog.booking.id, body)
             closeAnd(`Refund recorded for booking #${dialog.booking.id}.`)
-          }} />
+          }}
+          onRefundOnline={() => api.admin.refundOnline(dialog.booking.id)}
+          onCheck={() => api.admin.checkRefund(dialog.booking.id)}
+          onSettled={closeAnd} />
       )}
       {dialog?.kind === 'no-show' && (
         <NoShowDialog booking={dialog.booking} onClose={() => setDialog(null)}

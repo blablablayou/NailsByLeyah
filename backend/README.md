@@ -125,6 +125,10 @@ Environment variables (secrets are pasted in Render's dashboard, never committed
 | `Payments__Provider` | `Simulated`, or `Xendit` once Xendit is set up (switch back to `Simulated` as the fallback) |
 | `Xendit__SecretKey`, `Xendit__CallbackToken` | Xendit's test secret key and webhook verification token |
 
+In Xendit's dashboard, the same webhook address, `https://<address>/api/payments/xendit/webhook`, is set for
+**Payment Sessions** (paid, expired) and for **Refunds** (`refund.succeeded`, `refund.failed`). Without the Refunds
+one, a refund sent back online stays "processing" until Leyah presses **Check again**.
+
 A keep-awake ping (cron-job.org or UptimeRobot) opens `https://<address>/api/health/database` every 10 minutes, so
 the free service doesn't sleep and the free database doesn't pause. After the first deploy, check the time zone
 (booking times), the links in emails, the visitor address in the Activity log (`ForwardLimit`, see Security) and
@@ -153,7 +157,7 @@ Controller → Service → Repository (Ref 14.1):
 | Public | `GET /api/services`, `GET /api/slots?date=`, `GET /api/lookups` |
 | Account | `POST /api/auth/register`, `GET /api/auth/username-availability`, `POST /api/auth/verify-email`, `POST /api/auth/resend-verification`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password/validate`, `POST /api/auth/reset-password` |
 | Client | `POST /api/bookings` (book and pay), `GET /api/bookings`, `GET /api/bookings/{id}`, `GET /api/bookings/{id}/receipt`, `POST /api/bookings/{id}/reschedule`, `POST /api/bookings/{id}/cancel` |
-| Administrator | `GET /api/admin/dashboard`, `GET /api/admin/bookings`, `POST /api/admin/bookings/{id}/confirm`, `…/complete`, `…/reschedule`, `…/cancel`, `/api/admin/services`, `/api/admin/addons`, `/api/admin/blocked-slots`, `/api/admin/reports/daily`, `/api/admin/reports/monthly`, `/api/admin/activity-logs`, `POST /api/admin/clients/find`, `POST /api/admin/clients/{id}/delete-data` |
+| Administrator | `GET /api/admin/dashboard`, `GET /api/admin/bookings`, `POST /api/admin/bookings/{id}/confirm`, `…/complete`, `…/reschedule`, `…/cancel`, `…/refund` (sent by hand), `…/refund/online` (sent back through Xendit), `…/refund/check`, `/api/admin/services`, `/api/admin/addons`, `/api/admin/blocked-slots`, `/api/admin/reports/daily`, `/api/admin/reports/monthly`, `/api/admin/activity-logs`, `POST /api/admin/clients/find`, `POST /api/admin/clients/{id}/delete-data` |
 
 Errors are returned as RFC 7807 ProblemDetails with a `code` field (for example `slot_unavailable`, `account_locked`, `token_expired`, `rate_limited`) and, for validation errors, an `errors` object keyed by camelCase field name.
 

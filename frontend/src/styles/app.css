@@ -2644,3 +2644,21 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 .unsaved-bar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50; width: max-content; max-width: calc(100vw - 32px);
   padding: 10px 16px; border-radius: 12px; background: var(--amber-100); border: 1px solid color-mix(in srgb, var(--amber-700) 25%, transparent);
   color: var(--amber-700); font-size: var(--fs-small); font-weight: 600; box-shadow: var(--shadow); text-align: center; }
+
+/* ---- Refund window (components/BookingDialogs.jsx, RefundDialog, 2026-11-16) ----
+   What was paid, what is kept and what goes back, as a small receipt; then one clear way to send it back to the
+   client's GCash or Maya, with "I sent it myself" folded underneath for anything the payment service can't send. */
+.refund-who { margin: 0; }
+.refund-sum { padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--cream);
+  font-variant-numeric: tabular-nums; }
+.refund-sum .summary-total { color: var(--burgundy); }
+.refund-online { display: flex; flex-direction: column; gap: 6px; }
+.refund-online .muted { margin: 0; }
+.refund-send { width: 100%; min-height: 44px; }
+.refund-other { border-top: 1px solid var(--line); padding-top: 10px; }
+.refund-other > summary { cursor: pointer; width: fit-content; color: var(--rose-600); font-size: var(--fs-small); font-weight: 600;
+  border-radius: 6px; list-style-position: inside; }
+.refund-other > summary:hover { color: var(--burgundy); }
+.refund-other > summary:focus-visible { outline: none; box-shadow: var(--focus); }
+.refund-other[open] > summary { margin-bottom: 10px; }
+.refund-other .refund-manual .modal-actions { justify-content: flex-start; }

@@ -37,6 +37,10 @@ online, and Leyah runs her day, her bookings and her sales from one admin area.
 - **Payments: Xendit in test mode** (no real money). Pressing Pay holds the time slot for 15 minutes and sends the
   client to Xendit's GCash or Maya page; Xendit's webhook (or the site asking Xendit) marks it paid, and Leyah confirms
   it as before. Unpaid holds are released automatically and never show in Leyah's dashboard or reports.
+- **Refunds:** a refund owed on a booking paid on Xendit's page goes back to the client's GCash or Maya from the
+  refund window ("Send refund"); it shows as processing until Xendit's `refund.succeeded` or `refund.failed` arrives.
+  Anything else, or a refund that didn't go through, Leyah sends herself and records ("I sent it myself"). The
+  website never names Xendit to Leyah or the client.
 - **Fallback:** setting `Payments__Provider=Simulated` on Render switches back to the simulated payment (approves at
   once) without a code change; payments already started on Xendit still finish.
 - Before real clients: Xendit live mode (business verification), database backups, connection retries, a separate live

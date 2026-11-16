@@ -85,6 +85,16 @@ public enum ColorRequestStatus
     Unavailable,
 }
 
+/// <summary>A refund sent back through the payment provider, to the account the client paid from.</summary>
+public enum OnlineRefundStatus
+{
+    /// <summary>Sent to the provider; it hasn't said yet that the money arrived.</summary>
+    Processing,
+    Succeeded,
+    /// <summary>The provider couldn't send it; Leyah can try again or send it herself.</summary>
+    Failed,
+}
+
 public enum UserTokenPurpose
 {
     EmailVerification,

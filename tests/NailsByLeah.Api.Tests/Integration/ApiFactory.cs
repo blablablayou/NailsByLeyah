@@ -346,4 +346,37 @@ public sealed class TestHostedCheckout : IHostedCheckout
         Statuses[sessionId] = new CheckoutStatus(sessionId, CheckoutState.Expired, null, null, null);
         return Task.CompletedTask;
     }
+
+    // ---- Refunds ----
+
+    private int _refundCounter;
+    private int _refuseNextRefund;
+    private int _noAnswerNextRefund;
+
+    public ConcurrentQueue<RefundRequest> RefundRequests { get; } = new();
+    public ConcurrentDictionary<string, RefundOutcome> Refunds { get; } = new();
+
+    /// <summary>What Xendit answers a new refund with: Pending (wait for its notification) unless a test says otherwise.</summary>
+    public ProviderRefundState NextRefundState { get; set; } = ProviderRefundState.Pending;
+
+    /// <summary>The next refund is refused (Xendit answered no, e.g. INSUFFICIENT_BALANCE).</summary>
+    public void RefuseNextRefund() => Interlocked.Exchange(ref _refuseNextRefund, 1);
+
+    /// <summary>The next refund gets no clear answer (a timeout): it may or may not exist at Xendit.</summary>
+    public void NoAnswerNextRefund() => Interlocked.Exchange(ref _noAnswerNextRefund, 1);
+
+    public Task<RefundOutcome> RefundAsync(RefundRequest request, CancellationToken ct)
+    {
+        RefundRequests.Enqueue(request);
+        if (Interlocked.Exchange(ref _refuseNextRefund, 0) == 1)
+            throw new HostedCheckoutException("Xendit refused the request (400 INSUFFICIENT_BALANCE).") { Refused = true };
+        if (Interlocked.Exchange(ref _noAnswerNextRefund, 0) == 1)
+            throw new HostedCheckoutException("Xendit could not be reached in time.");
+        var outcome = new RefundOutcome($"rfd-test-{Interlocked.Increment(ref _refundCounter)}", NextRefundState, request.Reference);
+        Refunds[outcome.RefundId] = outcome;
+        return Task.FromResult(outcome);
+    }
+
+    public Task<RefundOutcome> GetRefundAsync(string refundId, CancellationToken ct) =>
+        Task.FromResult(Refunds.TryGetValue(refundId, out var outcome) ? outcome : throw new HostedCheckoutException("Unknown refund (test)."));
 }

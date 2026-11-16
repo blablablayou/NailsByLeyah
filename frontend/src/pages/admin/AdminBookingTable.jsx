@@ -7,7 +7,7 @@ import { formatDate, formatTime } from '../../lib/format'
 import { startsAt, today } from '../../lib/dates'
 import { Alert, Button, EmptyState, Money, STATUS_LABELS, StatusBadge } from '../../components/ui'
 import { BalanceDialog, CancelBookingDialog, NoShowDialog, RefundDialog, RescheduleDialog } from '../../components/BookingDialogs'
-import { refundOwed } from '../../lib/refunds'
+import { refundActionLabel, refundOwed } from '../../lib/refunds'
 import { BookingDetails } from './BookingDetails'
 
 const isActive = (b) => b.status === 'Pending' || b.status === 'Confirmed'
@@ -172,7 +172,7 @@ export function AdminBookingTable({ bookings, onChanged, emptyTitle = 'No bookin
                       <RowMenu label={`More actions for booking #${b.id}`} items={[
                         { label: 'View details', onSelect: () => setDialog({ kind: 'details', booking: b }) },
                         b.status === 'Completed' && b.balanceDue > 0 && { label: 'Record balance', onSelect: () => setDialog({ kind: 'balance', booking: b }) },
-                        refundOwed(b) && { label: 'Record refund sent', onSelect: () => setDialog({ kind: 'refund', booking: b }) },
+                        refundOwed(b) && { label: refundActionLabel(b), onSelect: () => setDialog({ kind: 'refund', booking: b }) },
                         isActive(b) && { label: 'Reschedule', onSelect: () => setDialog({ kind: 'reschedule', booking: b }) },
                         isActive(b) && hasStarted(b) && { label: 'Mark as no-show', danger: true, onSelect: () => setDialog({ kind: 'no-show', booking: b }) },
                         isActive(b) && { label: 'Cancel booking', danger: true, onSelect: () => setDialog({ kind: 'cancel', booking: b }) },
@@ -221,7 +221,10 @@ export function AdminBookingTable({ bookings, onChanged, emptyTitle = 'No bookin
           onSubmit={async (body) => {
             await api.admin.recordRefund(dialog.booking.id, body)
             closeAnd(`Refund recorded for booking #${dialog.booking.id}.`)
-          }} />
+          }}
+          onRefundOnline={() => api.admin.refundOnline(dialog.booking.id)}
+          onCheck={() => api.admin.checkRefund(dialog.booking.id)}
+          onSettled={closeAnd} />
       )}
       {dialog?.kind === 'no-show' && (
         <NoShowDialog booking={dialog.booking} onClose={() => setDialog(null)}

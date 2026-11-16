@@ -140,6 +140,8 @@ public static class AuditActions
     public const string ColorRequestDecided = "ColorRequestDecided";
     public const string BalanceReceived = "BalanceReceived";
     public const string RefundSent = "RefundSent";
+    public const string RefundRequested = "RefundRequested";
+    public const string RefundFailed = "RefundFailed";
     public const string SalonDetailsChanged = "SalonDetailsChanged";
     public const string SalonPhotoChanged = "SalonPhotoChanged";
     public const string PasswordChanged = "PasswordChanged";

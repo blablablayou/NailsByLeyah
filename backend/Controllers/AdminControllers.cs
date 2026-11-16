@@ -22,7 +22,7 @@ public sealed class AdminDashboardController(IDashboardService dashboard) : Cont
 [ApiController]
 [Authorize(Roles = Roles.Administrator)]
 [Route("api/admin/bookings")]
-public sealed class AdminBookingsController(IAdminBookingService bookings) : ControllerBase
+public sealed class AdminBookingsController(IAdminBookingService bookings, IOnlineRefundService onlineRefunds) : ControllerBase
 {
     /// <summary>Search by booking date, status or client name (Ref 11.5).</summary>
     [HttpGet]
@@ -56,6 +56,14 @@ public sealed class AdminBookingsController(IAdminBookingService bookings) : Con
     [HttpPost("{id:int}/refund")]
     public Task<BookingResponse> RecordRefund(int id, RecordRefundRequest request, CancellationToken ct) =>
         bookings.RecordRefundAsync(id, request, ct);
+
+    /// <summary>Sends the refund owed back online, to the GCash or Maya account the client paid from.</summary>
+    [HttpPost("{id:int}/refund/online")]
+    public Task<BookingResponse> RefundOnline(int id, CancellationToken ct) => onlineRefunds.RefundAsync(id, ct);
+
+    /// <summary>Asks again whether a refund sent back online has arrived.</summary>
+    [HttpPost("{id:int}/refund/check")]
+    public Task<BookingResponse> CheckRefund(int id, CancellationToken ct) => onlineRefunds.CheckAsync(id, ct);
 
     [HttpPost("{id:int}/balance")]
     public Task<BookingResponse> RecordBalance(int id, RecordBalanceRequest request, CancellationToken ct) =>
