@@ -111,7 +111,8 @@ public sealed class CreateBookingRequestValidator : AbstractValidator<CreateBook
         RuleFor(x => x.Note).MaximumLength(InputLimits.NoteMaxLength)
             .WithMessage($"Your note must be {InputLimits.NoteMaxLength} characters or fewer.");
         RuleFor(x => x.PaymentMethod).IsInEnum().WithMessage("Select GCash or Maya.");
-        RuleFor(x => x.PaymentOption).IsInEnum().WithMessage("Choose to pay the deposit or the full amount.");
+        RuleFor(x => x.PaymentOption).Must(o => o is PaymentOption.Deposit or PaymentOption.Full)
+            .WithMessage("Choose to pay the deposit or the full amount.");
         RuleFor(x => x.DepositAcknowledged).Equal(true).WithMessage(DepositAcknowledgementMessage);
         RuleFor(x => x.TermsVersion).NotEmpty().WithMessage(TermsMessage);
         RuleFor(x => x.RemovalServiceId).GreaterThan(0).When(x => x.RemovalServiceId is not null).WithMessage("Select a removal.");

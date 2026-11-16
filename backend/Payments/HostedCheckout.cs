@@ -73,6 +73,17 @@ public static class HostedCheckoutReference
     public static string ForRefund(int bookingId, DateTime utcNow) =>
         string.Create(CultureInfo.InvariantCulture, $"{For(bookingId)}-refund-{utcNow:yyyyMMddHHmmss}-{RandomNumberGenerator.GetHexString(6, lowercase: true)}");
 
+    /// <summary>"booking-{id}-balance-{time}-{random}": the page where the client pays the rest before the appointment.</summary>
+    public static string ForBalance(int bookingId, DateTime utcNow) =>
+        string.Create(CultureInfo.InvariantCulture, $"{For(bookingId)}-balance-{utcNow:yyyyMMddHHmmss}-{RandomNumberGenerator.GetHexString(6, lowercase: true)}");
+
+    public static bool TryParseBalance(string? reference, out int bookingId)
+    {
+        bookingId = 0;
+        var cut = reference?.IndexOf("-balance-", StringComparison.Ordinal) ?? -1;
+        return cut > 0 && TryParse(reference![..cut], out bookingId);
+    }
+
     public static bool TryParseRefund(string? reference, out int bookingId)
     {
         bookingId = 0;

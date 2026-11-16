@@ -793,6 +793,13 @@ namespace NailsByLeah.Api.Data.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("reference_number");
 
+                    b.Property<decimal>("RefundedAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("refunded_amount");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)

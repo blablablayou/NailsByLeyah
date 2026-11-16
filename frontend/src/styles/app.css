@@ -2665,3 +2665,11 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 .refund-other > summary:focus-visible { outline: none; box-shadow: var(--focus); }
 .refund-other[open] > summary { margin-bottom: 10px; }
 .refund-other .refund-manual .modal-actions { justify-content: flex-start; }
+
+/* My bookings: paying the balance online on a confirmed booking. A soft blush panel under the money, two plain buttons. */
+.pay-balance { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 14px;
+  border-radius: var(--radius-sm); background: var(--rose-50); border: 1px solid var(--line); }
+.pay-balance-text { display: flex; flex-direction: column; gap: 2px; margin: 0; min-width: 0; }
+.pay-balance-text strong { color: var(--burgundy); font-weight: 600; }
+.pay-balance-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pay-balance .alert { flex-basis: 100%; }

@@ -36,6 +36,9 @@ public interface INotificationService
     /// <summary>A client booked and paid; the booking waits for the salon to confirm it.</summary>
     Task SendSalonNewBookingAsync(Booking booking, Payment payment, CancellationToken ct = default);
 
+    /// <summary>Tells Leyah a client paid the rest of their booking online before the appointment.</summary>
+    Task SendSalonBalancePaidAsync(Booking booking, Payment payment, CancellationToken ct = default);
+
     /// <summary>A client cancelled their booking.</summary>
     Task SendSalonCancellationAsync(Booking booking, string reasonLabel, CancellationToken ct = default);
 
@@ -70,6 +73,19 @@ public sealed class EmailNotificationService(
             Note for Leyah: {booking.NoteText}
 
             Confirm it here: {AdminLink(booking, pendingOnly: true)}
+            """, ct);
+
+    public Task SendSalonBalancePaidAsync(Booking booking, Payment payment, CancellationToken ct = default) =>
+        ToSalon($"Balance paid online: {booking.Client.FirstName} {booking.Client.LastName}, {booking.BookingDate:MMM d} at {booking.StartTime:h:mm tt}",
+            $"""
+            A client paid the rest of their booking online. Nothing is left to collect at the salon.
+
+            {AppointmentLines(booking)}
+            Total: PHP {booking.TotalPrice:0.00}
+            Balance paid: PHP {payment.Amount:0.00} via {payment.Method} (reference {payment.ReferenceNumber})
+            Paid in all: PHP {booking.AmountPaid:0.00}
+
+            Bookings that day: {AdminLink(booking, pendingOnly: false)}
             """, ct);
 
     public Task SendSalonCancellationAsync(Booking booking, string reasonLabel, CancellationToken ct = default) =>
@@ -238,10 +254,12 @@ public sealed class EmailNotificationService(
     public Task SendRefundSentAsync(Booking booking, CancellationToken ct = default)
     {
         var method = PaidWith(booking);
+        var online = booking.Payments.Sum(p => p.RefundedAmount); // part may have gone back online before Leyah sent the rest
         var how = booking.RefundStatus == OnlineRefundStatus.Succeeded
             ? $"PHP {booking.RefundDue:0.00} was sent back to the {method} account you paid from. It can take a little while to show in your {method} app."
-            : $"Leyah sent your refund of PHP {booking.RefundDue:0.00} by GCash or Maya." +
-              (booking.RefundReference is { } reference ? $"{Environment.NewLine}Reference: {reference}" : "");
+            : $"Leyah sent your refund of PHP {booking.RefundDue - online:0.00} by GCash or Maya." +
+              (booking.RefundReference is { } reference ? $"{Environment.NewLine}Reference: {reference}" : "") +
+              (online > 0 ? $"{Environment.NewLine}PHP {online:0.00} had already gone back to the account you paid from." : "");
         return email.SendAsync(booking.Client.Email, FullName(booking.Client), "Your Nails by Leyah refund was sent",
             $"""
             Hi {booking.Client.FirstName},

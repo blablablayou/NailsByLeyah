@@ -45,6 +45,17 @@ public sealed class BookingsController(IClientBookingService bookings) : Control
     [HttpPost("{id:int}/checkout")]
     public Task<CheckoutResponse> Checkout(int id, CancellationToken ct) => bookings.RetryCheckoutAsync(User.GetUserId(), id, ct);
 
+    /// <summary>"Pay balance online": the payment page for the rest of a confirmed booking, in GCash or Maya.</summary>
+    [EnableRateLimiting(RateLimitPolicies.Booking)]
+    [HttpPost("{id:int}/balance/checkout")]
+    public Task<CheckoutResponse> BalanceCheckout(int id, BalanceCheckoutRequest request, [FromServices] IBalancePaymentService balance, CancellationToken ct) =>
+        balance.StartAsync(User.GetUserId(), id, request, ct);
+
+    /// <summary>Back from paying the balance: Paid, Waiting or NotCompleted.</summary>
+    [HttpGet("{id:int}/balance/status")]
+    public Task<PaymentStatusResponse> BalanceStatus(int id, [FromServices] IBalancePaymentService balance, CancellationToken ct) =>
+        balance.GetStatusAsync(User.GetUserId(), id, ct);
+
     [EnableRateLimiting(RateLimitPolicies.Booking)]
     [HttpPost("{id:int}/reschedule")]
     public Task<BookingResponse> Reschedule(int id, RescheduleRequest request, CancellationToken ct) =>

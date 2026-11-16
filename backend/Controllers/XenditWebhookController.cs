@@ -21,6 +21,7 @@ namespace NailsByLeah.Api.Controllers;
 public sealed class XenditWebhookController(
     IOptions<XenditOptions> xendit,
     ICheckoutConfirmationService confirmations,
+    IBalancePaymentService balances,
     IOnlineRefundService refunds,
     ILogger<XenditWebhookController> logger) : ControllerBase
 {
@@ -43,6 +44,12 @@ public sealed class XenditWebhookController(
         }
         if (XenditWebhook.Parse(body) is not { } status)
             return Ok();
+        if (HostedCheckoutReference.TryParseBalance(status.Reference, out var balanceFor))
+        {
+            var paid = await balances.ApplyAsync(balanceFor, status, ct);
+            logger.LogInformation("Xendit {State} for the balance of booking {BookingId}: {Outcome}", status.State, balanceFor, paid);
+            return Ok();
+        }
         if (await confirmations.FindBookingIdAsync(status, ct) is not { } bookingId)
         {
             logger.LogWarning("Xendit notification for an unknown booking ({Session})", status.SessionId);

@@ -195,6 +195,9 @@ export function RefundDialog({ booking, onSubmit, onRefundOnline, onCheck, onSet
   const status = pay.refundStatus ?? null
   const online = Boolean(pay.canRefundOnline) && status !== 'Succeeded'
   const kept = Math.max(0, (pay.amountPaid ?? 0) - amount)
+  // A refund across two online payments that stopped halfway: part of it has already gone back.
+  const alreadyOnline = status === 'Succeeded' ? 0 : pay.refundedOnline ?? 0
+  const left = amount - alreadyOnline
   const sentMessage = `Refund of ${formatMoney(amount)} for booking #${current.id}`
 
   const close = () => {
@@ -257,7 +260,8 @@ export function RefundDialog({ booking, onSubmit, onRefundOnline, onCheck, onSet
         <ul className="summary-lines refund-sum" aria-label="Refund">
           <li><span>Paid{pay.method ? ` by ${pay.method}` : ''}</span><Money amount={pay.amountPaid ?? 0} /></li>
           {kept > 0 && <li className="muted"><span>Deposit kept</span><span>−<Money amount={kept} /></span></li>}
-          <li className="summary-total"><span>To refund</span><Money amount={amount} /></li>
+          {alreadyOnline > 0 && <li className="muted"><span>Already sent back online</span><span>−<Money amount={alreadyOnline} /></span></li>}
+          <li className="summary-total"><span>{alreadyOnline > 0 ? 'Still to refund' : 'To refund'}</span><Money amount={left} /></li>
         </ul>
 
         {error && <Alert kind="error">{error}</Alert>}

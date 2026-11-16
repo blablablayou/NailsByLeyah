@@ -159,7 +159,7 @@ function resolveSelection(db, serviceId, selections = [], { requireHand = false,
 }
 
 const HAND_LABELS = { Left: 'Left hand', Right: 'Right hand', Both: 'Both hands' }
-const PAYMENT_OPTION_LABELS = { Deposit: 'Booking deposit', Full: 'Full payment' }
+const PAYMENT_OPTION_LABELS = { Deposit: 'Booking deposit', Full: 'Full payment', Balance: 'Balance' }
 
 const quoteFor = (selection, db) => calculateQuote(selection.service, selection.addOns, db ? bookingRules(db).depositAmount : policies.depositAmount, selection.removal)
 
@@ -311,12 +311,13 @@ function bookingResponse(db, b, includeClient) {
   const totalPrice = b.servicePrice + (b.removalPrice ?? 0) + addOnLines.reduce((sum, line) => sum + line.linePrice, 0)
   const cancellation = db.cancellations.find((c) => c.bookingId === b.id)
   const client = db.users.find((u) => u.id === b.clientId)
+  const balanceDue = Math.max(0, totalPrice - (b.amountPaid ?? b.depositAmount) - (b.balanceReceived ?? 0))
   return {
     id: b.id, status: b.status, bookingDate: b.bookingDate, startTime: b.startTime,
     endTime: addMinutesToTime(b.startTime, b.durationMinutes), durationMinutes: b.durationMinutes,
     serviceId: b.serviceId, serviceName: service?.name ?? 'Service', serviceCategory: service?.category ?? '',
     servicePrice: b.servicePrice, addOns: addOnLines, totalPrice, depositAmount: b.depositAmount,
-    balanceDue: Math.max(0, totalPrice - (b.amountPaid ?? b.depositAmount) - (b.balanceReceived ?? 0)),
+    balanceDue,
     payment: { ...paymentInfo(db, b), balanceReceived: b.balanceReceived ?? 0, balanceReceivedAt: b.balanceReceivedAt ?? null, balanceReference: b.balanceReference ?? null },
     note: b.note ?? null, createdAt: b.createdAt,
     removalServiceId: b.removalServiceId ?? null, removalServiceName: removal?.name ?? null, removalPrice: b.removalPrice ?? 0,
@@ -326,6 +327,9 @@ function bookingResponse(db, b, includeClient) {
     guestName: b.guestName ?? null, guestPhone: b.guestPhone ?? null, createdByAdmin: Boolean(b.createdByAdmin),
     checkoutUrl: b.status === 'AwaitingPayment' ? b.checkoutUrl ?? null : null,
     paymentHoldUntil: b.status === 'AwaitingPayment' ? b.paymentHoldUntil ?? null : null,
+    // Same rule as BalancePaymentService.CanPayOnline: the client's own view, with the hosted payment page in use.
+    canPayBalanceOnline: !includeClient && Boolean(db.flags.xendit) && b.status === 'Confirmed' && !b.guestName && balanceDue > 0
+      && startsAt(b.bookingDate, b.startTime) > new Date(),
     cancellation: cancellation ? {
       reason: cancellation.reason, reasonLabel: reasonLabel(cancellation.reason), explanation: cancellation.explanation,
       cancelledByRole: db.users.find((u) => u.id === cancellation.cancelledByUserId)?.role ?? '', cancelledAt: cancellation.cancelledAt,
@@ -385,7 +389,9 @@ function paymentInfo(db, b) {
     referenceNumber: p?.referenceNumber ?? null, method: p?.method ?? null, paidAt: p?.paidAt ?? null, verified: Boolean(p?.verifiedAt),
     confirmedAt: b.confirmedAt ?? null, confirmedBy: admin ? `${admin.firstName} ${admin.lastName}` : null,
     refundDue: b.refundDue ?? 0, refundSentAt: b.refundSentAt ?? null, refundReference: b.refundReference ?? null,
-    refundStatus: b.refundStatus ?? null, canRefundOnline: Boolean(onlinePaymentOf(db, b)) }
+    refundStatus: b.refundStatus ?? null, canRefundOnline: Boolean(onlinePaymentOf(db, b)),
+    balancePaidOnline: db.payments.filter((x) => x.bookingId === b.id && x.status === 'Succeeded' && x.option === 'Balance').reduce((s, x) => s + x.amount, 0),
+    refundedOnline: db.payments.filter((x) => x.bookingId === b.id).reduce((s, x) => s + (x.refundedAmount ?? 0), 0) }
 }
 
 // Same rule as OnlineRefundService.OnlinePaymentOf: a payment taken on the provider's page (ids start "py-").
@@ -1168,6 +1174,34 @@ const routes = [
     if (booking.status === 'AwaitingPayment') return { status: 'Waiting', checkoutUrl: booking.checkoutUrl, holdUntil: booking.paymentHoldUntil }
     if (booking.amountPaid > 0 && ['Pending', 'Confirmed', 'Completed'].includes(booking.status)) return { status: 'Paid', checkoutUrl: null, holdUntil: null }
     if (booking.amountPaid > 0 && booking.status === 'Cancelled') return { status: 'PaidRefundDue', checkoutUrl: null, holdUntil: null, amount: booking.amountPaid }
+    return { status: 'NotCompleted', checkoutUrl: null, holdUntil: null }
+  }],
+  // Paying the balance online. flags.paidBalances lists the bookings whose balance page has the money.
+  ['POST', '/bookings/:id/balance/checkout', (db, { params, body }) => {
+    const user = requireUser(db, 'Client')
+    const booking = ownedBooking(db, user, params.id)
+    if (!db.flags.xendit) conflict("Paying the balance online isn't available. Please pay it at the salon.", 'online_balance_unavailable')
+    if (!['GCash', 'Maya'].includes(body.method)) invalid('method', 'Choose GCash or Maya.')
+    const due = bookingResponse(db, booking, false).balanceDue
+    if (due <= 0) conflict('Nothing is left to pay on this booking.', 'no_balance_due')
+    if (booking.status !== 'Confirmed') conflict('You can pay the balance online once Leyah has confirmed your booking.', 'invalid_status')
+    booking.balanceCheckout = { method: body.method, amount: due, url: `https://checkout.test/bal-${booking.id}-${randomHex(3)}` }
+    saveDb()
+    return { checkoutUrl: booking.balanceCheckout.url }
+  }],
+  ['GET', '/bookings/:id/balance/status', (db, { params }) => {
+    const user = requireUser(db, 'Client')
+    const booking = ownedBooking(db, user, params.id)
+    const paidAlready = () => db.payments.some((p) => p.bookingId === booking.id && p.option === 'Balance' && p.status === 'Succeeded')
+    if (!paidAlready() && booking.balanceCheckout && (db.flags.paidBalances ?? []).includes(booking.id)) {
+      const { method, amount } = booking.balanceCheckout
+      db.payments.push({ id: nextId('payments'), bookingId: booking.id, clientId: user.id, method, option: 'Balance', amount,
+        totalAmount: booking.servicePrice, balanceAfter: 0, referenceNumber: `py-bal-${booking.id}-${randomHex(3)}`,
+        idempotencyKey: `bal-${booking.id}`, status: 'Succeeded', paidAt: nowIso(), verifiedAt: nowIso(), verifiedByUserId: null, refundedAmount: 0 })
+      booking.amountPaid = (booking.amountPaid ?? booking.depositAmount) + amount
+      saveDb()
+    }
+    if (paidAlready()) return { status: 'Paid', checkoutUrl: null, holdUntil: null }
     return { status: 'NotCompleted', checkoutUrl: null, holdUntil: null }
   }],
   ['POST', '/bookings/:id/checkout', (db, { params }) => {

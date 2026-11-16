@@ -261,6 +261,13 @@ public sealed class CapturingNotificationService : INotificationService
     public ConcurrentDictionary<int, string> ClientCancellations { get; } = new();
     public ConcurrentDictionary<int, (DateOnly Date, TimeOnly Time)> ClientMoves { get; } = new();
     public ConcurrentQueue<int> RefundSentIds { get; } = new();
+    public ConcurrentQueue<int> BalancePaidIds { get; } = new();
+
+    public Task SendSalonBalancePaidAsync(Booking booking, Payment payment, CancellationToken ct = default)
+    {
+        BalancePaidIds.Enqueue(booking.Id);
+        return Task.CompletedTask;
+    }
 
     public Task SendBookingCancelledBySalonAsync(Booking booking, string reasonLabel, string? explanation, CancellationToken ct = default)
     {

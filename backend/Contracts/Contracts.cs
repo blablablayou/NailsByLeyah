@@ -262,7 +262,8 @@ public sealed record BookingResponse(
     string? GuestPhone = null,
     bool CreatedByAdmin = false,
     string? CheckoutUrl = null, // AwaitingPayment only: Xendit's page where the client pays ("Continue payment")
-    DateTime? PaymentHoldUntil = null); // AwaitingPayment only: when the held slot is released
+    DateTime? PaymentHoldUntil = null, // AwaitingPayment only: when the held slot is released
+    bool CanPayBalanceOnline = false); // the client's own view: the balance can be paid online now ("Pay balance online")
 
 /// <summary>
 /// How the booking was paid. AmountPaid includes the deposit; BalanceDue on the booking is what is left for the salon.
@@ -275,7 +276,9 @@ public sealed record BookingPaymentResponse(
     decimal BalanceReceived = 0, DateTime? BalanceReceivedAt = null, string? BalanceReference = null,
     decimal RefundDue = 0, DateTime? RefundSentAt = null, string? RefundReference = null,
     string? RefundStatus = null, // Processing, Succeeded or Failed for a refund sent back online; null when sent by hand
-    bool CanRefundOnline = false); // paid on the provider's page, so the refund owed can go back to that account
+    bool CanRefundOnline = false, // paid on the provider's page, so the refund owed can go back to that account
+    decimal BalancePaidOnline = 0, // the balance the client paid online before the appointment (a second payment)
+    decimal RefundedOnline = 0); // how much of the refund owed has already gone back online (it can go in two parts)
 
 /// <summary>An uploaded design photo. The file is at GET /api/reference-images/{id}.</summary>
 public sealed record ReferenceImageResponse(int Id, string ContentType, long SizeBytes, DateTime CreatedAt, bool IsColorReference = false);
@@ -318,6 +321,9 @@ public sealed record ReceiptLineResponse(string Description, decimal Amount);
 /// <summary>Where a payment on Xendit's page stands: Paid, Waiting (with the page to continue on) or NotCompleted.</summary>
 /// <remarks>PaidRefundDue: Xendit took the money but the booking could not be kept (Amount is owed back).</remarks>
 public sealed record PaymentStatusResponse(string Status, string? CheckoutUrl, DateTime? HoldUntil, decimal? Amount = null);
+
+/// <summary>The client pays the balance online: GCash or Maya.</summary>
+public sealed record BalanceCheckoutRequest(PaymentMethod Method);
 
 /// <summary>A fresh Xendit page for a held booking ("Try again" / "Continue payment").</summary>
 public sealed record CheckoutResponse(string CheckoutUrl);

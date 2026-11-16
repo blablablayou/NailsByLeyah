@@ -151,7 +151,11 @@ export function BookingDetails({ booking, onClose, onChanged }) {
                 <div className="bd-tile">
                   <span>Paid</span>
                   <strong><Money amount={paid} /></strong>
-                  <small>{b.payment?.method ? `${b.payment.optionLabel ?? 'Booking deposit'} by ${b.payment.method}` : b.payment?.optionLabel ?? 'Booking deposit'}</small>
+                  <small>
+                    {b.payment?.balancePaidOnline > 0
+                      ? 'Deposit, then the balance online'
+                      : b.payment?.method ? `${b.payment.optionLabel ?? 'Booking deposit'} by ${b.payment.method}` : b.payment?.optionLabel ?? 'Booking deposit'}
+                  </small>
                 </div>
                 <div className={!closed && !paidInFull ? 'bd-tile bd-tile-due' : 'bd-tile'}>
                   <span>Balance due</span>
@@ -161,6 +165,9 @@ export function BookingDetails({ booking, onClose, onChanged }) {
               </div>
               <PaymentCheck booking={b} />
               {b.payment?.referenceNumber && <p className="bd-reference">Reference <span className="mono">{b.payment.referenceNumber}</span></p>}
+              {b.payment?.balancePaidOnline > 0 && (
+                <p className="bd-reference">Balance of <Money amount={b.payment.balancePaidOnline} /> paid online by the client</p>
+              )}
               {balanceReceived && (
                 <p className="bd-reference">
                   Balance of <Money amount={b.payment.balanceReceived} /> received

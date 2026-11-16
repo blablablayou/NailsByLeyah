@@ -17,6 +17,9 @@ public class Payment
     /// <summary>Amount charged.</summary>
     public decimal Amount { get; set; }
 
+    /// <summary>How much of this payment has gone back online to the account it came from (refunds through the provider).</summary>
+    public decimal RefundedAmount { get; set; }
+
     /// <summary>The appointment total when this payment was made, and what was left to pay after it.</summary>
     public decimal TotalAmount { get; set; }
     public decimal BalanceAfter { get; set; }

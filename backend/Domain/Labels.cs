@@ -44,6 +44,7 @@ public static class Labels
     {
         [PaymentOption.Deposit] = "Booking deposit",
         [PaymentOption.Full] = "Full payment",
+        [PaymentOption.Balance] = "Balance",
     };
 
     public static string For(PaymentOption option) => PaymentOptions[option];

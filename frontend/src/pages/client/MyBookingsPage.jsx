@@ -10,6 +10,7 @@ import { Alert, Button, EmptyState, Money, PageHeader, PageLoader, Spinner, Stat
 import { CancelBookingDialog, RescheduleDialog } from '../../components/BookingDialogs'
 import { Modal } from '../../components/Modal'
 import { Receipt } from '../../components/Receipt'
+import { PayBalance } from '../../components/PayBalance'
 import { ReceiptDownload } from '../../components/ReceiptDownload'
 import { canDownloadReceipt } from '../../lib/receiptPdf'
 import { colorLabel, colorRequestLabel, perNailText } from '../../lib/shades'
@@ -244,9 +245,10 @@ function BookingCard({ booking: b, onAction }) {
 
       <dl className="booking-money" role="group" aria-label="Payment">
         <div><dt>Total</dt><dd><Money amount={b.totalPrice} /></dd></div>
-        <div><dt>Paid</dt><dd><Money amount={b.payment?.amountPaid ?? b.depositAmount} /> <small>{b.payment?.option === 'Full' ? '(full)' : '(deposit)'}</small></dd></div>
+        <div><dt>Paid</dt><dd><Money amount={b.payment?.amountPaid ?? b.depositAmount} /> <small>{paidLabel(b)}</small></dd></div>
         {!closed && <div><dt>Balance</dt><dd><Money amount={b.balanceDue} /></dd></div>}
       </dl>
+      {b.canPayBalanceOnline && <PayBalance booking={b} />}
 
       {b.note && <p className="booking-note"><span className="booking-note-label">Note</span> <span>{b.note}</span></p>}
       <ReferenceImageGallery images={b.referenceImages} />
@@ -289,6 +291,12 @@ function BookingCard({ booking: b, onAction }) {
       )}
     </li>
   )
+}
+
+/** What the amount paid was: the deposit, the full amount, or the deposit and then the balance online. */
+function paidLabel(b) {
+  if (b.payment?.balancePaidOnline > 0) return '(deposit + balance)'
+  return b.payment?.option === 'Full' ? '(full)' : '(deposit)'
 }
 
 function ReceiptDialog({ booking, onClose }) {

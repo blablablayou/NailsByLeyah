@@ -5,6 +5,7 @@ import { errorMessage } from '../../api/errors'
 import { formatClock, formatMoney } from '../../lib/format'
 import { goToExternal } from '../../lib/navigation'
 import { BookingReceived } from '../../components/BookingReceived'
+import { BalanceReturn } from './BalanceReturn'
 import { CancelBookingDialog } from '../../components/BookingDialogs'
 import { Alert, Button, Card, PageHeader, PageLoader } from '../../components/ui'
 
@@ -18,6 +19,12 @@ const CHECK_FOR_MS = 60_000
 export default function PaymentReturnPage() {
   const [params] = useSearchParams()
   const bookingId = Number(params.get('booking'))
+  if (bookingId && params.get('for') === 'balance') return <BalanceReturn bookingId={bookingId} />
+  return <DepositReturn bookingId={bookingId} />
+}
+
+/** Back from paying the deposit (or the full amount) for a held booking. */
+function DepositReturn({ bookingId }) {
   const [state, setState] = useState({ kind: 'checking' }) // checking | paid | slow | notCompleted | error
   const [action, setAction] = useState(null) // 'retry' | 'cancel'
   const [error, setError] = useState(null)

@@ -41,6 +41,8 @@ public enum PaymentOption
 {
     Deposit,
     Full,
+    /// <summary>The rest of a confirmed booking, paid online before the appointment (a second payment).</summary>
+    Balance,
 }
 
 public enum PaymentStatus

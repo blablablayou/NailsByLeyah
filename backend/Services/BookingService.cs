@@ -254,11 +254,17 @@ public sealed class BookingService(
     public async Task<IReadOnlyList<BookingResponse>> GetHistoryAsync(int clientId, CancellationToken ct = default)
     {
         var limit = (await bookingRules.GetAsync(ct)).RescheduleLimit;
-        return (await bookings.GetForClientAsync(clientId, ct)).Select(b => Map(b, includeClient: false, limit)).ToList();
+        return (await bookings.GetForClientAsync(clientId, ct)).Select(b => ForClient(b, limit)).ToList();
     }
 
     public async Task<BookingResponse> GetAsync(int clientId, int bookingId, CancellationToken ct = default) =>
-        Map(await GetOwnedAsync(clientId, bookingId, ct), includeClient: false, (await bookingRules.GetAsync(ct)).RescheduleLimit);
+        ForClient(await GetOwnedAsync(clientId, bookingId, ct), (await bookingRules.GetAsync(ct)).RescheduleLimit);
+
+    /// <summary>A client's own booking, with whether its balance can be paid online now.</summary>
+    private BookingResponse ForClient(Booking b, int rescheduleLimit) => Map(b, includeClient: false, rescheduleLimit) with
+    {
+        CanPayBalanceOnline = BalancePaymentService.CanPayOnline(b, clock.LocalNow, paymentOptions.Value.Provider),
+    };
 
     public async Task<ReceiptResponse> GetReceiptAsync(int clientId, int bookingId, CancellationToken ct = default)
     {
@@ -578,7 +584,8 @@ public sealed class BookingService(
     {
         var reference = CleanBalanceReference(request.RefundReference, "refundReference");
         var booking = await ReloadAsync(bookingId, ct);
-        var amount = booking.RecordRefund(reference, clock.UtcNow);
+        // Part of it may already have gone back online (a refund across two payments that stopped halfway).
+        var amount = booking.RecordRefund(reference, clock.UtcNow) - OnlineRefundService.RefundedOnline(booking);
         audit.Record(AuditActions.RefundSent, nameof(Booking), booking.Id,
             $"PHP {amount:0.00}{(reference is null ? "" : $" (reference {reference})")}");
         await unitOfWork.SaveChangesAsync(ct);
@@ -1011,7 +1018,9 @@ public static class BookingMapper
             Verified: p?.VerifiedAt is not null, b.ConfirmedAt, b.ConfirmedBy is { } admin ? $"{admin.FirstName} {admin.LastName}" : null,
             b.BalanceReceived, b.BalanceReceivedAt, b.BalanceReference,
             b.RefundDue, b.RefundSentAt, b.RefundReference,
-            b.RefundStatus?.ToString(), CanRefundOnline: OnlineRefundService.OnlinePaymentOf(b) is not null);
+            b.RefundStatus?.ToString(), CanRefundOnline: OnlineRefundService.CanRefundOnline(b),
+            BalancePaidOnline: b.Payments.Where(x => x.Option == PaymentOption.Balance && x.Status == PaymentStatus.Succeeded).Sum(x => x.Amount),
+            RefundedOnline: OnlineRefundService.RefundedOnline(b));
     }
 
     public static ReceiptResponse ToReceipt(Payment p, Booking b) => new(

@@ -264,6 +264,9 @@ public class Booking : IPayable, ICancellable, ISoftDeletable
     // The provider's id is kept as soon as it answers; before that, any refund for this booking is the one in progress.
     private bool IsThisRefund(string refundId) => RefundReference is null || RefundReference == refundId;
 
+    /// <summary>A refund is on its way online, and this provider refund is (or may be) the part being waited for.</summary>
+    public bool IsAwaitingRefund(string refundId) => RefundStatus == OnlineRefundStatus.Processing && IsThisRefund(refundId);
+
     private void EnsureRefundOwed()
     {
         if (RefundDue <= 0)

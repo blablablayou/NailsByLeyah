@@ -88,6 +88,10 @@ export const api = {
     paymentStatus: (id) => get(`/bookings/${id}/payment-status`),
     /** A fresh Xendit page for a held booking: { checkoutUrl }. */
     retryCheckout: (id) => post(`/bookings/${id}/checkout`),
+    /** "Pay balance online": the payment page for the rest, in GCash or Maya: { checkoutUrl }. */
+    payBalance: (id, method) => post(`/bookings/${id}/balance/checkout`, { method }),
+    /** Back from paying the balance: { status: Paid | Waiting | NotCompleted }. */
+    balanceStatus: (id) => get(`/bookings/${id}/balance/status`),
   },
   /** The booking the signed-in client started but hasn't paid for (null when there is none). */
   bookingDraft: {

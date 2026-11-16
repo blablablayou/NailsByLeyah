@@ -166,6 +166,7 @@ internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         b.HasOne<User>().WithMany().HasForeignKey(x => x.ClientId);
         b.HasOne<User>().WithMany().HasForeignKey(x => x.VerifiedByUserId);
         b.Property(x => x.ReferenceNumber).HasMaxLength(64).IsRequired();
+        b.Property(x => x.RefundedAmount).HasDefaultValue(0m);
         b.HasIndex(x => x.ReferenceNumber).IsUnique().HasDatabaseName("ux_payments_reference_number");
         b.HasIndex(x => x.IdempotencyKey).IsUnique().HasDatabaseName(IndexNames.PaymentsIdempotencyKey);
         b.HasIndex(x => x.PaidAt).HasDatabaseName("ix_payments_paid_at");
