@@ -70,6 +70,8 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Alerts:Email", "");
         // Many tests share one test client address; RateLimitTests turns the limits back on with small numbers.
         builder.UseSetting("RateLimits:Enabled", "false");
+        // Tests sign Leyah in with her password alone; AdminLoginCodeTests switches her email code back on.
+        builder.UseSetting("Auth:AdminLoginCode", "false");
 
         builder.ConfigureTestServices(services =>
         {
@@ -198,6 +200,20 @@ public sealed class CapturingNotificationService : INotificationService
     {
         var link = _resetLinks[email];
         return Uri.UnescapeDataString(link[(link.IndexOf("token=", StringComparison.Ordinal) + "token=".Length)..]);
+    }
+
+    private readonly ConcurrentDictionary<string, string> _loginCodes = new(StringComparer.Ordinal);
+    private int _loginCodesSent;
+
+    /// <summary>How many sign-in codes have been sent, and the latest one for an address.</summary>
+    public int LoginCodesSent => Volatile.Read(ref _loginCodesSent);
+    public string LoginCodeFor(string email) => _loginCodes[email];
+
+    public Task SendAdminLoginCodeAsync(User user, string code, int validMinutes, CancellationToken ct = default)
+    {
+        _loginCodes[user.Email] = code;
+        Interlocked.Increment(ref _loginCodesSent);
+        return Task.CompletedTask;
     }
 
     public Task SendEmailVerificationAsync(User user, string code, CancellationToken ct = default)

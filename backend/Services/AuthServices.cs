@@ -266,7 +266,9 @@ public sealed class AuthService(
             throw new ForbiddenException("Please verify your email address before logging in.", "email_not_verified");
 
         account.RegisterSuccessfulLogin();
-        audit.Record(AuditActions.LoginSucceeded, nameof(User), user.Id, userId: user.Id);
+        // Leyah's sign-in is only complete after her email code (or on a remembered device); that step records it.
+        if (!(_options.AdminLoginCode && user.Role == UserRole.Administrator))
+            audit.Record(AuditActions.LoginSucceeded, nameof(User), user.Id, userId: user.Id);
         await unitOfWork.SaveChangesAsync(ct);
         return user;
     }

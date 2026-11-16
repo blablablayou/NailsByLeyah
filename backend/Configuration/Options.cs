@@ -17,6 +17,16 @@ public sealed class AuthOptions
     /// <summary>How long after a verification code is sent before another can be asked for.</summary>
     public int VerificationResendCooldownSeconds { get; set; } = 60;
     public int BcryptWorkFactor { get; set; } = 12;
+
+    /// <summary>
+    /// Leyah enters a code from her email after her password. On by default; set Auth__AdminLoginCode=false on the host to
+    /// turn it off without a deploy (for example if email is slow on the day of a demo).
+    /// </summary>
+    public bool AdminLoginCode { get; set; } = true;
+    public int LoginCodeMinutes { get; set; } = 10;
+
+    /// <summary>"Remember this device": how long a browser skips the code after one right code.</summary>
+    public int RememberDeviceDays { get; set; } = 30;
 }
 
 public sealed class BookingOptions

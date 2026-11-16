@@ -57,7 +57,11 @@ export const api = {
     usernameAvailability: (username) => get('/auth/username-availability', { username }),
     verifyEmail: (body) => post('/auth/verify-email', body),
     resendVerification: (email) => post('/auth/resend-verification', { email }),
+    /** The profile, or for Leyah { codeRequired, emailHint, expiresInMinutes } when her email code is needed next. */
     login: (body) => post('/auth/login', body),
+    /** Leyah's second step: { code, rememberDevice }; the profile. */
+    loginCode: (body) => post('/auth/login/code', body),
+    resendLoginCode: () => post('/auth/login/code/resend'),
     logout: () => post('/auth/logout'),
     me: () => get('/auth/me'),
     updateProfile: (body) => put('/auth/me', body),

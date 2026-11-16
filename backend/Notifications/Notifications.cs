@@ -36,6 +36,9 @@ public interface INotificationService
     /// <summary>A client booked and paid; the booking waits for the salon to confirm it.</summary>
     Task SendSalonNewBookingAsync(Booking booking, Payment payment, CancellationToken ct = default);
 
+    /// <summary>Leyah's sign-in code, sent after her password.</summary>
+    Task SendAdminLoginCodeAsync(User user, string code, int validMinutes, CancellationToken ct = default);
+
     /// <summary>Tells Leyah a client paid the rest of their booking online before the appointment.</summary>
     Task SendSalonBalancePaidAsync(Booking booking, Payment payment, CancellationToken ct = default);
 
@@ -148,6 +151,18 @@ public sealed class EmailNotificationService(
             The code expires in {authOptions.Value.EmailVerificationCodeHours} hours.
 
             If you did not create an account, you can ignore this email.
+            """, ct);
+
+    public Task SendAdminLoginCodeAsync(User user, string code, int validMinutes, CancellationToken ct = default) =>
+        email.SendAsync(user.Email, FullName(user), $"Your Nails by Leyah sign-in code: {code}",
+            $"""
+            Hi {user.FirstName},
+
+            Your sign-in code is: {code}
+
+            Enter it on the sign-in page to finish signing in. It expires in {validMinutes} minutes.
+
+            If you didn't just sign in, someone may know your password: change it from your account page.
             """, ct);
 
     public Task SendPasswordResetAsync(User user, string resetLink, CancellationToken ct = default) =>

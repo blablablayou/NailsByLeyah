@@ -45,6 +45,15 @@ function sendEmail(db, to, subject, body, extra = {}) {
   db.outbox.unshift({ id: nextId('outbox'), to, subject, body, createdAt: nowIso(), ...extra })
 }
 
+/** Leyah's sign-in code: a fresh one replaces the last, valid 10 minutes, 5 wrong tries. */
+function sendLoginCode(db, user) {
+  const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')
+  db.pendingLogin = { userId: user.id, code, failedAttempts: 0, expiresAt: new Date(Date.now() + 10 * MINUTE).toISOString() }
+  audit(db, user.id, 'LoginCodeSent', 'User', user.id)
+  sendEmail(db, user.email, `Your Nails by Leyah sign-in code: ${code}`,
+    `Hi ${user.firstName},\n\nYour sign-in code is: ${code}\n\nEnter it on the sign-in page to finish signing in. It expires in 10 minutes.`, { code })
+}
+
 // ---------------------------------------------------------------- session (stands in for the HttpOnly cookie)
 
 const readSession = () => {
@@ -810,10 +819,43 @@ const routes = [
 
     user.failedLoginCount = 0
     user.lockoutEndUtc = null
+    // Leyah's email code (flags.adminLoginCode), unless this browser was remembered for her.
+    if (user.role === 'Administrator' && db.flags.adminLoginCode && db.rememberedDevice !== `${user.id}:${user.securityStamp}`) {
+      sendLoginCode(db, user)
+      saveDb()
+      const at = user.email.indexOf('@')
+      return { status: 202, data: { codeRequired: true, emailHint: `${user.email[0]}•••${user.email.slice(at)}`, expiresInMinutes: 10 } }
+    }
     audit(db, user.id, 'LoginSucceeded', 'User', user.id)
     saveDb()
     writeSession({ userId: user.id, securityStamp: user.securityStamp, lastActivityAt: Date.now() })
     return profile(user)
+  }],
+  ['POST', '/auth/login/code', (db, { body }) => {
+    const pending = db.pendingLogin
+    const user = pending && new Date(pending.expiresAt) > new Date() ? db.users.find((u) => u.id === pending.userId) : null
+    if (!user) fail(401, 'Your sign-in timed out. Please log in again.', 'login_pending_expired')
+    if (pending.failedAttempts >= 5) invalid('code', 'Too many wrong tries. Send a new code.', 'token_locked')
+    if (String(body.code ?? '').trim() !== pending.code) {
+      pending.failedAttempts++
+      audit(db, user.id, 'LoginCodeFailed', 'User', user.id)
+      saveDb()
+      invalid('code', "That code isn't right. Check the email and try again.", 'token_invalid')
+    }
+    db.pendingLogin = null
+    if (body.rememberDevice) db.rememberedDevice = `${user.id}:${user.securityStamp}`
+    audit(db, user.id, 'LoginSucceeded', 'User', user.id)
+    saveDb()
+    writeSession({ userId: user.id, securityStamp: user.securityStamp, lastActivityAt: Date.now() })
+    return profile(user)
+  }],
+  ['POST', '/auth/login/code/resend', (db) => {
+    const pending = db.pendingLogin
+    const user = pending ? db.users.find((u) => u.id === pending.userId) : null
+    if (!user) fail(401, 'Your sign-in timed out. Please log in again.', 'login_pending_expired')
+    sendLoginCode(db, user)
+    saveDb()
+    return { message: 'A new code has been sent to your email.' }
   }],
 
   ['POST', '/auth/logout', () => {

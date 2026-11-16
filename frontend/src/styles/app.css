@@ -2673,3 +2673,10 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 .pay-balance-text strong { color: var(--burgundy); font-weight: 600; }
 .pay-balance-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .pay-balance .alert { flex-basis: 100%; }
+
+/* Leyah's sign-in code step: one wide, spaced-out input for the six digits; the two links on one line under the button. */
+.login-code-input { font-size: 1.4rem; letter-spacing: .45em; text-align: center; font-variant-numeric: tabular-nums; }
+.login-remember { display: flex; align-items: center; gap: 8px; font-size: var(--fs-small); color: var(--ink-soft); cursor: pointer; }
+.login-remember input { width: 18px; height: 18px; accent-color: var(--burgundy); }
+.login-code-links { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: var(--fs-small); }
+.login-code-links .link-button:disabled { color: var(--muted); text-decoration: none; cursor: default; font-weight: 500; }

@@ -21,8 +21,15 @@ public sealed class AuthController(
     IPasswordResetService passwordReset,
     IAccountSecurityService security,
     IClientProfileService clientProfile,
+    IAdminLoginCodeService loginCodes,
     IUserRepository users) : ControllerBase
 {
+    /// <summary>Between Leyah's password and her email code (encrypted, short-lived).</summary>
+    private const string PendingCookie = "nbl_login_pending";
+
+    /// <summary>"Remember this device": this browser skips the code for a while (encrypted).</summary>
+    private const string RememberedCookie = "nbl_login_device";
+
     private const string ResetRequestedMessage = "If that email address is registered, a password reset link has been sent. It expires in 15 minutes.";
 
     [AllowAnonymous]
@@ -62,12 +69,60 @@ public sealed class AuthController(
     [AllowAnonymous]
     [EnableRateLimiting(RateLimitPolicies.Login)]
     [HttpPost("login")]
-    public async Task<UserProfileResponse> Login(LoginRequest request, CancellationToken ct)
+    public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct)
     {
         var user = await auth.LoginAsync(request, ct);
+        if (loginCodes.IsRequiredFor(user, Request.Cookies[RememberedCookie]))
+        {
+            await loginCodes.SendAsync(user, ct);
+            Response.Cookies.Append(PendingCookie, loginCodes.PendingCookieFor(user), LoginCookie(loginCodes.CodeLifetime));
+            return StatusCode(StatusCodes.Status202Accepted, new LoginCodeRequiredResponse(true,
+                AdminLoginCodeService.EmailHint(user.Email), (int)loginCodes.CodeLifetime.TotalMinutes));
+        }
+        if (user.Role == UserRole.Administrator && Request.Cookies.ContainsKey(RememberedCookie))
+            await loginCodes.RecordRememberedLoginAsync(user, ct);
+        await SignInAsync(user);
+        return Ok(ToProfile(user));
+    }
+
+    /// <summary>Leyah's second step: the code from her email. Signs her in, and remembers this browser if she asked.</summary>
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Code)]
+    [HttpPost("login/code")]
+    public async Task<UserProfileResponse> LoginCode(LoginCodeRequest request, CancellationToken ct)
+    {
+        var user = await loginCodes.VerifyAsync(PendingLoginOrThrow(), request.Code, ct);
+        Response.Cookies.Delete(PendingCookie, LoginCookie(TimeSpan.Zero));
+        if (request.RememberDevice)
+            Response.Cookies.Append(RememberedCookie, loginCodes.RememberedCookieFor(user), LoginCookie(loginCodes.RememberFor));
         await SignInAsync(user);
         return ToProfile(user);
     }
+
+    /// <summary>"Send a new code", after a one-minute wait.</summary>
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Email)]
+    [HttpPost("login/code/resend")]
+    public async Task<MessageResponse> ResendLoginCode(CancellationToken ct)
+    {
+        await loginCodes.ResendAsync(PendingLoginOrThrow(), ct);
+        return new MessageResponse("A new code has been sent to your email.");
+    }
+
+    private PendingLogin PendingLoginOrThrow() =>
+        loginCodes.ReadPending(Request.Cookies[PendingCookie])
+        ?? throw new UnauthorizedAppException("Your sign-in timed out. Please log in again.", "login_pending_expired");
+
+    /// <summary>The two login cookies: only the browser sends them back (never page scripts), only to /api/auth.</summary>
+    private CookieOptions LoginCookie(TimeSpan lifetime) => new()
+    {
+        HttpOnly = true,
+        Secure = Request.IsHttps,
+        SameSite = SameSiteMode.Strict,
+        Path = "/api/auth",
+        IsEssential = true,
+        Expires = lifetime > TimeSpan.Zero ? DateTimeOffset.UtcNow.Add(lifetime) : null,
+    };
 
     /// <summary>Asks for the current password; every other signed-in device is signed out, this browser stays signed in.</summary>
     [Authorize]

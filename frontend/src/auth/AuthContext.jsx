@@ -25,8 +25,17 @@ export function AuthProvider({ children }) {
     })
   }), [])
 
+  // Leyah may need a code from her email next: then nobody is signed in yet, and the caller shows the code step.
   const login = useCallback(async (credentials) => {
     const profile = await api.auth.login(credentials)
+    if (profile?.codeRequired) return profile
+    setUser(profile)
+    setNotice(null)
+    return profile
+  }, [])
+
+  const verifyLoginCode = useCallback(async (body) => {
+    const profile = await api.auth.loginCode(body)
     setUser(profile)
     setNotice(null)
     return profile
@@ -47,8 +56,8 @@ export function AuthProvider({ children }) {
   /** After the profile is saved, so the greeting and menus show the new name straight away. */
   const updateUser = useCallback((profile) => setUser(profile), [])
 
-  const value = useMemo(() => ({ user, ready, login, logout, notice, clearNotice, updateUser }),
-    [user, ready, login, logout, notice, clearNotice, updateUser])
+  const value = useMemo(() => ({ user, ready, login, verifyLoginCode, logout, notice, clearNotice, updateUser }),
+    [user, ready, login, verifyLoginCode, logout, notice, clearNotice, updateUser])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

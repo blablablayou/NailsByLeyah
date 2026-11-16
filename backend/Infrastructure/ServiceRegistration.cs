@@ -109,6 +109,7 @@ public static class ServiceRegistration
         services.AddScoped<ICheckoutConfirmationService, CheckoutConfirmationService>();
         services.AddScoped<IOnlineRefundService, OnlineRefundService>();
         services.AddScoped<IBalancePaymentService, BalancePaymentService>();
+        services.AddScoped<IAdminLoginCodeService, AdminLoginCodeService>();
         services.AddScopedFor<ReferenceImageService, IReferenceImageService, IReferenceImageAttacher>();
 
         // External integrations

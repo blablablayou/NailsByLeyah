@@ -5,17 +5,19 @@ import { PasswordField } from '../../components/FormFields'
 import { Alert, Button, Card, PageLoader, TextField } from '../../components/ui'
 import { ApiError, errorMessage, fieldErrors } from '../../api/errors'
 import { hasErrors, validateLogin } from '../../validation/rules'
+import { LoginCodeStep } from './LoginCodeStep'
 
 export default function LoginPage() {
-  const { user, ready, login, notice, clearNotice } = useAuth()
+  const { user, ready, login, verifyLoginCode, notice, clearNotice } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [values, setValues] = useState({ usernameOrEmail: '', password: '' })
   const [errors, setErrors] = useState({})
   const [failure, setFailure] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [challenge, setChallenge] = useState(null) // Leyah's code step: { emailHint, expiresInMinutes }
   // Message from an automatic logout (Ref 8.4), shown once.
-  const [sessionNotice] = useState(notice)
+  const [sessionNotice, setSessionNotice] = useState(notice)
   useEffect(() => clearNotice(), [clearNotice])
 
   const set = (field) => (value) => setValues((v) => ({ ...v, [field]: value }))
@@ -29,17 +31,42 @@ export default function LoginPage() {
 
     setSubmitting(true)
     try {
-      const user = await login(values)
-      // Return to the page that asked for a login, unless it belongs to the other role. Otherwise a client starts on
-      // the landing page; Leyah starts on her dashboard.
-      const from = location.state?.from
-      const start = user.role === 'Client' ? '/' : homeFor(user.role)
-      navigate(from && canOpen(user.role, from) ? from : start, { replace: true })
+      const result = await login(values)
+      if (result.codeRequired) {
+        setChallenge(result)
+        setSubmitting(false)
+        return
+      }
+      goOn(result)
     } catch (err) {
       setErrors(fieldErrors(err))
       setFailure(err)
       setSubmitting(false)
     }
+  }
+
+  // Return to the page that asked for a login, unless it belongs to the other role. Otherwise a client starts on the
+  // landing page; Leyah starts on her dashboard.
+  const goOn = (signedIn) => {
+    const from = location.state?.from
+    const start = signedIn.role === 'Client' ? '/' : homeFor(signedIn.role)
+    navigate(from && canOpen(signedIn.role, from) ? from : start, { replace: true })
+  }
+
+  const verifyCode = async (body) => {
+    setSubmitting(true)
+    try {
+      goOn(await verifyLoginCode(body))
+    } catch (err) {
+      setSubmitting(false)
+      throw err
+    }
+  }
+
+  const backToPassword = (message) => {
+    setChallenge(null)
+    setValues((v) => ({ ...v, password: '' }))
+    setSessionNotice(message)
   }
 
   // Already signed in (and not in the middle of this form's own login): go home.
@@ -58,6 +85,7 @@ export default function LoginPage() {
         </div>
       </aside>
       <Card className="auth-card login-card">
+        {challenge ? <LoginCodeStep challenge={challenge} onVerified={verifyCode} onBack={backToPassword} /> : <>
         <div className="login-head">
           <h1>Log in</h1>
           <p className="muted">Welcome back! Log in to book and manage your appointments.</p>
@@ -78,6 +106,7 @@ export default function LoginPage() {
         <p className="auth-switch">
           New here? <Link to="/register">Create an account</Link>
         </p>
+        </>}
       </Card>
       </div>
     </div>

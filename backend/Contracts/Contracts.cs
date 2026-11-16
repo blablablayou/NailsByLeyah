@@ -31,6 +31,12 @@ public sealed record EmailRequest(string Email);
 
 public sealed record LoginRequest(string UsernameOrEmail, string Password);
 
+/// <summary>Leyah's second step: the 6-digit code from her email, and whether this browser may skip it for a while.</summary>
+public sealed record LoginCodeRequest(string Code, bool RememberDevice);
+
+/// <summary>The password was right, but a code from email is needed (answered with 202 instead of signing in).</summary>
+public sealed record LoginCodeRequiredResponse(bool CodeRequired, string EmailHint, int ExpiresInMinutes);
+
 /// <summary>The new password is entered once; the form has a show/hide toggle instead of a second field.</summary>
 public sealed record ResetPasswordRequest(string Token, string NewPassword);
 public sealed record TokenRequest(string Token);

@@ -128,6 +128,8 @@ public static class AuditActions
     public const string EmailVerified = "EmailVerified";
     public const string LoginSucceeded = "LoginSucceeded";
     public const string LoginFailed = "LoginFailed";
+    public const string LoginCodeSent = "LoginCodeSent";
+    public const string LoginCodeFailed = "LoginCodeFailed";
     public const string AccountLocked = "AccountLocked";
     public const string PasswordResetRequested = "PasswordResetRequested";
     public const string PasswordReset = "PasswordReset";

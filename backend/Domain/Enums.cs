@@ -101,4 +101,6 @@ public enum UserTokenPurpose
 {
     EmailVerification,
     PasswordReset,
+    /// <summary>The 6-digit code Leyah enters after her password.</summary>
+    AdminLoginCode,
 }
