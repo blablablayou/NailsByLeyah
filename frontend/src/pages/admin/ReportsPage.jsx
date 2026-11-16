@@ -4,7 +4,7 @@ import { useAsync } from '../../hooks/useAsync'
 import { errorMessage } from '../../api/errors'
 import { addDays, today } from '../../lib/dates'
 import { formatDate, formatMoney } from '../../lib/format'
-import { downloadSalesReport, totalReceived } from '../../lib/reportExcel'
+import { downloadSalesReport, netReceived, totalReceived } from '../../lib/reportExcel'
 import { Alert, Button, Card, Money, PageHeader, PageLoader } from '../../components/ui'
 import { DayPicker, MonthPicker } from '../../components/DateFilter'
 
@@ -40,7 +40,7 @@ export function Change({ now, before, label, lowerIsBetter = false }) {
 }
 
 const isEmpty = (r) => !r.bookingsMade && !r.bookingsCompleted && !r.bookingsCancelled && !r.bookingsNoShow
-  && !r.depositsCollected && !r.balancesReceived && !r.balancesUnpaid && !r.completedServicesValue
+  && !r.depositsCollected && !r.balancesReceived && !r.balancesUnpaid && !r.completedServicesValue && !r.refundsSent
 
 /**
  * Money first, then booking counts. Each figure appears once: the total shows what it is made of underneath, and the
@@ -54,12 +54,15 @@ function Totals({ report, previous, previousLabel, soFar }) {
       {isEmpty(report) && <p className="report-empty">Nothing was paid or booked on this {report.days ? 'month' : 'day'}.</p>}
       <section aria-label="Sales" className="report-money">
         <h3 className="report-section-title">Sales</h3>
-        <div className="report-hero" role="group" aria-label="Total received">
-          <span className="report-label">Total received</span>
-          <span className="report-hero-value"><Money amount={totalReceived(report)} /></span>
-          <span className="report-hint">{formatMoney(report.depositsCollected)} online · {formatMoney(report.balancesReceived)} in balances</span>
+        <div className="report-hero" role="group" aria-label="Net received">
+          <span className="report-label">Net received</span>
+          <span className="report-hero-value"><Money amount={netReceived(report)} /></span>
+          <span className="report-hint">
+            {formatMoney(report.depositsCollected)} online · {formatMoney(report.balancesReceived)} in balances
+            {report.refundsSent > 0 && <> · −{formatMoney(report.refundsSent)} refunds sent</>}
+          </span>
           {soFar && <span className="report-hint">{soFar}, compared with the whole of {previousLabel}</span>}
-          <Change now={totalReceived(report)} before={had(totalReceived)} label={previousLabel} />
+          <Change now={netReceived(report)} before={had(netReceived)} label={previousLabel} />
         </div>
         <div className="report-side">
           <div className="report-figure" role="group" aria-label="Completed services">
@@ -226,6 +229,6 @@ function MonthlyReport() {
 
 function ReportNotes() {
   return (
-    <p className="muted small report-notes">Payments count on the day they were paid; everything else on the day it happened.</p>
+    <p className="muted small report-notes">Payments count on the day they were paid, refunds on the day they were sent; everything else on the day it happened.</p>
   )
 }

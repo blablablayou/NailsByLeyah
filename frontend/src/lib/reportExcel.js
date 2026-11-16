@@ -4,6 +4,9 @@
 
 export const totalReceived = (report) => report.depositsCollected + report.balancesReceived
 
+/** What Leyah kept: everything received, less the refunds actually sent back in the same period. */
+export const netReceived = (report) => totalReceived(report) - (report.refundsSent ?? 0)
+
 const INK = 'FF000000'
 const GREY_BAND = 'FFD9D9D9'
 const GREY_LIGHT = 'FFF2F2F2'
@@ -23,7 +26,7 @@ const dayLabel = (iso) => {
   return new Date(y, m - 1, d).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-const hasActivity = (d) => d.bookingsMade || d.bookingsCompleted || d.bookingsCancelled || d.bookingsNoShow || d.depositsCollected || d.balancesReceived
+const hasActivity = (d) => d.bookingsMade || d.bookingsCompleted || d.bookingsCancelled || d.bookingsNoShow || d.depositsCollected || d.balancesReceived || d.refundsSent
 
 const COLUMNS = [
   { header: 'Date', key: 'date', width: 16 },
@@ -34,8 +37,12 @@ const COLUMNS = [
   { header: 'Paid online', key: 'depositsCollected', width: 15, format: PESO },
   { header: 'Balances received', key: 'balancesReceived', width: 19, format: PESO },
   { header: 'Total received', key: 'total', width: 17, format: PESO },
+  { header: 'Refunds sent', key: 'refundsSent', width: 15, format: PESO },
+  { header: 'Net received', key: 'net', width: 16, format: PESO },
 ]
-const LAST = COLUMNS.length // column H
+const LAST = COLUMNS.length // column J
+// What each column adds up to for one day, for the cached results Excel shows before it recalculates.
+const amountOf = (d, key) => (key === 'total' ? totalReceived(d) : key === 'net' ? netReceived(d) : d[key] ?? 0)
 
 /**
  * Builds the workbook. `period` is the report's title, e.g. "November 2026" or "Fri, Nov 13, 2026". A monthly report
@@ -101,7 +108,8 @@ export function buildSalesReportWorkbook(ExcelJS, { period, report, generatedAt 
     rows.forEach((d, i) => {
       const row = sheet.getRow(r)
       row.values = [d.date ? dayLabel(d.date) : period, d.bookingsMade, d.bookingsCompleted, d.bookingsCancelled, d.bookingsNoShow,
-        d.depositsCollected, d.balancesReceived, { formula: `F${r}+G${r}`, result: d.depositsCollected + d.balancesReceived }]
+        d.depositsCollected, d.balancesReceived, { formula: `F${r}+G${r}`, result: totalReceived(d) },
+        d.refundsSent ?? 0, { formula: `H${r}-I${r}`, result: netReceived(d) }]
       COLUMNS.forEach((col, c) => {
         const cell = row.getCell(c + 1)
         cell.font = font()
@@ -118,7 +126,7 @@ export function buildSalesReportWorkbook(ExcelJS, { period, report, generatedAt 
     total.values = ['Grand Total', ...COLUMNS.slice(1).map((col, i) => {
       const letter = String.fromCharCode(66 + i) // B, C, ...
       return { formula: `SUM(${letter}${first}:${letter}${last})`,
-        result: rows.reduce((sum, d) => sum + (col.key === 'total' ? d.depositsCollected + d.balancesReceived : d[col.key]), 0) }
+        result: rows.reduce((sum, d) => sum + amountOf(d, col.key), 0) }
     })]
     COLUMNS.forEach((col, c) => {
       const cell = total.getCell(c + 1)
@@ -151,7 +159,9 @@ export function buildSalesReportWorkbook(ExcelJS, { period, report, generatedAt 
     cell.alignment = { horizontal: 'right' }
     r += 1
   }
-  line('Total received', totalReceived(report), PESO, { strong: true, note: 'online payments plus balances' })
+  line('Net received', netReceived(report), PESO, { strong: true, note: 'total received, less the refunds sent' })
+  line('Total received', totalReceived(report), PESO, { note: 'online payments plus balances' })
+  line('Refunds sent', report.refundsSent ?? 0, PESO, { note: 'sent back to clients' })
   line('Paid online', report.depositsCollected, PESO, { note: 'deposits and full payments' })
   line('Balances received', report.balancesReceived, PESO, { note: 'paid after the service' })
   line('Completed services', report.completedServicesValue, PESO, { note: 'full price of appointments completed' })
@@ -174,7 +184,7 @@ export function buildSalesReportWorkbook(ExcelJS, { period, report, generatedAt 
   }
 
   // ---- Page footer (printed): the note and the page numbers ----
-  sheet.headerFooter.oddFooter = '&L&"Arial,Italic"&8Payments count on the day they were paid; everything else on the day it happened.&R&"Arial"&8Page &P of &N'
+  sheet.headerFooter.oddFooter = '&L&"Arial,Italic"&8Payments count on the day they were paid, refunds on the day they were sent; everything else on the day it happened.&R&"Arial"&8Page &P of &N'
   sheet.headerFooter.evenFooter = sheet.headerFooter.oddFooter
   return book
 }

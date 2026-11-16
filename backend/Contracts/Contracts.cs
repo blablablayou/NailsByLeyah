@@ -411,7 +411,8 @@ public sealed record DailySalesReport(
     decimal DepositsCollected,
     decimal BalancesReceived,
     decimal BalancesUnpaid,
-    decimal CompletedServicesValue);
+    decimal CompletedServicesValue,
+    decimal RefundsSent);
 
 public sealed record MonthlySalesReport(
     int Year,
@@ -424,6 +425,7 @@ public sealed record MonthlySalesReport(
     decimal BalancesReceived,
     decimal BalancesUnpaid,
     decimal CompletedServicesValue,
+    decimal RefundsSent,
     IReadOnlyList<DailySalesReport> Days);
 
 public sealed record ActivityLogResponse(

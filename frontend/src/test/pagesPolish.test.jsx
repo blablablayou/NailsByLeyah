@@ -100,7 +100,7 @@ describe('Sales reports polish', () => {
   it('compares the money with the day before', async () => {
     await signIn(ADMIN)
     renderApp('/admin/reports')
-    const total = await screen.findByRole('group', { name: 'Total received' })
+    const total = await screen.findByRole('group', { name: 'Net received' })
     const short = new Date(`${addDays(today(), -1)}T00:00:00`).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
     expect(await within(total).findByText(new RegExp(`(vs|Same as) ${short}$`))).toBeInTheDocument()
     expect(within(total).getByText(`Today so far, compared with the whole of ${short}`)).toBeInTheDocument()
@@ -127,7 +127,7 @@ describe('Sales reports polish', () => {
     for (let i = 0; i < 2; i += 1) await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Next month/ }))
     await user.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: /^\w{3}, \w{3} 15, \d{4}/ })[0])
     expect(await screen.findByText('Nothing was paid or booked on this day.')).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'Total received' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Net received' })).toBeInTheDocument()
   })
 })
 

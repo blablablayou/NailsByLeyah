@@ -12,7 +12,7 @@ import { refundProcessing } from '../../lib/refunds'
 import { BookingDetails } from './BookingDetails'
 import { NewBookingDialog } from './NewBookingDialog'
 import { Stars } from '../../components/StarRating'
-import { totalReceived } from '../../lib/reportExcel'
+import { netReceived } from '../../lib/reportExcel'
 import { colorFor, colorLabel } from '../../lib/shades'
 import { apiPhotoSrc } from '../../lib/photos'
 
@@ -203,7 +203,7 @@ function MonthCard({ today, refreshedAt }) {
         <ul className="dash-month-figures">
           <li><strong>{r.bookingsMade}</strong> made</li>
           <li><strong>{r.bookingsCompleted}</strong> completed</li>
-          <li><strong>{formatMoney(totalReceived(r))}</strong> received</li>
+          <li><strong>{formatMoney(netReceived(r))}</strong> net received</li>
         </ul>
       )}
     </section>

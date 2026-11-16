@@ -208,4 +208,38 @@ public sealed class OnlineRefundTests(XenditApiFactory factory) : IClassFixture<
         Assert.Equal(HttpStatusCode.Unauthorized, noToken.StatusCode);
         Assert.Null(factory.Load(id).RefundStatus);
     }
+
+    private DateOnly Today => DateOnly.FromDateTime(factory.Clock.GetUtcNow().AddHours(8).DateTime);
+
+    private Task<DailySalesReport> TodaysReport(HttpClient admin) =>
+        admin.GetAsync<DailySalesReport>($"/api/admin/reports/daily?date={Today:yyyy-MM-dd}");
+
+    [Fact]
+    public async Task The_report_takes_off_an_online_refund_only_once_it_has_arrived()
+    {
+        var (id, admin, _) = await PaidThenCancelledBySalon();
+        var before = (await TodaysReport(admin)).RefundsSent;
+
+        var refundId = (await RefundOnline(admin, id)).Payment!.RefundReference!;
+        Assert.Equal(before, (await TodaysReport(admin)).RefundsSent); // still on its way
+
+        await factory.PostWebhookAsync(RefundEvent("refund.succeeded", refundId, id, "SUCCEEDED"));
+
+        var today = await TodaysReport(admin);
+        Assert.Equal(before + 150m, today.RefundsSent);
+        var month = await admin.GetAsync<MonthlySalesReport>($"/api/admin/reports/monthly?year={Today.Year}&month={Today.Month}");
+        Assert.Equal(month.Days.Sum(d => d.RefundsSent), month.RefundsSent);
+        Assert.True(month.RefundsSent >= today.RefundsSent);
+    }
+
+    [Fact]
+    public async Task The_report_takes_off_a_refund_Leyah_sent_by_hand_on_the_day_she_sent_it()
+    {
+        var (id, admin, _) = await PaidThenCancelledBySalon();
+        var before = (await TodaysReport(admin)).RefundsSent;
+
+        await (await admin.PostJsonAsync($"/api/admin/bookings/{id}/refund", new RecordRefundRequest("GC-9"))).ShouldHaveStatus(HttpStatusCode.OK);
+
+        Assert.Equal(before + 150m, (await TodaysReport(admin)).RefundsSent);
+    }
 }

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { ADMIN, renderApp, signIn } from './helpers'
 import { addDays, today } from '../lib/dates'
 import { formatDate } from '../lib/format'
+import { getDb, saveDb } from './mockBackend/db'
 
 const monthName = (yearMonth) =>
   new Date(Number(yearMonth.slice(0, 4)), Number(yearMonth.slice(5, 7)) - 1, 1).toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })
@@ -41,5 +42,27 @@ describe('Sales reports date pickers', () => {
 
     await user.click(screen.getByRole('button', { name: 'Next month' }))
     expect(await screen.findByRole('heading', { name: monthName(`${lastYearJanuary.slice(0, 4)}-02`) })).toBeInTheDocument()
+  })
+})
+
+describe('Refunds in the sales report', () => {
+  it('leads with what Leyah kept: the refunds sent today come off, and the parts show underneath', async () => {
+    const db = getDb()
+    Object.assign(db.bookings.find((b) => b.id === 8), { status: 'Cancelled', refundDue: 300, refundSentAt: new Date().toISOString(), refundReference: 'GC-R1' })
+    saveDb()
+    await signIn(ADMIN)
+    renderApp('/admin/reports')
+
+    const hero = await screen.findByRole('group', { name: 'Net received' })
+    expect(await within(hero).findByText(/−₱300\.00 refunds sent/)).toBeInTheDocument()
+    expect(within(hero).getByText(/online · .* in balances/)).toBeInTheDocument()
+  })
+
+  it('leaves the refunds out of the line when none were sent', async () => {
+    await signIn(ADMIN)
+    renderApp('/admin/reports')
+    const hero = await screen.findByRole('group', { name: 'Net received' })
+    expect(await within(hero).findByText(/online · .* in balances/)).toBeInTheDocument()
+    expect(within(hero).queryByText(/refunds sent/)).toBeNull()
   })
 })

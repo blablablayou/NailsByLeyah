@@ -654,6 +654,7 @@ function dailyReport(db, date) {
     balancesReceived: live.filter((b) => b.balanceReceivedAt >= from && b.balanceReceivedAt < to).reduce((s, b) => s + b.balanceReceived, 0),
     balancesUnpaid: completed.reduce((s, b) => s + bookingResponse(db, b, false).balanceDue, 0),
     completedServicesValue: completed.reduce((s, b) => s + bookingResponse(db, b, false).totalPrice, 0),
+    refundsSent: live.filter((b) => b.refundSentAt >= from && b.refundSentAt < to).reduce((s, b) => s + (b.refundDue ?? 0), 0),
   }
 }
 
@@ -1637,7 +1638,7 @@ const routes = [
     const sum = (key) => days.reduce((s, d) => s + d[key], 0)
     return { year, month, bookingsMade: sum('bookingsMade'), bookingsCompleted: sum('bookingsCompleted'), bookingsCancelled: sum('bookingsCancelled'),
       bookingsNoShow: sum('bookingsNoShow'), depositsCollected: sum('depositsCollected'), balancesReceived: sum('balancesReceived'),
-      balancesUnpaid: sum('balancesUnpaid'), completedServicesValue: sum('completedServicesValue'), days }
+      balancesUnpaid: sum('balancesUnpaid'), completedServicesValue: sum('completedServicesValue'), refundsSent: sum('refundsSent'), days }
   }],
   ['GET', '/admin/activity-logs', (db, { query }) => {
     requireUser(db, 'Administrator')

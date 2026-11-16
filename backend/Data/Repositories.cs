@@ -53,6 +53,9 @@ public sealed record ScheduledAppointment(int BookingId, DateOnly Date, TimeOnly
 /// <summary>A balance paid at the salon and when Leyah recorded it (UTC).</summary>
 public sealed record BalanceReceipt(DateTime ReceivedAt, decimal Amount);
 
+/// <summary>A refund that actually went back to a client, and when (UTC).</summary>
+public sealed record RefundSent(DateTime SentAt, decimal Amount);
+
 public sealed record BookingSearchCriteria(DateOnly? Date, BookingStatus? Status, string? ClientName, int Page, int PageSize, int? ServiceId = null,
     bool OpenOnly = false);
 
@@ -93,6 +96,8 @@ public interface IBookingRepository
     Task<List<DateTime>> GetCreatedTimesBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
     /// <summary>Each balance received in the range, with when it was recorded (UTC), for reports that sort them into days.</summary>
     Task<List<BalanceReceipt>> GetBalancesReceivedBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
+    /// <summary>Each refund sent in the range (by hand, or online once it arrived), for reports that sort them into days.</summary>
+    Task<List<RefundSent>> GetRefundsSentBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
 
     /// <summary>Pending or Confirmed bookings between the dates, soonest first, with their details.</summary>
     Task<List<Booking>> GetUpcomingAsync(DateOnly from, DateOnly to, CancellationToken ct = default);
@@ -389,6 +394,11 @@ internal sealed class BookingRepository(AppDbContext db) : IBookingRepository
     public Task<List<BalanceReceipt>> GetBalancesReceivedBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct) =>
         Live.Where(b => b.BalanceReceivedAt >= fromUtc && b.BalanceReceivedAt < toUtc)
             .Select(b => new BalanceReceipt(b.BalanceReceivedAt!.Value, b.BalanceReceived))
+            .ToListAsync(ct);
+
+    public Task<List<RefundSent>> GetRefundsSentBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct) =>
+        Live.Where(b => b.RefundSentAt >= fromUtc && b.RefundSentAt < toUtc)
+            .Select(b => new RefundSent(b.RefundSentAt!.Value, b.RefundDue))
             .ToListAsync(ct);
 
     public Task<List<Booking>> GetUpcomingAsync(DateOnly from, DateOnly to, CancellationToken ct) =>

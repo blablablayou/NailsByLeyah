@@ -110,13 +110,14 @@ public sealed class ReportService(IBookingRepository bookings, IPaymentRepositor
             days.Sum(d => d.BalancesReceived),
             days.Sum(d => d.BalancesUnpaid),
             days.Sum(d => d.CompletedServicesValue),
+            days.Sum(d => d.RefundsSent),
             days);
     }
 
     /// <summary>
-    /// "Made" and "cancelled" count by the day it happened; deposits and balances by the day they were paid;
+    /// "Made" and "cancelled" count by the day it happened; deposits and balances by the day they were paid; refunds by the day they were sent;
     /// completed services, no-shows and unpaid balances by appointment date. All days are salon-local.
-    /// Everything is read for the whole period first (five queries) and then sorted into days, so a month costs the same
+    /// Everything is read for the whole period first (six queries) and then sorted into days, so a month costs the same
     /// few round trips to the database as a single day.
     /// </summary>
     private async Task<List<DailySalesReport>> BuildAsync(DateOnly from, DateOnly to, CancellationToken ct)
@@ -127,6 +128,7 @@ public sealed class ReportService(IBookingRepository bookings, IPaymentRepositor
         var cancelled = await bookings.GetCancelledBetweenAsync(fromUtc, toUtc, ct);
         var made = await bookings.GetCreatedTimesBetweenAsync(fromUtc, toUtc, ct);
         var balances = await bookings.GetBalancesReceivedBetweenAsync(fromUtc, toUtc, ct);
+        var refunds = await bookings.GetRefundsSentBetweenAsync(fromUtc, toUtc, ct);
 
         var reports = new List<DailySalesReport>();
         for (var day = from; day <= to; day = day.AddDays(1))
@@ -142,7 +144,8 @@ public sealed class ReportService(IBookingRepository bookings, IPaymentRepositor
                 paid.Where(p => p.PaidAt >= dayFrom && p.PaidAt < dayTo).Sum(p => p.Amount),
                 balances.Where(b => b.ReceivedAt >= dayFrom && b.ReceivedAt < dayTo).Sum(b => b.Amount),
                 completed.Sum(b => b.BalanceDue),
-                completed.Sum(b => b.TotalPrice)));
+                completed.Sum(b => b.TotalPrice),
+                refunds.Where(r => r.SentAt >= dayFrom && r.SentAt < dayTo).Sum(r => r.Amount)));
         }
         return reports;
     }
