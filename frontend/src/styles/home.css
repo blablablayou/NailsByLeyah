@@ -11,9 +11,9 @@ html { scroll-padding-top: var(--header-h); }
 .hm-intro { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: var(--rose-50); transition: opacity .6s ease, visibility .6s; }
 .hm-intro.is-hidden { opacity: 0; visibility: hidden; }
 .hm-intro-logo { position: relative; width: min(560px, 82vw); }
-.hm-intro-logo img { display: block; width: 100%; height: auto; clip-path: inset(0 100% 0 0); opacity: 0; transform: scale(.96);
+.hm-intro-logo img, .hm-intro-logo .hm-intro-brand { display: block; width: 100%; height: auto; clip-path: inset(0 100% 0 0); opacity: 0; transform: scale(.96);
   transition: clip-path 1.6s cubic-bezier(.6,.05,.3,1), opacity .4s ease, transform 1.8s cubic-bezier(.2,.8,.2,1); }
-.hm-intro-logo.show img { clip-path: inset(0 -2% 0 0); opacity: 1; transform: none; }
+.hm-intro-logo.show img, .hm-intro-logo.show .hm-intro-brand { clip-path: inset(0 -2% 0 0); opacity: 1; transform: none; }
 .hm-sparkle { position: absolute; width: 22px; height: 22px; color: var(--rose-500); opacity: 0; }
 .hm-intro.is-done .hm-sparkle { animation: hm-twinkle 1.2s ease-in-out infinite; }
 .hm-sparkle:nth-of-type(2) { animation-delay: .4s !important; }
@@ -165,7 +165,7 @@ html { scroll-padding-top: var(--header-h); }
 .hm-price-actions .btn { text-transform: uppercase; letter-spacing: .05em; font-size: .85rem; }
 /* The full price list, in the style of Leyah's printed price card. */
 .pc { padding: 30px 30px 18px; border-radius: 18px; border: 5px solid #fff; background: #fdf1f4; box-shadow: 0 16px 40px rgb(143 44 77 / .18); text-align: center; color: #4a1f2e; }
-.pc-logo { display: block; width: 72%; max-width: 260px; height: auto; margin: 0 auto 6px; }
+.pc-logo { display: block; width: 72%; max-width: 260px; height: auto; margin: 0 auto 6px; color: var(--burgundy); }
 .pc-title { display: flex; align-items: center; gap: 12px; margin: 0 0 22px; font-family: var(--font-display); font-size: .82rem; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; color: #4a1f2e; }
 .pc-title::before, .pc-title::after { content: ''; flex: 1; height: 1px; background: #d98aa3; }
 .pc-group + .pc-group { margin-top: 20px; }

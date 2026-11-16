@@ -5,6 +5,7 @@ import { Modal } from '../../../components/Modal'
 import { canAnimate, peso } from './motion'
 import { softGelSets, withDesignName } from '../../../lib/services'
 import { SectionHeading } from './SectionHeading'
+import { BrandLogo } from '../../../components/BrandLogo'
 
 /** The website's own line for each card, used until Leah writes one on admin Services (D6). */
 const DEFAULT_LINES = {
@@ -173,7 +174,7 @@ function PriceCard({ catalog }) {
   ].filter((g) => g.rows.length)
   return (
     <article className="pc" aria-labelledby="pc-title">
-      <img className="pc-logo" src="/img/logo.webp" width="1000" height="455" alt="Nails by Leyah" />
+      <BrandLogo className="brand-logo pc-logo" />
       <h3 className="pc-title" id="pc-title">Nails price list</h3>
       {groups.map((g) => (
         <section key={g.title} className="pc-group" aria-label={g.title}>
