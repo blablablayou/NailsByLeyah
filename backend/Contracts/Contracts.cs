@@ -140,6 +140,8 @@ public static class SlotStatuses
     /// <summary>Closed by the administrator: a break, day off, holiday or any other reason.</summary>
     public const string Closed = "Closed";
     public const string Past = "Past";
+    /// <summary>Still ahead, but closer than the notice a client must give (Schedule:MinimumNoticeMinutes).</summary>
+    public const string TooSoon = "TooSoon";
 
     /// <summary>Free, but the chosen service would run past closing or into another appointment, its gap or a blocked period.</summary>
     public const string TooShort = "TooShort";

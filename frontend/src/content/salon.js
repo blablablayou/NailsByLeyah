@@ -27,6 +27,8 @@ export const schedule = {
   slotIntervalMinutes: 30,
   // Mandatory break after every appointment's scheduled end before the next one may begin.
   bufferMinutes: 30,
+  // A client books at least this far ahead of now (the API's Schedule:MinimumNoticeMinutes); Leyah isn't limited.
+  minimumNoticeMinutes: 120,
   maxDaysAhead: 30,
   closedDaysOfWeek: [], // 0 = Sunday … 6 = Saturday
 }

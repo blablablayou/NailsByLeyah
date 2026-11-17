@@ -8,6 +8,37 @@ namespace NailsByLeah.Api.Tests.Integration;
 public sealed class XenditBookingTests(XenditApiFactory factory) : IClassFixture<XenditApiFactory>
 {
     [Fact]
+    public async Task One_client_can_hold_two_times_at_once_but_not_a_third()
+    {
+        var user = await factory.CreateClientAsync();
+        await user.Client.BookAsync(TestHelpers.NewBooking(factory.NextSlot()));
+        await user.Client.BookAsync(TestHelpers.NewBooking(factory.NextSlot()));
+
+        var third = await user.Client.PostJsonAsync("/api/bookings", TestHelpers.NewBooking(factory.NextSlot()));
+
+        await third.ShouldHaveStatus(HttpStatusCode.Conflict);
+        Assert.Equal("too_many_holds", (await third.ReadProblemAsync()).ProblemCode());
+        // Another client isn't affected.
+        var other = await factory.CreateClientAsync();
+        await other.Client.BookAsync(TestHelpers.NewBooking(factory.NextSlot()));
+    }
+
+    [Fact]
+    public async Task A_hold_that_ran_out_no_longer_counts()
+    {
+        var user = await factory.CreateClientAsync();
+        var first = await user.Client.BookAsync(TestHelpers.NewBooking(factory.NextSlot()));
+        await user.Client.BookAsync(TestHelpers.NewBooking(factory.NextSlot()));
+        factory.WithDb(db =>
+        {
+            db.Bookings.Single(b => b.Id == first.Booking.Id).PaymentHoldUntil = factory.Clock.GetUtcNow().UtcDateTime.AddMinutes(-1);
+            return db.SaveChanges();
+        });
+
+        await user.Client.BookAsync(TestHelpers.NewBooking(factory.NextSlot()));
+    }
+
+    [Fact]
     public async Task Paying_creates_a_hold_and_returns_the_checkout_address()
     {
         var user = await factory.CreateClientAsync();

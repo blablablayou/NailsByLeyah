@@ -7,7 +7,7 @@ import { errorMessage } from '../api/errors'
 import { Alert, Button, Spinner } from './ui'
 import { schedule } from '../content/salon'
 
-const STATUS_TEXT = { Open: 'Available', Booked: 'Booked', Break: 'Break', Closed: 'Closed', Past: 'Past', TooShort: 'Not enough time' }
+const STATUS_TEXT = { Open: 'Available', Booked: 'Booked', Break: 'Break', Closed: 'Closed', Past: 'Past', TooSoon: 'Too soon', TooShort: 'Not enough time' }
 
 const minutesOf = (time) => {
   const [h, m] = time.split(':').map(Number)
@@ -30,6 +30,7 @@ const STATUS_TITLE = {
   Booked: 'Another appointment is at this time',
   Break: 'The 30-minute break after an appointment',
   Closed: 'Closed by the salon',
+  TooSoon: 'Too close to now: book a little further ahead, or call or message the salon for a sooner time.',
   TooShort: 'This service would run past closing time or into another appointment and its 30-minute break.',
 }
 

@@ -15,8 +15,11 @@ public interface ISlotAvailability
     /// <summary>Opening and closing time, shown on the website.</summary>
     Task<SalonHoursResponse> GetHoursAsync(CancellationToken ct = default);
 
-    /// <summary>One day's start times. With a service, each time says whether that service fits there.</summary>
-    Task<DaySlotsResponse> GetDayAsync(DateOnly date, int? serviceId, CancellationToken ct = default, int? removalServiceId = null);
+    /// <summary>
+    /// One day's start times. With a service, each time says whether that service fits there. For a client, times
+    /// closer than the minimum notice are TooSoon; <paramref name="bySalon"/> leaves them open for Leyah.
+    /// </summary>
+    Task<DaySlotsResponse> GetDayAsync(DateOnly date, int? serviceId, CancellationToken ct = default, int? removalServiceId = null, bool bySalon = false);
 
     /// <summary>Dates from today to the end of the booking window that are closed all day.</summary>
     Task<IReadOnlyList<DateOnly>> GetClosedDatesAsync(CancellationToken ct = default);
@@ -25,7 +28,8 @@ public interface ISlotAvailability
     /// Every rule for an appointment of <paramref name="durationMinutes"/> at this time, for a clear early answer.
     /// <paramref name="movingBookingId"/> is the booking being rescheduled, which must not clash with itself.
     /// </summary>
-    Task EnsureBookableAsync(DateOnly date, TimeOnly startTime, int durationMinutes, int? movingBookingId, CancellationToken ct = default);
+    Task EnsureBookableAsync(DateOnly date, TimeOnly startTime, int durationMinutes, int? movingBookingId, CancellationToken ct = default,
+        bool bySalon = false);
 
     /// <summary>
     /// The checks that depend on other bookings and blocked time, repeated after
@@ -72,6 +76,21 @@ public sealed class ScheduleService(
     private int Buffer => _options.BufferMinutes;
     private int Opening => DayPeriod.ToMinutes(_options.OpeningTime);
 
+    /// <summary>The earliest start a client may book now: the minimum notice from now (Leyah isn't limited).</summary>
+    private DateTime EarliestFor(bool bySalon) => bySalon ? clock.LocalNow : clock.LocalNow.AddMinutes(Math.Max(0, _options.MinimumNoticeMinutes));
+
+    /// <summary>"2 hours", "1 hour 30 minutes", "45 minutes": the notice in words.</summary>
+    private string NoticeText
+    {
+        get
+        {
+            var (hours, minutes) = (_options.MinimumNoticeMinutes / 60, _options.MinimumNoticeMinutes % 60);
+            var h = hours == 0 ? "" : hours == 1 ? "1 hour" : $"{hours} hours";
+            var m = minutes == 0 ? "" : $"{minutes} minutes";
+            return string.Join(" ", new[] { h, m }.Where(x => x.Length > 0));
+        }
+    }
+
     /// <summary>How far ahead clients can book: Leyah's setting, or the appsettings default.</summary>
     private async Task<int> MaxDaysAheadAsync(CancellationToken ct) => (await settings.GetAsync(ct)).MaxDaysAhead ?? _options.MaxDaysAhead;
 
@@ -90,7 +109,7 @@ public sealed class ScheduleService(
         return closed;
     }
 
-    public async Task<DaySlotsResponse> GetDayAsync(DateOnly date, int? serviceId, CancellationToken ct = default, int? removalServiceId = null)
+    public async Task<DaySlotsResponse> GetDayAsync(DateOnly date, int? serviceId, CancellationToken ct = default, int? removalServiceId = null, bool bySalon = false)
     {
         var duration = Interval;
         if (serviceId is { } id)
@@ -125,6 +144,7 @@ public sealed class ScheduleService(
             .Select(a => new BookedTime(a.StartTime, a.DurationMinutes, Buffer))
             .ToList();
         var now = clock.LocalNow;
+        var earliest = EarliestFor(bySalon);
         var beyondWindow = date > clock.Today.AddDays(await MaxDaysAheadAsync(ct));
 
         var slots = starts.Select(start =>
@@ -134,6 +154,8 @@ public sealed class ScheduleService(
             var withBreak = DayPeriod.Occupied(start, duration, Buffer);
             if (date.ToDateTime(start) <= now)
                 return Slot(start, duration, SlotStatuses.Past);
+            if (date.ToDateTime(start) < earliest)
+                return Slot(start, duration, SlotStatuses.TooSoon, $"Book at least {NoticeText} ahead");
             if (beyondWindow || blocked.Any(b => b.Contains(minute)))
                 return Slot(start, duration, SlotStatuses.Closed);
             if (appointments.Any(a => a.Service.Contains(minute)))
@@ -152,7 +174,8 @@ public sealed class ScheduleService(
         return Day(false, slots, appointments.Select(a => new TakenPeriodResponse(a.Start, a.End, a.BreakUntil)).ToList());
     }
 
-    public async Task EnsureBookableAsync(DateOnly date, TimeOnly startTime, int durationMinutes, int? movingBookingId, CancellationToken ct = default)
+    public async Task EnsureBookableAsync(DateOnly date, TimeOnly startTime, int durationMinutes, int? movingBookingId, CancellationToken ct = default,
+        bool bySalon = false)
     {
         var start = DayPeriod.ToMinutes(startTime);
         if (start < Opening)
@@ -161,6 +184,10 @@ public sealed class ScheduleService(
             throw new ValidationAppException("startTime", "Please choose one of the available appointment times.");
         if (date.ToDateTime(startTime) <= clock.LocalNow)
             throw new ValidationAppException("bookingDate", "Please choose a future date and time.");
+        if (date.ToDateTime(startTime) < EarliestFor(bySalon))
+            throw new ValidationAppException("startTime",
+                $"Please choose a time at least {NoticeText} from now, so Leyah can confirm your booking and get ready. For a sooner time, call or message the salon.",
+                "too_soon");
         var maxDaysAhead = await MaxDaysAheadAsync(ct);
         if (date > clock.Today.AddDays(maxDaysAhead))
             throw new ValidationAppException("bookingDate", $"Bookings can be made up to {maxDaysAhead} days in advance.");

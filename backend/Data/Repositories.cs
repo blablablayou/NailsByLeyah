@@ -73,6 +73,8 @@ public interface IBookingRepository
 
     /// <summary>Holds whose time ran out before they were paid.</summary>
     Task<List<Booking>> GetExpiredHoldsAsync(DateTime utcNow, CancellationToken ct = default);
+    /// <summary>The client's times still held while they pay (their hold hasn't run out).</summary>
+    Task<int> CountOpenHoldsAsync(int clientId, DateTime utcNow, CancellationToken ct = default);
 
     Task<int?> FindIdByCheckoutSessionAsync(string sessionId, CancellationToken ct = default);
     void RemoveCancellation(Cancellation cancellation);
@@ -315,6 +317,9 @@ internal sealed class BookingRepository(AppDbContext db) : IBookingRepository
         await Live.Where(b => b.CheckoutSessionId == sessionId).Select(b => (int?)b.Id).FirstOrDefaultAsync(ct);
 
     public void RemoveCancellation(Cancellation cancellation) => db.Cancellations.Remove(cancellation);
+
+    public Task<int> CountOpenHoldsAsync(int clientId, DateTime utcNow, CancellationToken ct) =>
+        Live.CountAsync(b => b.ClientId == clientId && b.Status == BookingStatus.AwaitingPayment && b.PaymentHoldUntil > utcNow, ct);
 
     public Task<List<Booking>> GetExpiredHoldsAsync(DateTime utcNow, CancellationToken ct) =>
         Live.Where(b => b.Status == BookingStatus.AwaitingPayment && b.PaymentHoldUntil <= utcNow).ToListAsync(ct);

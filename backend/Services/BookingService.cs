@@ -109,6 +109,13 @@ public sealed class BookingService(
         if (await bookings.FindByPaymentIdempotencyKeyAsync(request.IdempotencyKey, ct) is { } held)
             return (await ReplayHoldAsync(clientId, held, ct), false);
 
+        // Each unpaid hold keeps a time from everyone else, so one client can only hold a few at once.
+        var maxHolds = paymentOptions.Value.MaxHoldsPerClient;
+        if (hosted && maxHolds > 0 && await bookings.CountOpenHoldsAsync(clientId, clock.UtcNow, ct) >= maxHolds)
+            throw new ConflictException(
+                $"You already have {(maxHolds == 1 ? "a booking" : $"{maxHolds} bookings")} waiting for payment. Pay for one or cancel it in My bookings, then book again.",
+                "too_many_holds");
+
         // The client must have agreed to the Terms version in force now, not one shown before an update.
         if (request.TermsVersion != legalOptions.Value.TermsVersion)
             throw new ConflictException(
@@ -421,7 +428,7 @@ public sealed class BookingService(
         var nailColor = string.IsNullOrWhiteSpace(request.NailColor) ? null : ResolveColor(selection.Service, request.NailColor, hasColorRequest: true, rules: null);
         var quote = prices.Calculate(selection);
         var duration = selection.DurationMinutes;
-        await slots.EnsureBookableAsync(request.BookingDate, request.StartTime, duration, movingBookingId: null, ct);
+        await slots.EnsureBookableAsync(request.BookingDate, request.StartTime, duration, movingBookingId: null, ct, bySalon: true);
 
         Booking created;
         try
@@ -710,7 +717,8 @@ public sealed class BookingService(
         if (booking.BookingDate == request.BookingDate && booking.StartTime == request.StartTime)
             throw new ValidationAppException("startTime", "Choose a different date or time.");
 
-        await slots.EnsureBookableAsync(request.BookingDate, request.StartTime, booking.DurationMinutes, booking.Id, ct);
+        // A client moving their own booking gives the same notice as a new booking; Leyah moving it doesn't.
+        await slots.EnsureBookableAsync(request.BookingDate, request.StartTime, booking.DurationMinutes, booking.Id, ct, bySalon: !countForClient);
         var from = Describe(booking.BookingDate, booking.StartTime);
 
         try

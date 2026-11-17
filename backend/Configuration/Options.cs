@@ -54,6 +54,12 @@ public sealed class ScheduleOptions
     /// <summary>Mandatory gap after every appointment's scheduled end before the next one may begin.</summary>
     public int BufferMinutes { get; set; } = 30;
 
+    /// <summary>
+    /// How far ahead of now a client must book (or move a booking), so Leyah can see it, confirm it and get ready.
+    /// Bookings Leyah makes herself aren't limited. 0 turns it off.
+    /// </summary>
+    public int MinimumNoticeMinutes { get; set; } = 120;
+
     public int MaxDaysAhead { get; set; } = 30;
     public DayOfWeek[] ClosedDays { get; set; } = [];
 }
@@ -154,6 +160,9 @@ public sealed class PaymentOptions
 
     /// <summary>How long a slot is held while the client pays on Xendit's page.</summary>
     public int HoldMinutes { get; set; } = 15;
+
+    /// <summary>How many times one client may hold at once while paying, so one person can't block the calendar.</summary>
+    public int MaxHoldsPerClient { get; set; } = 2;
 
     /// <summary>How often holds whose time ran out are released (seconds); 0 turns the job off.</summary>
     public int HoldCheckIntervalSeconds { get; set; } = 60;

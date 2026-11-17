@@ -246,7 +246,10 @@ function serviceDuration(db, serviceId, removalServiceId) {
   return service.durationMinutes + removal.durationMinutes
 }
 
-function daySlots(db, date, serviceId, removalServiceId) {
+/** The earliest start a client may book now (the API's Schedule:MinimumNoticeMinutes); Leyah isn't limited. */
+const earliestFor = (bySalon) => new Date(Date.now() + (bySalon ? 0 : schedule.minimumNoticeMinutes) * MINUTE)
+
+function daySlots(db, date, serviceId, removalServiceId, bySalon = false) {
   const duration = serviceDuration(db, serviceId, removalServiceId)
   const starts = slotStarts(db)
   const blocks = blocksFor(db, date)
@@ -269,6 +272,7 @@ function daySlots(db, date, serviceId, removalServiceId) {
     const inside = ([from, to]) => from <= minute && minute < to
     const service = period(start, duration)
     if (startsAt(date, start) <= new Date()) return slot(start, 'Past')
+    if (startsAt(date, start) < earliestFor(bySalon)) return slot(start, 'TooSoon', `Book at least ${noticeText()} ahead`)
     if (beyondWindow || blocked.some(inside)) return slot(start, 'Closed')
     if (booked.some((b) => inside(b.service))) return slot(start, 'Booked')
     const resting = booked.find((b) => inside(b.occupied))
@@ -282,13 +286,20 @@ function daySlots(db, date, serviceId, removalServiceId) {
   return day(false, slots, booked.map((b) => ({ startTime: b.start, endTime: b.endTime, breakUntil: b.breakUntil })))
 }
 
-function ensureBookable(db, date, startTime, duration, movingBookingId = null) {
+const noticeText = () => {
+  const [h, min] = [Math.floor(schedule.minimumNoticeMinutes / 60), schedule.minimumNoticeMinutes % 60]
+  return [h ? `${h} hour${h === 1 ? '' : 's'}` : '', min ? `${min} minutes` : ''].filter(Boolean).join(' ')
+}
+
+function ensureBookable(db, date, startTime, duration, movingBookingId = null, bySalon = false) {
   if (!date) invalid('bookingDate', 'Select a booking date.')
   if (!startTime) invalid('startTime', 'Please choose one of the available appointment times.')
   if (toMinutes(startTime) < toMinutes(schedule.openingTime))
     invalid('startTime', `Appointments can't start before the ${clockText(schedule.openingTime)} opening time.`)
   if (!onGrid(startTime)) invalid('startTime', 'Please choose one of the available appointment times.')
   if (startsAt(date, startTime) <= new Date()) invalid('bookingDate', 'Please choose a future date and time.')
+  if (startsAt(date, startTime) < earliestFor(bySalon))
+    invalid('startTime', `Please choose a time at least ${noticeText()} from now, so Leyah can confirm your booking and get ready. For a sooner time, call or message the salon.`, 'too_soon')
   if (date > addDays(today(), schedule.maxDaysAhead))
     invalid('bookingDate', `Bookings can be made up to ${schedule.maxDaysAhead} days in advance.`)
   if (schedule.closedDaysOfWeek.includes(dayOfWeek(date))) conflict('The salon is closed on this day.', 'slot_unavailable')
@@ -629,7 +640,7 @@ function moveBooking(db, user, booking, body) {
   if (!isActive(booking)) conflict(`A ${booking.status} booking cannot be rescheduled.`, 'invalid_status')
   if (booking.bookingDate === body.bookingDate && booking.startTime === body.startTime)
     invalid('startTime', 'Choose a different date or time.')
-  ensureBookable(db, body.bookingDate, body.startTime, booking.durationMinutes, booking.id)
+  ensureBookable(db, body.bookingDate, body.startTime, booking.durationMinutes, booking.id, user.role === 'Administrator')
 
   const from = describe(booking.bookingDate, booking.startTime)
   Object.assign(booking, { bookingDate: body.bookingDate, startTime: body.startTime, reminderSentAt: null, updatedAt: nowIso() })
@@ -1017,7 +1028,7 @@ const routes = [
   ['GET', '/services', (db) => catalog(db, false)],
   ['GET', '/slots', (db, { query }) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(query.date ?? '')) invalid('date', 'Select a date.')
-    return daySlots(db, query.date, query.serviceId, query.removalServiceId)
+    return daySlots(db, query.date, query.serviceId, query.removalServiceId, sessionUser(db)?.role === 'Administrator')
   }],
   ['GET', '/slots/closed-dates', (db) => {
     const closed = []
@@ -1525,7 +1536,7 @@ const routes = [
     const selection = resolveSelection(db, body.serviceId, (body.addOns ?? []).map((a) => ({ hand: 'Both', ...a })), { requireHand: true, removalServiceId: body.removalServiceId ?? null })
     const nailColor = selection.service.category !== 'Removal' && String(body.nailColor ?? '').trim()
       ? NAIL_COLORS.find((c) => same(c, body.nailColor)) ?? invalid('nailColor', 'Choose one of the listed colours.') : null
-    ensureBookable(db, body.bookingDate, body.startTime, selection.durationMinutes)
+    ensureBookable(db, body.bookingDate, body.startTime, selection.durationMinutes, null, true) // Leyah: no notice
     const quote = quoteFor(selection, db)
     const option = body.paid && body.paid !== 'None' ? body.paid : null
     const amount = option === 'Full' ? quote.fullAmount : option === 'Deposit' ? quote.deposit : 0

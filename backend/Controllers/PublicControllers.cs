@@ -32,7 +32,7 @@ public sealed class SlotsController(ISlotAvailability slots) : ControllerBase
     /// </summary>
     [HttpGet]
     public Task<DaySlotsResponse> Get([FromQuery] DateOnly date, [FromQuery] int? serviceId, [FromQuery] int? removalServiceId, CancellationToken ct) =>
-        slots.GetDayAsync(date, serviceId, ct, removalServiceId);
+        slots.GetDayAsync(date, serviceId, ct, removalServiceId, bySalon: User.IsInRole(Roles.Administrator)); // Leyah isn't held to the notice
 
     /// <summary>Dates in the booking window the salon is closed all day (days off and dates Leyah blocked), for the calendar.</summary>
     [HttpGet("closed-dates")]
