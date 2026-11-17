@@ -1035,7 +1035,10 @@ public static class BookingMapper
         RefundDue: b.RefundDue,
         RefundSentAt: b.RefundSentAt,
         RefundReference: b.RefundReference,
-        RefundStatus: b.RefundStatus?.ToString());
+        RefundStatus: b.RefundStatus?.ToString(),
+        Payments: b.Payments.Where(x => x.Status == PaymentStatus.Succeeded).OrderBy(x => x.PaidAt).ThenBy(x => x.Id)
+            .Select(x => new ReceiptPaymentResponse(x.Option.ToString(), Labels.For(x.Option), x.Method.ToString(), x.ReferenceNumber, x.Amount, x.PaidAt))
+            .ToList());
 
     /// <summary>The removal first, as in the appointment, then the service and each Stone add-on.</summary>
     private static List<ReceiptLineResponse> ReceiptLines(Booking b)

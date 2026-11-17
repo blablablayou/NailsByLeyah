@@ -38,6 +38,16 @@ public sealed class PriceServiceTests
     }
 
     [Fact]
+    public void A_service_cheaper_than_the_deposit_asks_only_its_price()
+    {
+        var cheap = new RemovalService { Id = 9, Name = "My Work", Price = 100m };
+
+        var quote = _prices.Calculate(new ServiceSelection(cheap, []));
+
+        Assert.Equal((100m, 100m, 0m), (quote.Total, quote.Deposit, quote.BalanceDue)); // never PHP 150 for a PHP 100 service
+    }
+
+    [Fact]
     public void Balance_never_goes_below_zero()
     {
         var cheap = new RemovalService { Id = 9, Name = "Cheap", Price = 100m };

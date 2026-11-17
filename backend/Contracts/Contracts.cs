@@ -315,7 +315,11 @@ public sealed record ReceiptResponse(
     decimal RefundDue = 0, // owed back after a cancellation or no-show; see BookingPaymentResponse
     DateTime? RefundSentAt = null,
     string? RefundReference = null,
-    string? RefundStatus = null); // Processing while a refund is on its way back online; see BookingPaymentResponse
+    string? RefundStatus = null, // Processing while a refund is on its way back online; see BookingPaymentResponse
+    IReadOnlyList<ReceiptPaymentResponse>? Payments = null); // every payment on the booking, oldest first (deposit, then a balance paid online)
+
+/// <summary>One payment on a receipt: what it was for, how, its reference and amount.</summary>
+public sealed record ReceiptPaymentResponse(string Option, string OptionLabel, string Method, string ReferenceNumber, decimal Amount, DateTime PaidAt);
 
 /// <summary>One priced line on a receipt: the service, the removal before it, or a Stone add-on.</summary>
 public sealed record ReceiptLineResponse(string Description, decimal Amount);

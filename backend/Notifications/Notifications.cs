@@ -229,7 +229,7 @@ public sealed class EmailNotificationService(
     {
         var method = PaidWith(booking);
         var money = booking.RefundDue > 0
-            ? $"PHP {booking.RefundDue:0.00} will be sent back to the {method} account you paid from. You will get another email when it is sent."
+            ? $"PHP {booking.RefundDue:0.00} will be sent back to the {method} {(method.Contains(" and ") ? "accounts" : "account")} you paid from. You will get another email when it is sent."
             : booking.AmountPaid > 0
                 ? $"The PHP {Math.Min(booking.AmountPaid, booking.DepositAmount):0.00} deposit is kept, so nothing is refunded."
                 : "Nothing was paid, so there is nothing to refund.";
@@ -271,7 +271,7 @@ public sealed class EmailNotificationService(
         var method = PaidWith(booking);
         var online = booking.Payments.Sum(p => p.RefundedAmount); // part may have gone back online before Leyah sent the rest
         var how = booking.RefundStatus == OnlineRefundStatus.Succeeded
-            ? $"PHP {booking.RefundDue:0.00} was sent back to the {method} account you paid from. It can take a little while to show in your {method} app."
+            ? $"PHP {booking.RefundDue:0.00} was sent back to the {method} {(method.Contains(" and ") ? "accounts" : "account")} you paid from. It can take a little while to show in your {method} app."
             : $"Leyah sent your refund of PHP {booking.RefundDue - online:0.00} by GCash or Maya." +
               (booking.RefundReference is { } reference ? $"{Environment.NewLine}Reference: {reference}" : "") +
               (online > 0 ? $"{Environment.NewLine}PHP {online:0.00} had already gone back to the account you paid from." : "");
@@ -287,10 +287,17 @@ public sealed class EmailNotificationService(
             """, ct);
     }
 
-    /// <summary>GCash or Maya, as the client paid; GCash when the payment isn't known.</summary>
-    private static string PaidWith(Booking booking) =>
-        booking.Payments.Where(p => p.Status == PaymentStatus.Succeeded).OrderBy(p => p.PaidAt).FirstOrDefault()?.Method == PaymentMethod.Maya
-            ? "Maya" : "GCash";
+    /// <summary>
+    /// GCash or Maya, as the client paid; "GCash and Maya" when the deposit and the balance went through different
+    /// wallets; GCash when the payment isn't known.
+    /// </summary>
+    private static string PaidWith(Booking booking)
+    {
+        var methods = booking.Payments.Where(p => p.Status == PaymentStatus.Succeeded).Select(p => p.Method).Distinct().ToList();
+        if (methods.Contains(PaymentMethod.GCash) && methods.Contains(PaymentMethod.Maya))
+            return "GCash and Maya";
+        return methods.FirstOrDefault() == PaymentMethod.Maya ? "Maya" : "GCash";
+    }
 
     private static string FullName(User user) => $"{user.FirstName} {user.LastName}";
 }

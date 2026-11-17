@@ -20,6 +20,20 @@ const BOOKING = {
 }
 const show = (receipt = {}, booking = {}) => render(<Receipt receipt={{ ...RECEIPT, ...receipt }} booking={{ ...BOOKING, ...booking }} />)
 
+describe('Receipt with the balance paid online', () => {
+  it('lists the deposit and the balance, each with its reference, and the total paid', () => {
+    show({ amount: 150, amountPaid: 499, paymentOptionLabel: 'Booking deposit', payments: [
+      { option: 'Deposit', optionLabel: 'Booking deposit', method: 'GCash', referenceNumber: 'py-dep-1', amount: 150, paidAt: '2026-11-15T04:59:00Z' },
+      { option: 'Balance', optionLabel: 'Balance', method: 'Maya', referenceNumber: 'py-bal-1', amount: 349, paidAt: '2026-11-16T04:59:00Z' },
+    ] }, { totalPrice: 499, balanceDue: 0 })
+
+    const payments = screen.getByRole('list', { name: 'Payments' })
+    expect(payments).toHaveTextContent('Booking deposit via GCash py-dep-1₱150.00')
+    expect(payments).toHaveTextContent('Balance via Maya py-bal-1₱349.00')
+    expect(screen.getByRole('group', { name: 'Totals' })).toHaveTextContent('Amount paid₱499.00')
+  })
+})
+
 describe('Payment receipt polish', () => {
   it('copies the reference number', async () => {
     const user = userEvent.setup()

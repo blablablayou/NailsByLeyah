@@ -51,14 +51,15 @@ public sealed class PaymentOptionTests(ApiFactory factory) : IClassFixture<ApiFa
     }
 
     [Fact]
-    public async Task A_full_payment_is_never_less_than_the_non_refundable_deposit()
+    public async Task A_service_cheaper_than_the_deposit_is_charged_only_its_price()
     {
         var user = await factory.CreateClientAsync();
         var request = Booking(RemovalMyWork, PaymentOption.Full);
 
         var result = await user.Client.BookAsync(request);
 
-        Assert.Equal(150m, factory.Gateway.AmountsByKey[request.IdempotencyKey]);
+        Assert.Equal(100m, factory.Gateway.AmountsByKey[request.IdempotencyKey]); // never PHP 150 for a PHP 100 removal
+        Assert.Equal(100m, result.Booking.DepositAmount);
         Assert.Equal(0m, result.Booking.BalanceDue);
     }
 

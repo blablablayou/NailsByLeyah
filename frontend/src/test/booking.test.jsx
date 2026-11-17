@@ -30,6 +30,12 @@ describe('Payment step', () => {
     expect(screen.queryByText(/GCash \/ Maya number/)).toBeNull()
   })
 
+  it('offers only the full payment when the service costs no more than the deposit', () => {
+    render(panel({ option: null, quote: { total: 100, deposit: 100, fullAmount: 100, balanceDue: 0, lines: [] } }))
+    expect(screen.queryByRole('radio', { name: 'Booking deposit' })).toBeNull()
+    expect(screen.getByRole('radio', { name: 'Full payment' }).closest('label')).toHaveTextContent('₱100.00')
+  })
+
   it('starts with nothing picked: the client chooses how much and how to pay', async () => {
     const user = userEvent.setup()
     render(panel({ option: null }))

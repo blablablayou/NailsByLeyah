@@ -54,8 +54,11 @@ export function PaymentPanel({ quote, option, onOptionChange, onPay, error }) {
     }
   }
 
+  // A service that costs no more than the deposit has nothing left after it, so only the full payment is offered.
   const options = [
-    { value: 'Deposit', title: 'Booking deposit', note: <>Pay the rest (<Money amount={balanceAfter(quote, 'Deposit')} />) at the salon</> },
+    ...(quote.deposit < quote.total
+      ? [{ value: 'Deposit', title: 'Booking deposit', note: <>Pay the rest (<Money amount={balanceAfter(quote, 'Deposit')} />) at the salon</> }]
+      : []),
     { value: 'Full', title: 'Full payment', note: <>Nothing left to pay at the salon</> },
   ]
 

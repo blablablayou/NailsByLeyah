@@ -19,6 +19,11 @@ describe('Shared rules', () => {
     expect(quote).toMatchObject({ total: 570, deposit: 150, balanceDue: 420 })
   })
 
+  it('never asks more than the price: a service cheaper than the deposit costs just its price', () => {
+    const quote = calculateQuote({ id: 7, name: 'My Work', price: 100 }, [], 150)
+    expect(quote).toMatchObject({ total: 100, deposit: 100, balanceDue: 0, fullAmount: 100 })
+  })
+
   it('validates registration with the same limits as the backend', () => {
     const errors = validateRegistration({ firstName: 'x'.repeat(76), lastName: '', username: 'ab', email: 'nope',
       phoneNumber: 'abc#', password: 'short', confirmPassword: 'other', acceptTerms: false })

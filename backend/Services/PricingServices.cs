@@ -47,6 +47,9 @@ public sealed class PriceService(IServiceCatalogRepository catalog, IOptions<Boo
             .ToList();
 
         var total = lines.Sum(l => l.LineTotal);
+        // A service cheaper than the deposit asks only its price: the client never pays more than the appointment costs.
+        if (total > 0)
+            deposit = Math.Min(deposit, total);
         return new PriceQuote(lines, total, deposit, Math.Max(0, total - deposit));
     }
 

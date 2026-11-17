@@ -115,7 +115,21 @@ export function Receipt({ receipt, booking }) {
         <dt>Booking number</dt>
         <dd>#{receipt.bookingId}</dd>
         <dt>Payment</dt>
-        <dd>{receipt.paymentOptionLabel ?? 'Booking deposit'} via {receipt.method}</dd>
+        {receipt.payments?.length > 1 ? (
+          <dd>
+            {/* The deposit, then the balance paid online: each with its own reference. */}
+            <ul className="receipt-payments" aria-label="Payments">
+              {receipt.payments.map((p) => (
+                <li key={p.referenceNumber}>
+                  <span>{p.optionLabel} via {p.method} <span className="mono muted small">{p.referenceNumber}</span></span>
+                  <span className="receipt-price"><Money amount={p.amount} /></span>
+                </li>
+              ))}
+            </ul>
+          </dd>
+        ) : (
+          <dd>{receipt.paymentOptionLabel ?? 'Booking deposit'} via {receipt.method}</dd>
+        )}
         <dt>Appointment</dt>
         <dd>{formatDate(receipt.bookingDate)}, {formatTime(receipt.startTime)}</dd>
         <dt>Service</dt>
@@ -141,7 +155,7 @@ export function Receipt({ receipt, booking }) {
           <dt>Total</dt>
           <dd><Money amount={total} /></dd>
           <dt>Amount paid</dt>
-          <dd><Money amount={receipt.amount} /></dd>
+          <dd><Money amount={receipt.amountPaid || receipt.amount} /></dd>
           {closed ? (
             <>
               <dt>Refund</dt>

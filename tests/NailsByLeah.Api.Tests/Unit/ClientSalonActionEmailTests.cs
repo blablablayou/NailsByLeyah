@@ -87,6 +87,23 @@ public sealed class ClientSalonActionEmailTests
         Assert.DoesNotContain("rfd-123", body); // the payment service's own id means nothing to the client
     }
 
+    [Fact]
+    public async Task A_refund_back_to_two_wallets_names_both()
+    {
+        var sent = new CapturingEmailSender();
+        var booking = SampleBooking(amountPaid: 400m, refundDue: 400m);
+        booking.RefundStatus = OnlineRefundStatus.Succeeded;
+        booking.Payments =
+        [
+            new Payment { Method = PaymentMethod.GCash, Status = PaymentStatus.Succeeded, ReferenceNumber = "py-dep", Amount = 150m },
+            new Payment { Method = PaymentMethod.Maya, Status = PaymentStatus.Succeeded, ReferenceNumber = "py-bal", Amount = 250m, Option = PaymentOption.Balance },
+        ];
+
+        await Service(sent).SendRefundSentAsync(booking);
+
+        Assert.Contains("PHP 400.00 was sent back to the GCash and Maya accounts you paid from", Assert.Single(sent.Mails).Body);
+    }
+
     private static EmailNotificationService Service(IEmailSender sender) => new(
         sender,
         Options.Create(new AuthOptions()),

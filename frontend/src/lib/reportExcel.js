@@ -162,7 +162,7 @@ export function buildSalesReportWorkbook(ExcelJS, { period, report, generatedAt 
   line('Net received', netReceived(report), PESO, { strong: true, note: 'total received, less the refunds sent' })
   line('Total received', totalReceived(report), PESO, { note: 'online payments plus balances' })
   line('Refunds sent', report.refundsSent ?? 0, PESO, { note: 'sent back to clients' })
-  line('Paid online', report.depositsCollected, PESO, { note: 'deposits and full payments' })
+  line('Paid online', report.depositsCollected, PESO, { note: 'deposits, full payments and balances paid online' })
   line('Balances received', report.balancesReceived, PESO, { note: 'paid after the service' })
   line('Completed services', report.completedServicesValue, PESO, { note: 'full price of appointments completed' })
   line('Balances unpaid', report.balancesUnpaid, PESO, { note: 'completed, not recorded yet' })

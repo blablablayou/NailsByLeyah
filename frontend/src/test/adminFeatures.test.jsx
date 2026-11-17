@@ -49,7 +49,7 @@ describe('Leyah books for a client herself', () => {
     return Object.fromEntries([...summary.querySelectorAll('.nb-sum-total div')].map((d) => [d.querySelector('dt').textContent, d.querySelector('dd').textContent]))
   }
 
-  it('books a removal on its own: no set options, and paid now is at least the deposit', async () => {
+  it('books a removal on its own: no set options, and never more than its price', async () => {
     const user = userEvent.setup()
     const dialog = await openNewBooking(user)
     await user.click(within(within(dialog).getByRole('radiogroup', { name: 'Removal only' })).getByRole('radio', { name: /^My Work/ }))
@@ -59,11 +59,11 @@ describe('Leyah books for a client herself', () => {
     expect(within(dialog).queryByRole('button', { name: /^More nails with/ })).toBeNull()
     expect(within(dialog).getByRole('complementary', { name: 'Booking summary' })).toHaveTextContent('Removal only: My Work')
 
-    // The ₱100 removal is below the ₱150 deposit: what is recorded as paid is the deposit, as the backend does.
+    // The ₱100 removal is below the ₱150 deposit: the deposit is its price, so nobody pays more than it costs (as the backend does).
     await user.click(within(dialog).getByRole('radio', { name: 'Deposit' }))
-    expect(summaryAmounts(dialog)).toEqual({ Total: '₱100.00', 'Paid now': '₱150.00', 'Left at the salon': '₱0.00' })
+    expect(summaryAmounts(dialog)).toEqual({ Total: '₱100.00', 'Paid now': '₱100.00', 'Left at the salon': '₱0.00' })
     await user.click(within(dialog).getByRole('radio', { name: 'Full payment' }))
-    expect(summaryAmounts(dialog)).toEqual({ Total: '₱100.00', 'Paid now': '₱150.00', 'Left at the salon': '₱0.00' })
+    expect(summaryAmounts(dialog)).toEqual({ Total: '₱100.00', 'Paid now': '₱100.00', 'Left at the salon': '₱0.00' })
     await user.click(within(dialog).getByRole('radio', { name: 'Nothing yet' }))
     expect(summaryAmounts(dialog)).toEqual({ Total: '₱100.00', 'Paid now': '₱0.00', 'Left at the salon': '₱100.00' })
   })

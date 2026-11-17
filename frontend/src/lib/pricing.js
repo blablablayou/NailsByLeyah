@@ -23,8 +23,10 @@ export function calculateQuote(service, addOns, deposit, removal = null) {
       unitPrice: addOn.price, quantity: nailCount, lineTotal: round(addOn.price * nailCount) })
   }
   const total = round(lines.reduce((sum, line) => sum + line.lineTotal, 0))
-  // Paying in full covers the total; it is never less than the non-refundable deposit it includes (same rule as the backend).
-  return { lines, total, deposit, balanceDue: Math.max(0, round(total - deposit)), fullAmount: Math.max(total, deposit) }
+  // A service cheaper than the deposit asks only its price (same rule as the backend): nobody pays more than it costs.
+  const due = total > 0 ? Math.min(deposit, total) : deposit
+  // Paying in full covers the total; it is never less than the non-refundable deposit it includes.
+  return { lines, total, deposit: due, balanceDue: Math.max(0, round(total - due)), fullAmount: Math.max(total, due) }
 }
 
 const round = (value) => Math.round(value * 100) / 100

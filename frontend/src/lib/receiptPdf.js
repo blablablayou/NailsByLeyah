@@ -91,6 +91,11 @@ export function buildReceiptPdf(JsPdf, receipt, generatedAt = new Date()) {
   row('Payment method', receipt.method)
   row('Transaction reference', receipt.referenceNumber)
   row('Payment date', when(receipt.paidAt))
+  // A balance paid online before the appointment is its own payment, with its own reference.
+  for (const extra of (receipt.payments ?? []).slice(1)) {
+    row(`${extra.optionLabel} paid`, `${php(extra.amount)} via ${extra.method}, ${when(extra.paidAt)}`)
+    row(`${extra.optionLabel} reference`, extra.referenceNumber)
+  }
   row('Payment status', receipt.verified ? `Verified by the salon${receipt.verifiedAt ? ` on ${when(receipt.verifiedAt)}` : ''}` : 'Paid')
   if (closed) {
     row('Booking status', receipt.bookingStatus === 'NoShow' ? 'No-show' : 'Cancelled')
@@ -118,7 +123,7 @@ export function buildReceiptPdf(JsPdf, receipt, generatedAt = new Date()) {
   y += 66
 
   text(closed
-    ? 'The PHP 150 booking deposit is kept for client cancellations and no-shows; when the salon cancels, everything is refunded.'
+    ? 'The booking deposit is kept for client cancellations and no-shows; when the salon cancels, everything is refunded.'
     : 'The booking deposit is non-refundable. Please bring this receipt or its reference number to your appointment.', LEFT,
     { size: 8.5, color: MUTED, maxWidth: RIGHT - LEFT })
   y += 14
