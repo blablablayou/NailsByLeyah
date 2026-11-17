@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { AdminNav, ClientAccountMenu } from './AdminNav'
 import { ErrorBoundary } from './ErrorBoundary'
@@ -38,6 +38,17 @@ export function Layout() {
   const setAccessDenied = () => setDismissedAt(location.key)
 
   const isAdmin = user?.role === 'Administrator'
+
+  // Moving to another page: the new page fades in (opacity only, so fixed bars and sticky headers don't move). Not on
+  // the first load, which has its own opening animation, and not with "Reduce motion".
+  const mainRef = useRef(null)
+  const shownPath = useRef(location.pathname) // the page already on screen: no fade for it (also when an effect runs twice)
+  useEffect(() => {
+    if (shownPath.current === location.pathname) return
+    shownPath.current = location.pathname
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (!reduce) mainRef.current?.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' })
+  }, [location.pathname])
   const isHome = location.pathname === '/'
   // Checked again when the client signs in or moves between their own pages, so a visit Leyah just completed shows up.
   const isClientPage = ['/book', '/bookings', '/feedback', '/profile'].includes(location.pathname)
@@ -98,7 +109,7 @@ export function Layout() {
         </div>
       </header>
 
-      <main id="main" className={isHome ? 'page page-home' : 'page'}>
+      <main id="main" ref={mainRef} className={isHome ? 'page page-home' : 'page'}>
         {accessDenied && (
           <Alert kind="warning" onClose={setAccessDenied}>
             You don&apos;t have access to that page, so we brought you here instead.
