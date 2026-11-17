@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { api } from '../../api'
 import { errorMessage } from '../../api/errors'
-import { formatDate, formatTime } from '../../lib/format'
+import { formatDate, formatMoney, formatTime } from '../../lib/format'
 import { Alert, Card, Money, PageHeader, PageLoader } from '../../components/ui'
 
 const CHECK_EVERY_MS = 3_000
@@ -13,7 +13,7 @@ const CHECK_FOR_MS = 60_000
  * minute, then says what happened. Nothing was held, so leaving without paying just leaves the balance due.
  */
 export function BalanceReturn({ bookingId }) {
-  const [state, setState] = useState({ kind: 'checking' }) // checking | paid | notPaid | slow | error
+  const [state, setState] = useState({ kind: 'checking' }) // checking | paid | refundDue | notPaid | slow | error
   const startedAt = useRef(0)
 
   useEffect(() => {
@@ -26,6 +26,10 @@ export function BalanceReturn({ bookingId }) {
         if (stopped) return
         if (status.status === 'Paid') {
           setState({ kind: 'paid', booking: await api.bookings.get(bookingId) })
+          return
+        }
+        if (status.status === 'PaidRefundDue') {
+          setState({ kind: 'refundDue', amount: status.amount })
           return
         }
         if (status.status === 'NotCompleted') {
@@ -58,6 +62,16 @@ export function BalanceReturn({ bookingId }) {
               {b.serviceName} on <strong>{formatDate(b.bookingDate)}</strong> at <strong>{formatTime(b.startTime)}</strong>:
               {' '}<Money amount={b.payment?.amountPaid ?? b.totalPrice} /> paid, nothing left to pay at the salon.
             </p>
+            <div className="row"><Link to="/bookings" className="btn btn-primary">Go to My bookings</Link></div>
+          </Card>
+        </>
+      )}
+      {state.kind === 'refundDue' && (
+        <>
+          <PageHeader title="Payment received" subtitle={`We received ${formatMoney(state.amount)}, but couldn't add it to this booking.`} />
+          <Card className="payment-return">
+            <p>The booking had already been cancelled or its balance settled before the payment came through. Leyah will send the
+              full amount back to the account you paid from. You don&apos;t need to do anything.</p>
             <div className="row"><Link to="/bookings" className="btn btn-primary">Go to My bookings</Link></div>
           </Card>
         </>

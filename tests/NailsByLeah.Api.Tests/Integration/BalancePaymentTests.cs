@@ -139,6 +139,45 @@ public sealed class BalancePaymentTests(XenditApiFactory factory) : IClassFixtur
         Assert.True(factory.WithDb(db => db.AuditLogs.Any(a => a.EntityId == id.ToString() && a.Details!.Contains("needs a manual refund"))));
     }
 
+    [Fact]
+    public async Task A_payment_that_cant_be_accepted_is_noted_once_and_the_client_is_told_it_comes_back()
+    {
+        var (id, user, admin, balance) = await Confirmed();
+        await (await StartBalance(user.Client, id)).ShouldHaveStatus(HttpStatusCode.OK);
+        var reference = factory.Checkout.LastRequest!.Reference;
+        var session = factory.WithDb(db => db.Bookings.Single(b => b.Id == id).CheckoutSessionId!);
+        await (await admin.PostJsonAsync($"/api/admin/bookings/{id}/cancel",
+            new AdminCancelRequest(AdminCancellationReason.StaffUnavailable, null))).ShouldHaveStatus(HttpStatusCode.OK);
+
+        // Xendit reports it twice, and the client's page keeps asking.
+        await factory.PostWebhookAsync(BalancePaid(session, reference, balance, $"py-late-{id}"));
+        await factory.PostWebhookAsync(BalancePaid(session, reference, balance, $"py-late-{id}"));
+        factory.Checkout.Statuses[session] = new CheckoutStatus(session, CheckoutState.Paid, $"py-late-{id}", balance, "PHP", reference);
+        factory.Clock.Advance(TimeSpan.FromSeconds(6));
+        var status = await user.Client.GetAsync<PaymentStatusResponse>($"/api/bookings/{id}/balance/status");
+
+        Assert.Equal(("PaidRefundDue", balance), (status.Status, status.Amount));
+        Assert.Equal(1, factory.WithDb(db => db.AuditLogs.Count(a => a.EntityId == id.ToString() && a.Details!.Contains("needs a manual refund"))));
+    }
+
+    [Fact]
+    public async Task Paying_again_after_a_payment_that_wasnt_accepted_says_it_comes_back_not_already_paid()
+    {
+        var (id, user, _, balance) = await Confirmed();
+        await (await StartBalance(user.Client, id)).ShouldHaveStatus(HttpStatusCode.OK);
+        var reference = factory.Checkout.LastRequest!.Reference;
+        var session = factory.WithDb(db => db.Bookings.Single(b => b.Id == id).CheckoutSessionId!);
+        factory.Checkout.Statuses[session] = new CheckoutStatus(session, CheckoutState.Paid, $"py-short-{id}", balance - 1, "PHP", reference); // not the amount due
+
+        var first = await StartBalance(user.Client, id);
+        var second = await StartBalance(user.Client, id);
+
+        Assert.Equal("balance_payment_refund_due", (await first.ReadProblemAsync()).ProblemCode());
+        Assert.Equal("balance_payment_refund_due", (await second.ReadProblemAsync()).ProblemCode());
+        Assert.Equal(balance, factory.Load(id).BalanceDue);
+        Assert.Equal(1, factory.WithDb(db => db.AuditLogs.Count(a => a.EntityId == id.ToString() && a.Details!.Contains("needs a manual refund"))));
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

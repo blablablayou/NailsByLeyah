@@ -1,4 +1,5 @@
 using NailsByLeah.Api.Contracts;
+using Microsoft.EntityFrameworkCore;
 using NailsByLeah.Api.Data;
 using NailsByLeah.Api.Domain;
 using NailsByLeah.Api.Errors;
@@ -90,7 +91,7 @@ public sealed class OnlineRefundService(
         await SendNextPartAsync(booking, ct);
         await unitOfWork.SaveChangesAsync(CancellationToken.None); // whatever happened at the provider is kept
         await TellClientIfSentAsync(booking);
-        return BookingMapper.ToResponse(booking, includeClient: true);
+        return BookingMapper.ToResponse(await CurrentAsync(booking, ct), includeClient: true);
     }
 
     public async Task<BookingResponse> CheckAsync(int bookingId, CancellationToken ct = default)
@@ -111,7 +112,7 @@ public sealed class OnlineRefundService(
         }
         await unitOfWork.SaveChangesAsync(ct);
         await TellClientIfSentAsync(booking);
-        return BookingMapper.ToResponse(booking, includeClient: true);
+        return BookingMapper.ToResponse(await CurrentAsync(booking, ct), includeClient: true);
     }
 
     public async Task<bool> ApplyAsync(RefundOutcome outcome, CancellationToken ct = default)
@@ -195,7 +196,20 @@ public sealed class OnlineRefundService(
                 {
                     audit.Record(AuditActions.RefundSent, nameof(Booking), booking.Id,
                         $"PHP {part.Amount:0.00} of PHP {booking.RefundDue:0.00} sent back online ({outcome.RefundId}); sending the rest");
-                    await unitOfWork.SaveChangesAsync(CancellationToken.None); // the part that arrived is kept whatever happens next
+                    // Saving the booking too checks its row version: when the provider's notification and its own answer
+                    // arrive together, only the first to save sends the next part, so it never goes out twice.
+                    booking.UpdatedAt = now;
+                    try
+                    {
+                        await unitOfWork.SaveChangesAsync(CancellationToken.None); // the part that arrived is kept whatever happens next
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        unitOfWork.DiscardChanges();
+                        _lostRace = true;
+                        logger.LogInformation("Refund {RefundId} for booking {BookingId} was already handled by another request", outcome.RefundId, booking.Id);
+                        return false;
+                    }
                     await SendNextPartAsync(booking, ct);
                 }
                 return true;
@@ -210,6 +224,12 @@ public sealed class OnlineRefundService(
 
     // A refund only turns Succeeded once, so a repeated notification never sends a second email.
     private bool _sentNow;
+
+    // Another request applied the same answer first; this one's copy of the booking was dropped, so it is read again.
+    private bool _lostRace;
+
+    private async Task<Booking> CurrentAsync(Booking booking, CancellationToken ct) =>
+        _lostRace ? await LoadAsync(booking.Id, ct) : booking;
 
     /// <summary>Emails the client once their refund has gone back online, after the change is saved.</summary>
     private async Task TellClientIfSentAsync(Booking booking)

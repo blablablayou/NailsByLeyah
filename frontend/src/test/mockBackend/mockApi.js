@@ -1235,7 +1235,11 @@ const routes = [
     const user = requireUser(db, 'Client')
     const booking = ownedBooking(db, user, params.id)
     const paidAlready = () => db.payments.some((p) => p.bookingId === booking.id && p.option === 'Balance' && p.status === 'Succeeded')
-    if (!paidAlready() && booking.balanceCheckout && (db.flags.paidBalances ?? []).includes(booking.id)) {
+    const pagePaid = booking.balanceCheckout && (db.flags.paidBalances ?? []).includes(booking.id)
+    // Paid after the booking was cancelled: the money can't go on it, so Leyah sends it back.
+    if (!paidAlready() && pagePaid && booking.status !== 'Confirmed')
+      return { status: 'PaidRefundDue', checkoutUrl: null, holdUntil: null, amount: booking.balanceCheckout.amount }
+    if (!paidAlready() && pagePaid) {
       const { method, amount } = booking.balanceCheckout
       db.payments.push({ id: nextId('payments'), bookingId: booking.id, clientId: user.id, method, option: 'Balance', amount,
         totalAmount: booking.servicePrice, balanceAfter: 0, referenceNumber: `py-bal-${booking.id}-${randomHex(3)}`,

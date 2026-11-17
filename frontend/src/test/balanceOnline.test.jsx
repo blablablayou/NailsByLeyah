@@ -75,6 +75,26 @@ describe('Paying the balance online', () => {
     expect(paid).toHaveLength(1)
   })
 
+  it('paying after the booking was cancelled says the money was received and will be sent back', async () => {
+    const booking = confirmedWithBalance()
+    const user = userEvent.setup()
+    await signIn(CLIENT)
+    const { unmount } = renderApp('/bookings')
+    await user.click(within(await screen.findByRole('group', { name: 'Pay balance online' })).getByRole('button', { name: 'Pay with GCash' }))
+    await waitFor(() => expect(goToExternal).toHaveBeenCalled())
+    unmount()
+
+    const db = getDb()
+    db.bookings.find((b) => b.id === booking.id).status = 'Cancelled'
+    db.flags.paidBalances = [booking.id]
+    saveDb()
+    renderApp(`/bookings/payment?booking=${booking.id}&for=balance`)
+
+    expect(await screen.findByRole('heading', { name: 'Payment received' })).toBeInTheDocument()
+    expect(screen.getByText(/Leyah will send the full amount back/)).toBeInTheDocument()
+    expect(screen.queryByText(/You have not been charged/)).not.toBeInTheDocument()
+  })
+
   it('coming back without paying says nothing was charged and the balance is still due', async () => {
     const booking = confirmedWithBalance()
     await signIn(CLIENT)

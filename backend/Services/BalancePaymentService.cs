@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using Microsoft.Extensions.Options;
 using NailsByLeah.Api.Configuration;
 using NailsByLeah.Api.Contracts;
@@ -34,6 +35,7 @@ public sealed class BalancePaymentService(
     IHostedCheckout checkout,
     IUnitOfWork unitOfWork,
     IAuditLogger audit,
+    IAuditLogRepository auditLogs,
     ISalonClock clock,
     IBackgroundNotifications background,
     ISalonProfileService salonProfile,
@@ -77,7 +79,10 @@ public sealed class BalancePaymentService(
         {
             if (earlier.State == CheckoutState.Paid)
             {
-                await ApplyAsync(booking.Id, earlier, ct);
+                if (await ApplyAsync(booking.Id, earlier, ct) == ConfirmationOutcome.PaidButNeedsRefund)
+                    throw new ConflictException(
+                        "Your earlier balance payment couldn't be added to this booking, so Leyah will send it back. Please pay the balance at the salon.",
+                        "balance_payment_refund_due");
                 throw new ConflictException("This balance has already been paid.", "already_paid");
             }
             if (earlier.State == CheckoutState.Open)
@@ -125,11 +130,14 @@ public sealed class BalancePaymentService(
         var status = await TryGetStatusAsync(session, ct);
         if (status is { State: CheckoutState.Paid } && HostedCheckoutReference.TryParseBalance(status.Reference, out _))
         {
-            await ApplyAsync(booking.Id, status, ct);
+            var outcome = await ApplyAsync(booking.Id, status, ct);
             unitOfWork.DiscardChanges();
             booking = await OwnedAsync(clientId, bookingId, ct);
             if (HasPaidBalance(booking))
                 return new PaymentStatusResponse("Paid", null, null);
+            // The money was taken but couldn't go on the booking (cancelled or settled meanwhile): Leyah sends it back.
+            if (outcome == ConfirmationOutcome.PaidButNeedsRefund)
+                return new PaymentStatusResponse("PaidRefundDue", null, null, status.Amount);
         }
         return status is null or { State: CheckoutState.Open }
             ? new PaymentStatusResponse("Waiting", booking.CheckoutUrl, null)
@@ -153,9 +161,13 @@ public sealed class BalancePaymentService(
                        && booking.Status is BookingStatus.Pending or BookingStatus.Confirmed or BookingStatus.Completed;
         if (!accepted)
         {
+            // The same payment reported again (a repeated notification, or the client's page checking): Leyah was told once.
+            if (await auditLogs.ExistsAsync(AuditActions.PaymentSucceeded, nameof(Booking), booking.Id.ToString(CultureInfo.InvariantCulture),
+                    RejectedNote(reference), ct))
+                return ConfirmationOutcome.PaidButNeedsRefund;
             // Cancelled meanwhile, settled at the salon, or a different amount: the money is real, so Leyah gives it back.
             audit.Record(AuditActions.PaymentSucceeded, nameof(Booking), booking.Id,
-                $"Balance payment {reference} of {status.Currency} {amount:0.00} received online but not accepted " +
+                $"{RejectedNote(reference)} {status.Currency} {amount:0.00} received online but not accepted " +
                 $"({booking.Status}, PHP {due:0.00} left to pay): needs a manual refund");
             await unitOfWork.SaveChangesAsync(ct);
             logger.LogWarning("A balance payment for booking {BookingId} could not be accepted", booking.Id);
@@ -201,6 +213,9 @@ public sealed class BalancePaymentService(
             await background.EnqueueAsync((n, stop) => n.SendSalonBalancePaidAsync(booking, payment, stop), $"balance paid alert for booking {booking.Id}");
         return ConfirmationOutcome.Confirmed;
     }
+
+    /// <summary>How the audit entry for a balance payment that wasn't accepted begins; it is how a repeat is recognised.</summary>
+    private static string RejectedNote(string reference) => $"Balance payment {reference} of";
 
     private static bool HasPaidBalance(Booking booking) =>
         booking.Payments.Any(p => p.Option == PaymentOption.Balance && p.Status == PaymentStatus.Succeeded);

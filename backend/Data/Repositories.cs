@@ -168,6 +168,9 @@ public interface IAuditLogRepository
 {
     void Add(AuditLog entry);
     Task<(List<AuditLog> Items, int TotalCount)> SearchAsync(AuditLogCriteria criteria, CancellationToken ct = default);
+
+    /// <summary>Whether an entry with this action, about this record, whose details start with this text, was already written.</summary>
+    Task<bool> ExistsAsync(string action, string entityType, string entityId, string detailsStart, CancellationToken ct = default);
 }
 
 internal sealed class UserRepository(AppDbContext db) : IUserRepository
@@ -479,6 +482,10 @@ internal sealed class BlockedSlotRepository(AppDbContext db) : IBlockedSlotRepos
 internal sealed class AuditLogRepository(AppDbContext db) : IAuditLogRepository
 {
     public void Add(AuditLog entry) => db.AuditLogs.Add(entry);
+
+    public Task<bool> ExistsAsync(string action, string entityType, string entityId, string detailsStart, CancellationToken ct) =>
+        db.AuditLogs.AnyAsync(a => a.Action == action && a.EntityType == entityType && a.EntityId == entityId
+                                   && a.Details != null && a.Details.StartsWith(detailsStart), ct);
 
     public async Task<(List<AuditLog> Items, int TotalCount)> SearchAsync(AuditLogCriteria c, CancellationToken ct)
     {
