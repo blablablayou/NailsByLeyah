@@ -93,12 +93,20 @@ public interface IFeedbackService
 }
 
 /// <summary>Star ratings (1-5) with optional comments. Clients rate the salon; the administrator reads them.</summary>
-public sealed class FeedbackService(IFeedbackRepository feedback, IUnitOfWork unitOfWork, IAuditLogger audit, ISalonClock clock) : IFeedbackService
+public sealed class FeedbackService(IFeedbackRepository feedback, IBookingRepository bookings, IUnitOfWork unitOfWork, IAuditLogger audit, ISalonClock clock)
+    : IFeedbackService
 {
     public async Task<(FeedbackResponse Response, bool Created)> SubmitAsync(int clientId, SubmitFeedbackRequest request, CancellationToken ct = default)
     {
         if (await feedback.FindBySubmissionKeyAsync(request.SubmissionKey, ct) is { } earlier)
             return (Replay(earlier, clientId), false);
+
+        // One rating per finished appointment, so the stars on the home page come from real visits.
+        var visits = (await bookings.GetForClientAsync(clientId, ct)).Count(b => b.Status == BookingStatus.Completed);
+        if (visits == 0)
+            throw new ConflictException("You can rate us after your first appointment.", "feedback_needs_visit");
+        if ((await feedback.GetForClientAsync(clientId, ct)).Count >= visits)
+            throw new ConflictException("You've rated each of your appointments. You can rate us again after your next one.", "feedback_all_rated");
 
         var item = new Feedback
         {

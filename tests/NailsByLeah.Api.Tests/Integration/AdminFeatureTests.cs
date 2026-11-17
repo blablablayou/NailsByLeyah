@@ -134,6 +134,7 @@ public sealed class AdminFeatureTests(ApiFactory factory) : IClassFixture<ApiFac
     public async Task Leyah_replies_to_feedback_and_the_client_sees_it()
     {
         var user = await factory.CreateClientAsync();
+        factory.AddCompletedVisit(user.Id);
         var sent = await user.Client.PostJsonAsync("/api/feedback", new SubmitFeedbackRequest(5, "Lovely set!", Guid.NewGuid()));
         var feedbackId = (await sent.ReadAsync<FeedbackResponse>()).Id;
         var admin = await factory.CreateAdminClientAsync();

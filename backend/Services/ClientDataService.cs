@@ -95,6 +95,12 @@ public sealed class ClientDataService(
         var bookings = await clientData.GetBookingsAsync(clientId, ct);
         if (bookings.Any(b => b.IsActive))
             throw new ConflictException("This client still has an open booking. Complete or cancel it first.", "client_has_active_bookings");
+        // Money still moving: a payment page held open, or a refund not yet sent. Erasing would lose how to reach them.
+        if (bookings.Any(b => b.Status == BookingStatus.AwaitingPayment))
+            throw new ConflictException("This client is in the middle of paying for a booking. Try again once the payment is done or the hold has ended.",
+                "client_has_payment_in_progress");
+        if (bookings.Any(b => b.RefundDue > 0 && b.RefundSentAt is null))
+            throw new ConflictException("This client is still owed a refund. Send it and record it first.", "client_has_refund_due");
 
         // The placeholders keep the unique indexes and the 11-digit phone rule satisfied, and free the real
         // email, username and phone number in case the person signs up again. Real mobile numbers start with 09.

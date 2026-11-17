@@ -19,6 +19,7 @@ public sealed class EnhancementTests(ApiFactory factory) : IClassFixture<ApiFact
     public async Task A_rating_can_be_submitted_without_a_comment_and_the_administrator_sees_it()
     {
         var user = await factory.CreateClientAsync();
+        factory.AddCompletedVisit(user.Id);
 
         var response = await user.Client.PostJsonAsync("/api/feedback", new SubmitFeedbackRequest(5, null, Guid.NewGuid()));
 
@@ -38,6 +39,7 @@ public sealed class EnhancementTests(ApiFactory factory) : IClassFixture<ApiFact
     public async Task Repeated_clicks_save_the_feedback_once()
     {
         var user = await factory.CreateClientAsync();
+        factory.AddCompletedVisit(user.Id);
         var request = new SubmitFeedbackRequest(4, "Lovely chrome!", Guid.NewGuid());
 
         var responses = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => user.Client.PostJsonAsync("/api/feedback", request)));
@@ -57,6 +59,22 @@ public sealed class EnhancementTests(ApiFactory factory) : IClassFixture<ApiFact
 
         await response.ShouldHaveStatus(HttpStatusCode.BadRequest);
         Assert.NotEmpty((await response.ReadProblemAsync()).ErrorsFor("rating"));
+    }
+
+    [Fact]
+    public async Task A_rating_needs_a_finished_appointment_and_each_appointment_is_rated_once()
+    {
+        var user = await factory.CreateClientAsync();
+
+        var before = await user.Client.PostJsonAsync("/api/feedback", new SubmitFeedbackRequest(1, "Never been", Guid.NewGuid()));
+        factory.AddCompletedVisit(user.Id);
+        var first = await user.Client.PostJsonAsync("/api/feedback", new SubmitFeedbackRequest(5, "Lovely", Guid.NewGuid()));
+        var second = await user.Client.PostJsonAsync("/api/feedback", new SubmitFeedbackRequest(1, "Again", Guid.NewGuid()));
+
+        Assert.Equal("feedback_needs_visit", (await before.ReadProblemAsync()).ProblemCode());
+        await first.ShouldHaveStatus(HttpStatusCode.Created);
+        Assert.Equal("feedback_all_rated", (await second.ReadProblemAsync()).ProblemCode());
+        Assert.Equal(1, factory.WithDb(db => db.Feedback.Count(f => f.ClientId == user.Id)));
     }
 
     [Fact]

@@ -11,8 +11,11 @@ public sealed class ClientDataTests(ApiFactory factory) : IClassFixture<ApiFacto
     private static Task<HttpResponseMessage> Erase(HttpClient admin, int clientId) =>
         admin.PostAsync($"/api/admin/clients/{clientId}/delete-data", null);
 
-    /// <summary>A client with one completed booking that has a note, so there is something to erase and something to keep.</summary>
-    private async Task<(TestUser User, HttpClient Admin, int BookingId)> ClientWithFinishedBookingAsync()
+    /// <summary>
+    /// A client with one finished booking that has a note, so there is something to erase and something to keep. Leyah
+    /// cancelled it and, unless a test says otherwise, has sent the refund back.
+    /// </summary>
+    private async Task<(TestUser User, HttpClient Admin, int BookingId)> ClientWithFinishedBookingAsync(bool refundSent = true)
     {
         var user = await factory.CreateClientAsync();
         var admin = await factory.CreateAdminClientAsync();
@@ -21,6 +24,9 @@ public sealed class ClientDataTests(ApiFactory factory) : IClassFixture<ApiFacto
         var cancelled = await admin.PostJsonAsync($"/api/admin/bookings/{booked.Booking.Id}/cancel",
             new { reason = "StaffUnavailable", explanation = "Told the client by phone" });
         await cancelled.ShouldHaveStatus(HttpStatusCode.OK);
+        if (refundSent)
+            await (await admin.PostJsonAsync($"/api/admin/bookings/{booked.Booking.Id}/refund", new RecordRefundRequest("GC-TEST")))
+                .ShouldHaveStatus(HttpStatusCode.OK);
         return (user, admin, booked.Booking.Id);
     }
 
@@ -104,6 +110,18 @@ public sealed class ClientDataTests(ApiFactory factory) : IClassFixture<ApiFacto
 
         await response.ShouldHaveStatus(HttpStatusCode.Conflict);
         Assert.Equal("client_has_active_bookings", (await response.ReadProblemAsync()).ProblemCode());
+        Assert.False(factory.WithDb(db => db.Users.Single(u => u.Id == user.Id).IsDeleted));
+    }
+
+    [Fact]
+    public async Task Erasing_is_refused_while_the_client_is_still_owed_a_refund()
+    {
+        var (user, admin, _) = await ClientWithFinishedBookingAsync(refundSent: false);
+
+        var response = await Erase(admin, user.Id);
+
+        await response.ShouldHaveStatus(HttpStatusCode.Conflict);
+        Assert.Equal("client_has_refund_due", (await response.ReadProblemAsync()).ProblemCode());
         Assert.False(factory.WithDb(db => db.Users.Single(u => u.Id == user.Id).IsDeleted));
     }
 

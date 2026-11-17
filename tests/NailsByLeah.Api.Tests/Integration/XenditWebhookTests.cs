@@ -110,6 +110,18 @@ public sealed class XenditWebhookTests(XenditApiFactory factory) : IClassFixture
     }
 
     [Fact]
+    public async Task The_same_wrong_payment_reported_again_tells_Leyah_once()
+    {
+        var (id, session, _, _) = await factory.HoldAsync();
+
+        await factory.PostWebhookAsync(XenditTestKit.PaidEvent(session, id, 1m, paymentId: $"py-short-{id}"));
+        await factory.PostWebhookAsync(XenditTestKit.PaidEvent(session, id, 1m, paymentId: $"py-short-{id}"));
+
+        Assert.Single(factory.Notifications.PaymentProblems[id]);
+        Assert.Equal(1, factory.WithDb(db => db.AuditLogs.Count(a => a.EntityId == id.ToString() && a.Details!.Contains("amount mismatch"))));
+    }
+
+    [Fact]
     public async Task A_wrong_amount_or_currency_is_not_accepted()
     {
         var (id, session, _, _) = await factory.HoldAsync();
@@ -121,7 +133,7 @@ public sealed class XenditWebhookTests(XenditApiFactory factory) : IClassFixture
         Assert.Equal(BookingStatus.AwaitingPayment, factory.Load(id).Status);
         Assert.Empty(factory.PaymentsOf(id));
         Assert.True(factory.WithDb(db => db.AuditLogs.Any(a => a.EntityId == id.ToString() && a.Details!.Contains("amount mismatch"))));
-        Assert.Contains("did not match", factory.Notifications.SalonCancellationReasons[id], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("did not match", Assert.Single(factory.Notifications.PaymentProblems[id]), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -178,7 +190,7 @@ public sealed class XenditWebhookTests(XenditApiFactory factory) : IClassFixture
         var booking = factory.Load(id);
         Assert.Equal((BookingStatus.Cancelled, 150m, 150m), (booking.Status, booking.AmountPaid, booking.RefundDue));
         Assert.Single(factory.PaymentsOf(id));
-        Assert.Contains("refund", factory.Notifications.SalonCancellationReasons[id], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("refund", Assert.Single(factory.Notifications.PaymentProblems[id]), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -191,7 +203,7 @@ public sealed class XenditWebhookTests(XenditApiFactory factory) : IClassFixture
 
         var booking = factory.Load(id);
         Assert.Equal((BookingStatus.Cancelled, 150m), (booking.Status, booking.RefundDue));
-        Assert.Contains(id, factory.Notifications.SalonCancellationReasons.Keys);
+        Assert.Contains(id, factory.Notifications.PaymentProblems.Keys);
     }
 
     [Fact]
@@ -219,7 +231,7 @@ public sealed class XenditWebhookTests(XenditApiFactory factory) : IClassFixture
         await factory.PostWebhookAsync(XenditTestKit.PaidEvent("ps-other-page", id, 150m, paymentId: $"py-second-{id}"));
 
         Assert.Single(factory.PaymentsOf(id));
-        Assert.Contains("second payment", factory.Notifications.SalonCancellationReasons[id], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("second payment", Assert.Single(factory.Notifications.PaymentProblems[id]), StringComparison.OrdinalIgnoreCase);
         Assert.True(factory.WithDb(db => db.AuditLogs.Any(a => a.EntityId == id.ToString() && a.Details!.Contains($"py-second-{id}"))));
     }
 

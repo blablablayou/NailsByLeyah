@@ -1,3 +1,4 @@
+using System.Globalization;
 using NailsByLeah.Api.Data;
 using NailsByLeah.Api.Domain;
 using NailsByLeah.Api.Errors;
@@ -27,6 +28,7 @@ public sealed class CheckoutConfirmationService(
     ISlotAvailability slots,
     IUnitOfWork unitOfWork,
     IAuditLogger audit,
+    IAuditLogRepository auditLogs,
     ISalonClock clock,
     IBackgroundNotifications background,
     ISalonProfileService salonProfile,
@@ -55,12 +57,16 @@ public sealed class CheckoutConfirmationService(
         var expected = found.AmountFor(found.PaymentOption);
         if (!string.Equals(status.Currency, Currency, StringComparison.OrdinalIgnoreCase) || status.Amount != expected)
         {
+            var mismatch = $"Xendit payment {status.PaymentId ?? status.SessionId} amount mismatch:";
+            // The same payment reported again (a repeated notification, or the client's page checking): Leyah was told once.
+            if (await AlreadyNotedAsync(AuditActions.PaymentFailed, bookingId, mismatch, ct))
+                return ConfirmationOutcome.Ignored;
             audit.Record(AuditActions.PaymentFailed, nameof(Booking), bookingId,
-                $"Xendit payment amount mismatch: {status.Currency} {status.Amount:0.00} reported, PHP {expected:0.00} expected. Not accepted.");
+                $"{mismatch} {status.Currency} {status.Amount:0.00} reported, PHP {expected:0.00} expected. Not accepted.");
             await unitOfWork.SaveChangesAsync(ct);
             logger.LogWarning("Xendit payment for booking {BookingId} did not match the expected amount", bookingId);
-            await background.EnqueueAsync((n, stop) => n.SendSalonCancellationAsync(found,
-                $"A Xendit payment for this booking did not match: {status.Currency} {status.Amount:0.00} reported, PHP {expected:0.00} expected. It was not accepted. Check Xendit, and refund it if money was taken.", stop),
+            await background.EnqueueAsync((n, stop) => n.SendSalonPaymentProblemAsync(found,
+                $"The payment did not match: {status.Currency} {status.Amount:0.00} reported, PHP {expected:0.00} expected. It was not accepted. Check Xendit, and refund it if money was taken.", stop),
                 $"payment mismatch alert for booking {bookingId}");
             return ConfirmationOutcome.Ignored;
         }
@@ -113,8 +119,8 @@ public sealed class CheckoutConfirmationService(
             if (result.Outcome == ConfirmationOutcome.Confirmed)
                 await BookingEmails.QueuePaidAsync(background, salonProfile, done, paid);
             else if (result.Outcome == ConfirmationOutcome.PaidButNeedsRefund)
-                await background.EnqueueAsync((n, stop) => n.SendSalonCancellationAsync(done,
-                    $"Paid PHP {paid.Amount:0.00} on Xendit after the booking was cancelled or its time had passed. Needs a manual refund.", stop),
+                await background.EnqueueAsync((n, stop) => n.SendSalonPaymentProblemAsync(done,
+                    $"PHP {paid.Amount:0.00} was paid online (reference {paid.ReferenceNumber}) after the booking was cancelled or its time had passed. Refund due: PHP {done.RefundDue:0.00}.", stop),
                     $"refund-needed alert for booking {done.Id}");
         }
         return result.Outcome;
@@ -129,16 +135,23 @@ public sealed class CheckoutConfirmationService(
         var reference = status.PaymentId ?? status.SessionId;
         if (booking.Payments.Any(p => p.ReferenceNumber == reference))
             return ConfirmationOutcome.AlreadyHandled;
+        // The same second payment reported again: Leyah was told once.
+        var note = $"Second payment {reference} of";
+        if (await AlreadyNotedAsync(AuditActions.PaymentSucceeded, booking.Id, note, ct))
+            return ConfirmationOutcome.PaidButNeedsRefund;
 
         audit.Record(AuditActions.PaymentSucceeded, nameof(Booking), booking.Id,
-            $"Second payment {reference} of {status.Currency} {status.Amount:0.00} received on Xendit for an already-paid booking: needs a manual refund");
+            $"{note} {status.Currency} {status.Amount:0.00} received on Xendit for an already-paid booking: needs a manual refund");
         await unitOfWork.SaveChangesAsync(ct);
         logger.LogWarning("Second Xendit payment for booking {BookingId}", booking.Id);
-        await background.EnqueueAsync((n, stop) => n.SendSalonCancellationAsync(booking,
-            $"A second payment of {status.Currency} {status.Amount:0.00} (Xendit {reference}) was received for this already-paid booking. Needs a manual refund.", stop),
+        await background.EnqueueAsync((n, stop) => n.SendSalonPaymentProblemAsync(booking,
+            $"A second payment of {status.Currency} {status.Amount:0.00} (reference {reference}) was received for this already-paid booking. Refund it to the client.", stop),
             $"second payment alert for booking {booking.Id}");
         return ConfirmationOutcome.PaidButNeedsRefund;
     }
+
+    private Task<bool> AlreadyNotedAsync(string action, int bookingId, string detailsStart, CancellationToken ct) =>
+        auditLogs.ExistsAsync(action, nameof(Booking), bookingId.ToString(CultureInfo.InvariantCulture), detailsStart, ct);
 
     private async Task<bool> IsFreeAsync(Booking booking, CancellationToken ct)
     {

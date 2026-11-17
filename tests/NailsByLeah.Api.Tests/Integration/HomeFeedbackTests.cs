@@ -19,6 +19,7 @@ public sealed class HomeFeedbackTests(ApiFactory factory) : IClassFixture<ApiFac
             (u.FirstName, u.LastName) = (firstName, lastName);
             return db.SaveChanges();
         });
+        factory.AddCompletedVisit(user.Id);
         var sent = await user.Client.PostJsonAsync("/api/feedback", new SubmitFeedbackRequest(stars, comment, Guid.NewGuid()));
         return ((await sent.ReadAsync<FeedbackResponse>()).Id, user.Id);
     }

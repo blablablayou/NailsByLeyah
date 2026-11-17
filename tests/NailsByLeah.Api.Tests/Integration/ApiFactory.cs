@@ -106,6 +106,28 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         return (StartDate.AddDays(2 + index / SlotTimes.Length), SlotTimes[index % SlotTimes.Length]);
     }
 
+    /// <summary>A finished appointment for the client (a week before the tests' start), so they may leave a rating.</summary>
+    public void AddCompletedVisit(int clientId) => WithDb(db =>
+    {
+        var service = db.Services.First(s => s.Id == 1);
+        db.Bookings.Add(new Booking
+        {
+            ClientId = clientId,
+            ServiceId = service.Id,
+            ServicePrice = service.Price,
+            DepositAmount = 150m,
+            AmountPaid = 150m,
+            BalanceReceived = Math.Max(0, service.Price - 150m),
+            BookingDate = StartDate.AddDays(-7),
+            StartTime = new TimeOnly(11, 0),
+            DurationMinutes = 60,
+            Status = BookingStatus.Completed,
+            CreatedAt = StartTime.UtcDateTime.AddDays(-8),
+            UpdatedAt = StartTime.UtcDateTime.AddDays(-7),
+        });
+        return db.SaveChanges();
+    });
+
     public T WithDb<T>(Func<AppDbContext, T> query)
     {
         using var scope = Services.CreateScope();
@@ -264,6 +286,15 @@ public sealed class CapturingNotificationService : INotificationService
     public Task SendSalonCancellationAsync(Booking booking, string reasonLabel, CancellationToken ct = default)
     {
         SalonCancellationReasons[booking.Id] = reasonLabel;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Every payment problem Leyah was told about, per booking, in order (so a repeat shows as a second entry).</summary>
+    public ConcurrentDictionary<int, ConcurrentQueue<string>> PaymentProblems { get; } = new();
+
+    public Task SendSalonPaymentProblemAsync(Booking booking, string problem, CancellationToken ct = default)
+    {
+        PaymentProblems.GetOrAdd(booking.Id, _ => new ConcurrentQueue<string>()).Enqueue(problem);
         return Task.CompletedTask;
     }
 

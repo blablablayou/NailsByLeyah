@@ -1074,6 +1074,11 @@ const routes = [
       if (earlier.clientId !== user.id) conflict('This submission key has already been used.', 'submission_key_reused')
       return { status: 200, data: feedbackResponse(db, earlier, false) }
     }
+    // One rating per finished appointment, as the server does.
+    const visits = db.bookings.filter((b) => b.clientId === user.id && b.status === 'Completed').length
+    if (visits === 0) conflict('You can rate us after your first appointment.', 'feedback_needs_visit')
+    if (db.feedback.filter((f) => f.clientId === user.id).length >= visits)
+      conflict("You've rated each of your appointments. You can rate us again after your next one.", 'feedback_all_rated')
     const comment = String(body.comment ?? '').trim()
     const row = { id: nextId('feedback'), clientId: user.id, rating: Number(body.rating), comment: comment || null,
       submissionKey: body.submissionKey, createdAt: nowIso() }

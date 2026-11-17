@@ -45,6 +45,21 @@ describe('Customer feedback', () => {
     expect(getDb().feedback).toHaveLength(before + 1)
   })
 
+  it('once every finished appointment is rated, says so instead of showing the form', async () => {
+    const db = getDb()
+    const visits = db.bookings.filter((b) => b.clientId === 2 && b.status === 'Completed').length
+    db.feedback = db.feedback.filter((f) => f.clientId !== 2)
+    for (let i = 0; i < visits; i++)
+      db.feedback.push({ id: 9000 + i, clientId: 2, rating: 5, comment: null, submissionKey: `seed-${i}`, createdAt: new Date().toISOString() })
+    await signIn(CLIENT)
+    renderApp('/feedback')
+
+    expect(await screen.findByText(/You've rated each of your appointments/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Submit feedback' })).not.toBeInTheDocument()
+    await expect(mockRequest('POST', '/feedback', { body: { rating: 1, comment: null, submissionKey: crypto.randomUUID() } }))
+      .rejects.toMatchObject({ code: 'feedback_all_rated' })
+  })
+
   it('shows the administrator every rating with the average', async () => {
     await signIn(ADMIN)
     renderApp('/admin/feedback')

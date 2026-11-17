@@ -171,8 +171,8 @@ public sealed class BalancePaymentService(
                 $"({booking.Status}, PHP {due:0.00} left to pay): needs a manual refund");
             await unitOfWork.SaveChangesAsync(ct);
             logger.LogWarning("A balance payment for booking {BookingId} could not be accepted", booking.Id);
-            await background.EnqueueAsync((n, stop) => n.SendSalonCancellationAsync(booking,
-                $"A balance payment of {status.Currency} {amount:0.00} (reference {reference}) arrived for this booking, but it is {booking.Status} with PHP {due:0.00} left to pay, so it was not accepted. Please refund it.", stop),
+            await background.EnqueueAsync((n, stop) => n.SendSalonPaymentProblemAsync(booking,
+                $"A balance payment of {status.Currency} {amount:0.00} (reference {reference}) arrived, but the booking is {booking.Status} with PHP {due:0.00} left to pay, so it was not accepted. Refund it to the client.", stop),
                 $"balance not accepted alert for booking {booking.Id}");
             return ConfirmationOutcome.PaidButNeedsRefund;
         }

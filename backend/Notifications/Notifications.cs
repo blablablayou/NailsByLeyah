@@ -45,6 +45,9 @@ public interface INotificationService
     /// <summary>A client cancelled their booking.</summary>
     Task SendSalonCancellationAsync(Booking booking, string reasonLabel, CancellationToken ct = default);
 
+    /// <summary>Money arrived online that couldn't go on the booking (wrong amount, paid twice, or too late): Leyah checks it and sends it back.</summary>
+    Task SendSalonPaymentProblemAsync(Booking booking, string problem, CancellationToken ct = default);
+
     /// <summary>A client moved their booking; <paramref name="fromDate"/> and <paramref name="fromTime"/> are the old slot.</summary>
     Task SendSalonRescheduleAsync(Booking booking, DateOnly fromDate, TimeOnly fromTime, CancellationToken ct = default);
 }
@@ -100,6 +103,19 @@ public sealed class EmailNotificationService(
             Reason: {reasonLabel}
             Paid online: PHP {booking.AmountPaid:0.00}
             {(booking.RefundDue > 0 ? $"Refund to send the client: PHP {booking.RefundDue:0.00} (everything above the PHP {booking.DepositAmount:0.00} deposit)" : $"Nothing to refund: the PHP {booking.DepositAmount:0.00} deposit is kept")}
+
+            Bookings that day: {AdminLink(booking, pendingOnly: false)}
+            """, ct);
+
+    public Task SendSalonPaymentProblemAsync(Booking booking, string problem, CancellationToken ct = default) =>
+        ToSalon($"Payment to check: {booking.Client.FirstName} {booking.Client.LastName}, booking #{booking.Id}",
+            $"""
+            A payment came in online that couldn't be added to this booking. Please check it and send the money back to the client.
+
+            {problem}
+
+            {AppointmentLines(booking)}
+            Booking status: {booking.Status}
 
             Bookings that day: {AdminLink(booking, pendingOnly: false)}
             """, ct);

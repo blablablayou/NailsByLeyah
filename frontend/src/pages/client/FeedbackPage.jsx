@@ -41,6 +41,10 @@ export default function FeedbackPage() {
     }
   }
 
+  // One rating per finished appointment (the server checks it too).
+  const completed = visits.data?.filter((b) => b.status === 'Completed').length ?? 0
+  const allRated = Boolean(visits.data && mine.data) && completed > 0 && mine.data.length >= completed
+
   const again = () => {
     setRating(0)
     setComment('')
@@ -58,6 +62,13 @@ export default function FeedbackPage() {
             <Link to="/bookings" className="btn btn-secondary">My bookings</Link>
           </div>
         </Card>
+      ) : allRated && !thanks ? (
+        <Card>
+          <div className="stack">
+            <p className="muted">Thank you! You&apos;ve rated each of your appointments. You can rate us again after your next one.</p>
+            <Link to="/bookings" className="btn btn-secondary">My bookings</Link>
+          </div>
+        </Card>
       ) : (
       <Card>
         {thanks ? (
@@ -66,7 +77,7 @@ export default function FeedbackPage() {
             <Stars rating={thanks.rating} size="lg" />
             <div className="row">
               <Link to="/bookings" className="btn btn-primary">My bookings</Link>
-              <Button variant="ghost" onClick={again}>Rate another visit</Button>
+              {!allRated && <Button variant="ghost" onClick={again}>Rate another visit</Button>}
             </div>
           </div>
         ) : (
