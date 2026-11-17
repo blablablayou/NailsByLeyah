@@ -13,6 +13,31 @@ describe('Registration', () => {
     expect(await screen.findByText('Username is already taken.')).toBeInTheDocument()
   })
 
+  it('shows no counters or format hints, and warns about a wrong field once the user leaves it', async () => {
+    const user = userEvent.setup()
+    renderApp('/register')
+    const email = await screen.findByLabelText(/^Email address/)
+
+    expect(screen.queryByText(/\/75/)).toBeNull()
+    expect(screen.queryByText(/\/11 digits/)).toBeNull()
+    expect(screen.queryByText(/3–50 characters/)).toBeNull()
+    expect(email).not.toHaveAttribute('placeholder')
+
+    // Leaving an empty field says nothing; leaving a wrong one says what is wrong.
+    await user.click(email)
+    await user.tab()
+    expect(screen.queryByText('Enter a valid email address.')).toBeNull()
+    await user.type(email, 'kyla@')
+    await user.type(screen.getByLabelText(/^Username/), 'ky')
+    expect(screen.getByText('Enter a valid email address.')).toBeInTheDocument()
+    await user.tab()
+    expect(screen.getByText('Username must be 3 to 50 characters.')).toBeInTheDocument()
+
+    // Fixing it clears the warning while typing.
+    await user.type(email, 'gmail.com')
+    expect(screen.queryByText('Enter a valid email address.')).toBeNull()
+  })
+
   it('says that creating an account agrees to the Terms & Conditions and Privacy Policy, with no checkbox', async () => {
     renderApp('/register')
     const submit = await screen.findByRole('button', { name: 'Create account' })

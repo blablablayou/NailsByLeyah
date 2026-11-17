@@ -4,10 +4,13 @@ import { PASSWORD_RULES, LIMITS, phoneChars, phoneMaxLength } from '../validatio
 import { api } from '../api'
 import { useDebouncedValue } from '../hooks/useAsync'
 
-/** First/Last name: any characters, 75 max, with a live "12/75" counter (Ref 1.1, 9.3). */
+/**
+ * First/Last name: any characters (numbers too: some names have them), 75 max. Typing stops at the limit, so there is
+ * no counter; the form warns when a name is missing (Ref 1.1, 9.3).
+ */
 export function NameField({ label, value, onChange, error, ...props }) {
   return (
-    <Field label={label} error={error} required counter={`${value.length}/${LIMITS.nameMax}`}>
+    <Field label={label} error={error} required>
       {(aria) => (
         <input className="input" type="text" autoComplete={props.autoComplete} maxLength={LIMITS.nameMax} value={value}
           onChange={(e) => onChange(e.target.value.slice(0, LIMITS.nameMax))} required {...aria} {...props} />
@@ -33,10 +36,9 @@ export function PhoneField({ value, onChange, onBlur, error, label = 'Phone Numb
     const { selectionStart: start, selectionEnd: end } = input
     onChange(phoneChars(value.slice(0, start ?? value.length) + text + value.slice(end ?? value.length)))
   }
-  const digits = value.startsWith('+63') ? value.length - 2 : value.length // +63 counts as the leading 0
-  const counter = `${digits}/${LIMITS.phoneDigits} digits`
+  // No digit counter: typing stops at 11 digits, and leaving the field with a wrong number shows what is wrong.
   return (
-    <Field label={label} error={error} required={required} counter={counter}>
+    <Field label={label} error={error} required={required}>
       {(aria) => (
         <input className="input" type="tel" inputMode="tel" autoComplete="tel" value={value} required={required}
           onKeyDown={(e) => {
@@ -64,7 +66,7 @@ const BLOCKED_SHORTCUTS = new Set(['c', 'x', 'v'])
  * Password input with a show/hide eye toggle (Ref 8.6). Copy, cut and paste are blocked
  * for keyboard shortcuts and the right-click menu (Ref 1.5).
  */
-export function PasswordField({ label = 'Password', value, onChange, error, hint, autoComplete = 'current-password', children }) {
+export function PasswordField({ label = 'Password', value, onChange, onBlur, error, hint, autoComplete = 'current-password', children }) {
   const [visible, setVisible] = useState(false)
   const block = (e) => e.preventDefault()
   return (
@@ -73,7 +75,7 @@ export function PasswordField({ label = 'Password', value, onChange, error, hint
         <>
           <div className="password-wrap">
             <input className="input" type={visible ? 'text' : 'password'} value={value} autoComplete={autoComplete} required
-              onChange={(e) => onChange(e.target.value)}
+              onChange={(e) => onChange(e.target.value)} onBlur={onBlur}
               onCopy={block} onCut={block} onPaste={block} onDrop={block} onContextMenu={block}
               onKeyDown={(e) => {
                 if ((e.ctrlKey || e.metaKey) && BLOCKED_SHORTCUTS.has(e.key.toLowerCase())) e.preventDefault()
@@ -122,7 +124,7 @@ export function PasswordRules({ password }) {
  * Username with a debounced availability check while typing (Ref 1.2, 9.2).
  * `onAvailabilityChange(false)` lets the form block submission while the name is taken.
  */
-export function UsernameField({ value, onChange, error, onAvailabilityChange }) {
+export function UsernameField({ value, onChange, onBlur, error, onAvailabilityChange }) {
   const debounced = useDebouncedValue(value.trim(), 400)
   // The last answer from the server, for the username it was asked about.
   const [checked, setChecked] = useState({ username: null, state: 'idle', message: null })
@@ -152,11 +154,12 @@ export function UsernameField({ value, onChange, error, onAvailabilityChange }) 
 
   const shownError = error ?? (status.state === 'taken' ? status.message : null)
   return (
+    // No standing "3–50 characters" hint: a username that is too short is warned about when the user leaves the field.
     <Field label="Username" error={shownError} required
-      hint={status.state === 'checking' || status.state === 'available' ? status.message : `${LIMITS.usernameMin}–${LIMITS.usernameMax} characters`}>
+      hint={status.state === 'checking' || status.state === 'available' ? status.message : undefined}>
       {(aria) => (
         <input className={status.state === 'available' ? 'input input-ok' : 'input'} type="text" autoComplete="username"
-          maxLength={LIMITS.usernameMax} value={value} onChange={(e) => onChange(e.target.value)} required {...aria} />
+          maxLength={LIMITS.usernameMax} value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} required {...aria} />
       )}
     </Field>
   )

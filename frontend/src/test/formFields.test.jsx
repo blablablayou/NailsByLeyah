@@ -32,14 +32,14 @@ describe('Phone Number field (7.1)', () => {
     expect(input).toHaveValue('09171234567')
   })
 
-  it('stops typing at 11 digits and shows the digit count', async () => {
+  it('stops typing at 11 digits, with no digit counter', async () => {
     const user = userEvent.setup()
     render(<Controlled Component={PhoneField} />)
     const input = screen.getByLabelText(/Phone Number/)
 
     await user.type(input, '091712345678')
     expect(input).toHaveValue('09171234567')
-    expect(screen.getByText('11/11 digits')).toBeInTheDocument()
+    expect(screen.queryByText(/\/11 digits/)).not.toBeInTheDocument()
   })
 
   it('takes +63 numbers, typed or pasted with spaces', async () => {
@@ -50,7 +50,6 @@ describe('Phone Number field (7.1)', () => {
     await user.click(input)
     await user.paste('+63 917 123 4567')
     expect(input).toHaveValue('+639171234567')
-    expect(screen.getByText('11/11 digits')).toBeInTheDocument()
     expect(validatePhone('+639171234567')).toBeNull()
 
     await user.clear(input)
@@ -123,23 +122,23 @@ describe('Password field (7.2)', () => {
 })
 
 describe('Name fields (7.3)', () => {
-  it('stops at 75 characters and the counter shows 75/75', async () => {
+  it('stops at 75 characters, with no counter', async () => {
     const user = userEvent.setup()
     render(<Controlled Component={NameField} label="First Name" />)
     const input = screen.getByLabelText(/First Name/)
 
     await user.type(input, 'x'.repeat(76))
     expect(input).toHaveValue('x'.repeat(75))
-    expect(screen.getByText('75/75')).toBeInTheDocument()
+    expect(screen.queryByText('75/75')).toBeNull()
   })
 
-  it('accepts letters, numbers and special characters with a live counter', async () => {
+  it('accepts letters, numbers and special characters', async () => {
     const user = userEvent.setup()
     render(<Controlled Component={NameField} label="First Name" />)
     const input = screen.getByLabelText(/First Name/)
 
     await user.type(input, 'Ma. José #2')
     expect(input).toHaveValue('Ma. José #2')
-    expect(screen.getByText('11/75')).toBeInTheDocument()
+    expect(screen.queryByText('11/75')).toBeNull()
   })
 })

@@ -5,9 +5,22 @@ import { NameField, PasswordField, PasswordRules, PhoneField, UsernameField } fr
 import { LegalDocumentModal } from '../../components/Modal'
 import { Alert, Button, Card, TextField } from '../../components/ui'
 import { errorMessage, fieldErrors } from '../../api/errors'
-import { hasErrors, validatePhone, validateRegistration } from '../../validation/rules'
+import {
+  hasErrors, validateConfirmPassword, validateEmail, validateName, validatePassword, validatePhone, validateRegistration, validateUsername,
+} from '../../validation/rules'
 
 const empty = { firstName: '', lastName: '', username: '', email: '', phoneNumber: '', password: '', confirmPassword: '' }
+
+/** Each field's own check, the same rules Create account uses. */
+const FIELD_RULES = {
+  firstName: (v) => validateName(v.firstName, 'First Name'),
+  lastName: (v) => validateName(v.lastName, 'Last Name'),
+  username: (v) => validateUsername(v.username),
+  email: (v) => validateEmail(v.email),
+  phoneNumber: (v) => validatePhone(v.phoneNumber),
+  password: (v) => validatePassword(v.password),
+  confirmPassword: (v) => validateConfirmPassword(v.password, v.confirmPassword),
+}
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -19,9 +32,23 @@ export default function RegisterPage() {
   // The Terms & Conditions or the Privacy Policy, opened from the line under Create account (to read; no ticking).
   const [legalDocument, setLegalDocument] = useState(null)
 
+  // A field is checked when the user leaves it (an empty one only on Create account, so tabbing past isn't nagged).
+  // Once it shows a warning, it is checked again as they type, so the warning goes away the moment it's right.
+  const check = (field, next = values) => {
+    const rule = FIELD_RULES[field]
+    if (rule && next[field]) setErrors((e) => ({ ...e, [field]: rule(next) ?? undefined }))
+  }
+  const blur = (field) => () => check(field)
+
   const set = (field) => (value) => {
-    setValues((v) => ({ ...v, [field]: value }))
-    setErrors((e) => ({ ...e, [field]: undefined }))
+    const next = { ...values, [field]: value }
+    setValues(next)
+    if (errors[field]) {
+      if (value) check(field, next)
+      else setErrors((e) => ({ ...e, [field]: undefined }))
+    }
+    // The confirmation follows the password: a fixed password can make a mismatch warning wrong.
+    if (field === 'password' && errors.confirmPassword) check('confirmPassword', next)
   }
 
   const submit = async (e) => {
@@ -65,20 +92,23 @@ export default function RegisterPage() {
 
         <form onSubmit={submit} noValidate className="stack">
           <div className="grid-2">
-            <NameField label="First Name" autoComplete="given-name" value={values.firstName} onChange={set('firstName')} error={errors.firstName} />
-            <NameField label="Last Name" autoComplete="family-name" value={values.lastName} onChange={set('lastName')} error={errors.lastName} />
+            <NameField label="First Name" autoComplete="given-name" value={values.firstName} onChange={set('firstName')}
+              onBlur={blur('firstName')} error={errors.firstName} />
+            <NameField label="Last Name" autoComplete="family-name" value={values.lastName} onChange={set('lastName')}
+              onBlur={blur('lastName')} error={errors.lastName} />
           </div>
           <div className="grid-2">
-            <UsernameField value={values.username} onChange={set('username')} error={errors.username} onAvailabilityChange={setUsernameAvailable} />
-            <PhoneField value={values.phoneNumber} onChange={set('phoneNumber')} error={errors.phoneNumber}
-              onBlur={() => values.phoneNumber && setErrors((e) => ({ ...e, phoneNumber: validatePhone(values.phoneNumber) ?? undefined }))} />
+            <UsernameField value={values.username} onChange={set('username')} onBlur={blur('username')} error={errors.username}
+              onAvailabilityChange={setUsernameAvailable} />
+            <PhoneField value={values.phoneNumber} onChange={set('phoneNumber')} onBlur={blur('phoneNumber')} error={errors.phoneNumber} />
           </div>
-          <TextField label="Email address" type="email" autoComplete="email" placeholder="you@example.com" value={values.email} required
-            error={errors.email} onChange={(e) => set('email')(e.target.value)} />
+          <TextField label="Email address" type="email" autoComplete="email" value={values.email} required
+            error={errors.email} onChange={(e) => set('email')(e.target.value)} onBlur={blur('email')} />
           <div className="grid-2">
+            {/* The password's rules show live underneath, so only the confirmation warns on leaving it. */}
             <PasswordField value={values.password} onChange={set('password')} error={errors.password} autoComplete="new-password" />
             <PasswordField label="Confirm Password" value={values.confirmPassword} onChange={set('confirmPassword')}
-              error={errors.confirmPassword} autoComplete="new-password" />
+              onBlur={blur('confirmPassword')} error={errors.confirmPassword} autoComplete="new-password" />
           </div>
           {/* The password rules span both columns so they stay readable. */}
           <PasswordRules password={values.password} />
