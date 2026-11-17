@@ -139,6 +139,36 @@ public sealed class BalancePaymentTests(XenditApiFactory factory) : IClassFixtur
         Assert.True(factory.WithDb(db => db.AuditLogs.Any(a => a.EntityId == id.ToString() && a.Details!.Contains("needs a manual refund"))));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Cancelling_closes_a_balance_page_the_client_still_has_open(bool bySalon)
+    {
+        var (id, user, admin, _) = await Confirmed();
+        await (await StartBalance(user.Client, id)).ShouldHaveStatus(HttpStatusCode.OK);
+        var session = factory.WithDb(db => db.Bookings.Single(b => b.Id == id).CheckoutSessionId!);
+
+        var cancelled = bySalon
+            ? await admin.PostJsonAsync($"/api/admin/bookings/{id}/cancel", new AdminCancelRequest(AdminCancellationReason.StaffUnavailable, null))
+            : await user.Client.PostJsonAsync($"/api/bookings/{id}/cancel", new ClientCancelRequest(ClientCancellationReason.Emergency));
+
+        await cancelled.ShouldHaveStatus(HttpStatusCode.OK);
+        Assert.Contains(session, factory.Checkout.Expired);
+    }
+
+    [Fact]
+    public async Task Cancelling_leaves_the_paid_deposit_page_alone()
+    {
+        var (id, _, admin, _) = await Confirmed(); // its only page is the deposit's, already paid
+        var session = factory.WithDb(db => db.Bookings.Single(b => b.Id == id).CheckoutSessionId!);
+        factory.Checkout.MarkPaid(session, 150m);
+
+        await (await admin.PostJsonAsync($"/api/admin/bookings/{id}/cancel",
+            new AdminCancelRequest(AdminCancellationReason.StaffUnavailable, null))).ShouldHaveStatus(HttpStatusCode.OK);
+
+        Assert.DoesNotContain(session, factory.Checkout.Expired);
+    }
+
     [Fact]
     public async Task Clients_cannot_choose_Balance_when_booking()
     {

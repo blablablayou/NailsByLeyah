@@ -375,7 +375,7 @@ public sealed class TestHostedCheckout : IHostedCheckout
         if (Interlocked.Exchange(ref _failNext, 0) == 1)
             throw new HostedCheckoutException("Xendit is unavailable (test).");
         var id = $"ps-test-{Interlocked.Increment(ref _counter)}-{Guid.NewGuid():N}"[..24];
-        Statuses[id] = new CheckoutStatus(id, CheckoutState.Open, null, null, null);
+        Statuses[id] = new CheckoutStatus(id, CheckoutState.Open, null, null, null, request.Reference); // Xendit reports our reference_id
         return Task.FromResult(new CheckoutSession(id, $"https://checkout.test/{id}"));
     }
 

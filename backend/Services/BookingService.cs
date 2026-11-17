@@ -565,9 +565,12 @@ public sealed class BookingService(
         var now = clock.UtcNow;
         booking.MarkCompleted(now);
         audit.Record(AuditActions.BookingCompleted, nameof(Booking), booking.Id);
-        if (request?.BalanceReceived == true && booking.BalanceDue > 0)
+        var settled = request?.BalanceReceived == true && booking.BalanceDue > 0;
+        if (settled)
             RecordBalance(booking, reference, now);
         await unitOfWork.SaveChangesAsync(ct);
+        if (settled)
+            await CloseBalancePageAsync(booking);
         return Map(booking, includeClient: true);
     }
 
@@ -577,6 +580,7 @@ public sealed class BookingService(
         var booking = await ReloadAsync(bookingId, ct);
         RecordBalance(booking, reference, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(ct);
+        await CloseBalancePageAsync(booking);
         return Map(booking, includeClient: true);
     }
 
@@ -612,6 +616,7 @@ public sealed class BookingService(
             $"Deposit of PHP {Math.Min(booking.AmountPaid, booking.DepositAmount):0.00} kept" +
             (booking.RefundDue > 0 ? $"; refund due PHP {booking.RefundDue:0.00}" : ""));
         await unitOfWork.SaveChangesAsync(ct);
+        await CloseBalancePageAsync(booking);
         return Map(booking, includeClient: true);
     }
 
@@ -681,6 +686,21 @@ public sealed class BookingService(
             $"Reason: {Labels.ForCancellationReason(reason)}. " +
             (booking.RefundDue > 0 ? $"Refund due: PHP {booking.RefundDue:0.00}." : "Nothing to refund (the deposit is kept)."));
         await unitOfWork.SaveChangesAsync(ct);
+        await CloseBalancePageAsync(booking);
+    }
+
+    /// <summary>
+    /// The booking is cancelled, a no-show, or its balance was paid at the salon: a balance payment page the client still
+    /// has open is closed, so they can't pay money that would only have to be sent back. Best effort, after the change
+    /// is saved; a page that can't be closed is still caught when its payment arrives (Leyah is told to refund it).
+    /// </summary>
+    private async Task CloseBalancePageAsync(Booking booking)
+    {
+        if (booking.CheckoutSessionId is not { } session || booking.Payments.Any(p => p.Option == PaymentOption.Balance))
+            return;
+        if (await TryGetStatusAsync(session, CancellationToken.None) is { State: CheckoutState.Open } open
+            && HostedCheckoutReference.TryParseBalance(open.Reference, out _))
+            await TryExpireAsync(session, CancellationToken.None);
     }
 
     private async Task<BookingResponse> MoveAsync(Booking booking, RescheduleRequest request, CancellationToken ct, bool includeClient = false, bool countForClient = false)

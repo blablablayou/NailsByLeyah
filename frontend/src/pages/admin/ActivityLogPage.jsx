@@ -9,17 +9,23 @@ const dayLabel = (day) => (day.slice(0, 4) === String(new Date().getFullYear()) 
 import { Alert, Card, EmptyState, PageHeader, PageLoader, SelectField, Spinner } from '../../components/ui'
 import { LIST_PAGE_SIZE, ListPaging, usePageParam } from '../../components/ListPaging'
 
+// Every action the backend records (AuditActions), grouped: bookings, money, the salon's settings, accounts.
 const ACTIONS = [
-  'BookingCreated', 'BookingConfirmed', 'BookingRescheduled', 'BookingCompleted', 'BookingCancelled',
-  'PaymentSucceeded', 'PaymentFailed', 'ServiceCreated', 'ServiceUpdated', 'ServiceDeleted', 'SlotBlocked', 'SlotUnblocked',
-  'UserRegistered', 'EmailVerified', 'LoginSucceeded', 'LoginFailed', 'AccountLocked', 'PasswordResetRequested', 'PasswordReset', 'ClientDataDeleted',
+  'BookingCreated', 'BookingCreatedByAdmin', 'BookingHeldForPayment', 'BookingConfirmed', 'BookingRescheduled',
+  'BookingCompleted', 'BookingCancelled', 'BookingNoShow', 'ColorRequestDecided',
+  'PaymentSucceeded', 'PaymentFailed', 'PaymentNotCompleted', 'BalanceReceived', 'RefundRequested', 'RefundSent', 'RefundFailed',
+  'ServiceCreated', 'ServiceUpdated', 'ServiceDeleted', 'SlotBlocked', 'SlotUnblocked', 'SlotBlockChanged', 'SalonHoursChanged',
+  'BookingRulesChanged', 'ColorStockChanged', 'SalonDetailsChanged', 'SalonPhotoChanged', 'GalleryPhotoAdded', 'GalleryPhotoRemoved',
+  'FeedbackSubmitted', 'FeedbackReplied', 'FeedbackShownOnHome', 'ReferenceImageUploaded', 'ReferenceImageRemoved', 'ClientNoteChanged',
+  'UserRegistered', 'EmailVerified', 'LoginSucceeded', 'LoginFailed', 'LoginCodeSent', 'LoginCodeFailed', 'AccountLocked',
+  'PasswordResetRequested', 'PasswordReset', 'PasswordChanged', 'SignedOutEverywhere', 'ProfileUpdated', 'ClientDataDeleted',
 ].map((a) => ({ value: a, label: humanize(a) }))
 
 
 /** The colour of an entry's dot: problems red, payments green, bookings rose, price list and schedule amber, accounts blue. */
 function tone(action) {
   if (/Failed|Locked|Deleted$/.test(action) && action !== 'ServiceDeleted') return 'problem'
-  if (action.startsWith('Payment')) return 'payment'
+  if (action.startsWith('Payment') || action.startsWith('Refund') || action === 'BalanceReceived') return 'payment'
   if (action.startsWith('Booking')) return 'booking'
   if (action.startsWith('Service') || action.startsWith('Slot')) return 'catalog'
   return 'account'
