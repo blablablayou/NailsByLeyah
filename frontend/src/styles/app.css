@@ -1627,6 +1627,7 @@ select.input { appearance: auto; }
 /* The day and the week: rows split by hairlines; the time or date in a plain column on the left. */
 .dash-week { list-style: none; margin: 0; padding: 0; }
 .dash-week li + li { border-top: 1px solid var(--line); }
+.dash-week-toggle { margin-top: 8px; padding: 6px; } /* "Show all N bookings" under the first five */
 .dash-week-row { display: flex; align-items: center; gap: 14px; width: 100%; padding: 10px 6px; border: 0; background: none; cursor: pointer; font: inherit; color: inherit; text-align: left; border-radius: 8px; }
 .dash-week-row:hover { background: var(--rose-50); }
 .dash-week-row:focus-visible { box-shadow: var(--focus); outline: 0; }

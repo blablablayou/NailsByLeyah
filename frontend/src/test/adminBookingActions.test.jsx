@@ -199,6 +199,25 @@ describe('Booking details', () => {
 })
 
 describe('Dashboard', () => {
+  it('shows the first three of a busy week, then all of them on request', async () => {
+    const user = userEvent.setup()
+    const db = getDb()
+    const template = db.bookings.find((b) => b.id === 8)
+    db.bookings.forEach((b) => { if (b.bookingDate >= today() && b.bookingDate <= addDays(today(), 7)) b.isDeleted = true })
+    for (let i = 0; i < 7; i++)
+      db.bookings.push({ ...template, id: 7000 + i, bookingDate: addDays(today(), 1 + (i % 6)), startTime: i < 6 ? '11:00:00' : '15:00:00', status: 'Confirmed', isDeleted: false })
+    saveDb()
+    await openDashboard()
+
+    const week = screen.getByRole('heading', { name: 'Next 7 days' }).closest('section')
+    const rows = () => within(week).getAllByRole('button', { name: /View details$/ })
+    expect(rows()).toHaveLength(3)
+    await user.click(within(week).getByRole('button', { name: 'Show all 7 bookings' }))
+    expect(rows()).toHaveLength(7)
+    await user.click(within(week).getByRole('button', { name: 'Show fewer' }))
+    expect(rows()).toHaveLength(3)
+  })
+
   it('lists upcoming bookings and asks Leyah to check a payment, then confirms it', async () => {
     const user = userEvent.setup()
     const booking = stage({ bookingDate: addDays(today(), 1), startTime: '11:00:00', status: 'Pending' })

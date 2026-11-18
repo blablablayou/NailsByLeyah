@@ -501,8 +501,13 @@ function NextClientCard({ booking: b, date, isToday, isPast, now, elapsed, upcom
   )
 }
 
+/** Next 7 days shows three at first, so a busy week does not make the dashboard very long. */
+const WEEK_SHOWN = 3
+
 function UpcomingCard({ bookings, from, isToday }) {
   const [open, setOpen] = useState(null)
+  const [all, setAll] = useState(false)
+  const shown = all ? bookings : bookings.slice(0, WEEK_SHOWN)
   return (
     <section className="dash-section dash-upcoming" aria-labelledby="dash-upcoming">
       <div className="dash-card-head">
@@ -513,8 +518,8 @@ function UpcomingCard({ bookings, from, isToday }) {
       {bookings.length === 0 ? (
         <p className="dash-quiet">Nothing booked in these 7 days.</p>
       ) : (
-        <ul className="dash-week">
-          {bookings.map((b) => {
+        <ul className="dash-week" id="dash-week-list">
+          {shown.map((b) => {
             const md = monthDay(b.bookingDate)
             return (
               <li key={b.id}>
@@ -532,6 +537,12 @@ function UpcomingCard({ bookings, from, isToday }) {
             )
           })}
         </ul>
+      )}
+      {bookings.length > WEEK_SHOWN && (
+        <button type="button" className="link-button dash-more dash-week-toggle" aria-expanded={all} aria-controls="dash-week-list"
+          onClick={() => setAll((a) => !a)}>
+          {all ? 'Show fewer' : `Show all ${bookings.length} bookings`}
+        </button>
       )}
       {open && <BookingDetails booking={open} onClose={() => setOpen(null)} />}
     </section>
