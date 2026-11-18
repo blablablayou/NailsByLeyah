@@ -287,6 +287,11 @@ public sealed class AdminGalleryController(IGalleryService gallery) : Controller
         await gallery.RemoveAsync(id, ct);
         return NoContent();
     }
+
+    /// <summary>Changes the caption (the design shown with the photo); an empty caption removes it.</summary>
+    [HttpPut("{id:int}/caption")]
+    public Task<GalleryPhotoResponse> Caption(int id, GalleryCaptionRequest request, CancellationToken ct) =>
+        gallery.UpdateCaptionAsync(id, request.Caption, ct);
 }
 
 /// <summary>Leyah's salon details, photo and email alert switches (her profile page).</summary>

@@ -1614,6 +1614,19 @@ const routes = [
     saveDb()
     return { status: 201, data: galleryResponse(photo) }
   }],
+  ['PUT', '/admin/gallery/:id/caption', (db, { params, body }) => {
+    const user = requireUser(db, 'Administrator')
+    const photo = (db.galleryPhotos ?? []).find((p) => p.id === Number(params.id))
+    if (!photo) fail(404, 'This photo has been removed.', 'not_found')
+    const caption = String(body?.caption ?? '').trim()
+    if (caption.length > rules.LIMITS.galleryCaptionMax) invalid('caption', `The caption must be ${rules.LIMITS.galleryCaptionMax} characters or fewer.`)
+    if ((photo.caption ?? null) !== (caption || null)) {
+      photo.caption = caption || null
+      audit(db, user.id, 'GalleryCaptionChanged', 'GalleryPhoto', photo.id, caption ? 'Caption changed' : 'Caption removed')
+      saveDb()
+    }
+    return galleryResponse(photo)
+  }],
   ['DELETE', '/admin/gallery/:id', (db, { params }) => {
     requireUser(db, 'Administrator')
     const before = (db.galleryPhotos ?? []).length

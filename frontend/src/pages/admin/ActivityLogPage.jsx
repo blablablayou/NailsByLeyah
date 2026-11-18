@@ -15,7 +15,7 @@ const ACTIONS = [
   'BookingCompleted', 'BookingCancelled', 'BookingNoShow', 'ColorRequestDecided',
   'PaymentSucceeded', 'PaymentFailed', 'PaymentNotCompleted', 'BalanceReceived', 'RefundRequested', 'RefundSent', 'RefundFailed',
   'ServiceCreated', 'ServiceUpdated', 'ServiceDeleted', 'SlotBlocked', 'SlotUnblocked', 'SlotBlockChanged', 'SalonHoursChanged',
-  'BookingRulesChanged', 'ColorStockChanged', 'SalonDetailsChanged', 'SalonPhotoChanged', 'GalleryPhotoAdded', 'GalleryPhotoRemoved',
+  'BookingRulesChanged', 'ColorStockChanged', 'SalonDetailsChanged', 'SalonPhotoChanged', 'GalleryPhotoAdded', 'GalleryPhotoRemoved', 'GalleryCaptionChanged',
   'FeedbackSubmitted', 'FeedbackReplied', 'FeedbackShownOnHome', 'ReferenceImageUploaded', 'ReferenceImageRemoved', 'ClientNoteChanged',
   'UserRegistered', 'EmailVerified', 'LoginSucceeded', 'LoginFailed', 'LoginCodeSent', 'LoginCodeFailed', 'AccountLocked',
   'PasswordResetRequested', 'PasswordReset', 'PasswordChanged', 'SignedOutEverywhere', 'ProfileUpdated', 'ClientDataDeleted',

@@ -54,12 +54,12 @@ describe('Registration', () => {
 
     await user.click(within(line).getByRole('button', { name: 'Terms & Conditions' }))
     const terms = await screen.findByRole('dialog', { name: 'Terms & Conditions' })
-    expect(terms).toHaveTextContent('Version 2.4')
+    expect(terms).toHaveTextContent('Version 2.5')
     expect(within(terms).queryByRole('button', { name: 'Agree and continue' })).toBeNull() // only to read
     await user.keyboard('{Escape}')
 
     await user.click(within(line).getByRole('button', { name: 'Privacy Policy' }))
-    expect(await screen.findByRole('dialog', { name: 'Privacy Policy' })).toHaveTextContent('Version 2.3')
+    expect(await screen.findByRole('dialog', { name: 'Privacy Policy' })).toHaveTextContent('Version 2.4')
   })
 
   it('the footer opens the Terms & Conditions and Privacy Policy on every page', async () => {

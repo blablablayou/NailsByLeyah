@@ -10,14 +10,31 @@ import { SectionHeading } from './SectionHeading'
 export const HOME_WORKS = 9
 
 // The built-in photos keep the grid full until Leyah has uploaded enough of her own (Management > Gallery).
-const BUILT_IN = Array.from({ length: 13 }, (_, i) => ({ key: `set-${i + 1}`, src: photo(i + 1), alt: `Nail set ${i + 1}` }))
+// Each caption describes the design as it looks in its photo (nails-01.jpg first); Leyah may rename them.
+const BUILT_IN_CAPTIONS = [
+  'Black lace French tips with silver studs on nude almond nails',
+  'Leopard print with silver cat eye accent nails',
+  'Burgundy and milky white with silver chrome lines and red accents',
+  'Milky white and nude with pink bows, polka dots and white French tips',
+  'Butter yellow polka dots with 3D flowers, a brown cat eye nail and gold studs',
+  'Classic white French tips on nude almond nails',
+  'Nude nails with gold wire flowers, small 3D white flowers and white tips',
+  '3D white lilies with pink airbrush, croc texture and blue butterfly-wing accents',
+  'Burgundy stripes, pink polka dots and butter yellow tips with gold studs',
+  'Nude and white with 3D flowers, brown polka dots and silver stones',
+  'Dark chocolate with gold chrome lines, gold textured nails and pearls',
+  'Burgundy and mauve cat eye with gold lines, red airbrush and 3D petals',
+  'Pastel milky nails with 3D flowers, shell shapes, pink blush and gold studs',
+]
+const BUILT_IN = BUILT_IN_CAPTIONS.map((caption, i) => ({ key: `set-${i + 1}`, src: photo(i + 1), alt: caption, caption }))
 
-/** Every work in showing order: Leyah's uploads (the API lists the newest first), then the built-in photos. */
+/**
+ * Every work in showing order: Leyah's uploads (the API lists the newest first). The built-in photos only fill the
+ * gallery while she has none, since she has uploaded them herself (Management > Gallery), each with its design.
+ */
 export function galleryPhotos(uploads = []) {
-  return [
-    ...uploads.map((p) => ({ key: `photo-${p.id}`, src: galleryPhotoSrc(p), alt: p.caption || 'A nail set by Leyah' })),
-    ...BUILT_IN,
-  ]
+  if (uploads.length === 0) return BUILT_IN
+  return uploads.map((p) => ({ key: `photo-${p.id}`, src: galleryPhotoSrc(p), alt: p.caption || 'A nail set by Leyah', caption: p.caption || null }))
 }
 
 /** The works, with `loaded` once Leyah's uploads have been asked for. A gallery that can't load leaves the built-in photos. */
@@ -46,7 +63,7 @@ export function WorksGrid({ items, loaded, onOpen }) {
       {items.map((item, i) => (
         <li key={item.key} style={{ '--i': Math.min(i, 11) }}>
           <button type="button" className="works-tile" aria-label={`View ${item.alt}`}
-            onClick={(e) => onOpen({ src: item.src, alt: item.alt }, e.currentTarget)}>
+            onClick={(e) => onOpen({ src: item.src, alt: item.alt, caption: item.caption }, e.currentTarget)}>
             <img src={item.src} alt="" loading="lazy" decoding="async" width="600" height="600" />
           </button>
         </li>
@@ -67,7 +84,10 @@ export function WorksGallery({ onOpen }) {
   )
 }
 
-/** Full-size photo. Click anywhere, × or Escape to close; focus returns to the photo that opened it. */
+/**
+ * Full-size photo, with its design caption beside it on a wide screen (below it on a phone); a photo without a caption
+ * shows alone. Click anywhere, × or Escape to close; focus returns to the photo that opened it.
+ */
 export function PhotoViewer({ photo: current, open, onClose }) {
   const closeRef = useRef(null)
 
@@ -86,7 +106,18 @@ export function PhotoViewer({ photo: current, open, onClose }) {
   return (
     <div className={open ? 'hm-viewer open' : 'hm-viewer'} role="dialog" aria-modal="true" aria-label="Nail set photo"
       aria-hidden={!open} onClick={onClose}>
-      {current && <img src={current.src} alt={current.alt} />}
+      {current && (
+        <figure className={current.caption ? 'hm-viewer-figure has-caption' : 'hm-viewer-figure'}>
+          <img src={current.src} alt={current.alt} />
+          {current.caption && (
+            <figcaption className="hm-viewer-caption">
+              <span className="hm-viewer-eyebrow">The design</span>
+              <span className="hm-viewer-text">{current.caption}</span>
+              <span className="hm-viewer-by">By Leyah, Nails by Leyah</span>
+            </figcaption>
+          )}
+        </figure>
+      )}
       <button type="button" className="hm-viewer-close" ref={closeRef} aria-label="Close" tabIndex={open ? 0 : -1}>×</button>
     </div>
   )

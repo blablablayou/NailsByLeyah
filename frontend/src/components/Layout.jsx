@@ -46,9 +46,24 @@ export function Layout() {
   useEffect(() => {
     if (shownPath.current === location.pathname) return
     shownPath.current = location.pathname
+    // A new page starts at its top (a link to a home section, like /#services, glides there instead).
+    if (!location.hash) window.scrollTo?.({ top: 0, behavior: 'instant' })
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     if (!reduce) mainRef.current?.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' })
-  }, [location.pathname])
+  }, [location.pathname, location.hash])
+
+  // The logo: on another page it goes home (or to Leyah's dashboard); already there, it glides back to the top.
+  const logoHome = isAdmin ? '/admin' : '/'
+  const onLogoClick = (e) => {
+    if (location.pathname !== logoHome) return
+    e.preventDefault()
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    const toTop = () => window.scrollTo?.({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
+    if (!location.hash) return toTop()
+    // Drop "#reviews" so the address shows the top again, then glide once the page has taken the new address.
+    navigate(logoHome, { replace: true })
+    requestAnimationFrame(() => requestAnimationFrame(toTop))
+  }
   const isHome = location.pathname === '/'
   // Checked again when the client signs in or moves between their own pages, so a visit Leyah just completed shows up.
   const isClientPage = ['/book', '/bookings', '/feedback', '/profile'].includes(location.pathname)
@@ -71,7 +86,7 @@ export function Layout() {
       <a href="#main" className="skip-link">Skip to content</a>
       <header className="site-header">
         <div className={isAdmin ? 'header-inner header-admin' : 'header-inner header-split'}>
-          <Link to={isAdmin ? '/admin' : '/'} className="brand">
+          <Link to={logoHome} className="brand" onClick={onLogoClick} aria-label={isAdmin ? 'Nails by Leyah: dashboard' : 'Nails by Leyah: home'}>
             <BrandLogo />
           </Link>
           <button type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="site-nav"

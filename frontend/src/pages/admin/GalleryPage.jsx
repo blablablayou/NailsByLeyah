@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { api } from '../../api'
 import { useAsync } from '../../hooks/useAsync'
 import { errorMessage, fieldErrors } from '../../api/errors'
@@ -7,6 +7,7 @@ import { LIMITS, REFERENCE_IMAGE_ACCEPT, validateReferenceImage } from '../../va
 import { shrinkImage } from '../../lib/shrinkImage'
 import { Alert, Button, Card, EmptyState, PageHeader, PageLoader, TextField } from '../../components/ui'
 import { Modal } from '../../components/Modal'
+import { ListPaging, usePageParam } from '../../components/ListPaging'
 
 /** Where an uploaded gallery photo is served: the API's address, or the test backend's data URL. */
 export const galleryPhotoSrc = (photo) =>
@@ -14,6 +15,75 @@ export const galleryPhotoSrc = (photo) =>
 
 /** The home page keeps at most this many of Leyah's own photos (GalleryPhoto.MaxPhotos on the server). */
 const MAX_PHOTOS = 30
+
+/** "Your photos" shows three rows at a time, however many photos fit in a row on this screen. */
+const ROWS_PER_PAGE = 3
+
+/** How many tiles fit in one row of the grid right now (it changes with the screen width). */
+function useGridColumns() {
+  const [columns, setColumns] = useState(5)
+  const observer = useRef(null)
+  const ref = useCallback((el) => {
+    observer.current?.disconnect()
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const measure = () => setColumns(Math.max(1, getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length))
+    observer.current = new ResizeObserver(measure)
+    observer.current.observe(el)
+    measure()
+  }, [])
+  return [columns, ref]
+}
+
+/**
+ * A photo's caption under its tile: the design clients see beside the larger photo. "Edit" changes it in place;
+ * an empty caption removes it.
+ */
+function TileCaption({ photo, onSaved, onRemove }) {
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState(photo.caption ?? '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const name = photo.caption ?? 'this photo'
+
+  const start = () => { setText(photo.caption ?? ''); setError(null); setEditing(true) }
+  const save = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setError(null)
+    try {
+      onSaved(await api.admin.updateGalleryCaption(photo.id, text.trim() || null))
+      setEditing(false)
+    } catch (err) {
+      setError(fieldErrors(err).caption ?? errorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <form className="gallery-tile-edit" onSubmit={save} noValidate>
+        <TextField label="Caption (the design)" maxLength={LIMITS.galleryCaptionMax} value={text} error={error} autoFocus
+          placeholder="e.g. Pink French tips with hand-painted flowers" onChange={(e) => setText(e.target.value)} />
+        <div className="gallery-tile-edit-actions">
+          <Button variant="secondary" size="sm" onClick={() => setEditing(false)} disabled={saving}>Cancel</Button>
+          <Button type="submit" size="sm" loading={saving}>Save</Button>
+        </div>
+      </form>
+    )
+  }
+  return (
+    <div className="gallery-tile-foot">
+      {photo.caption
+        ? <span className="gallery-tile-caption" title={photo.caption}>{photo.caption}</span>
+        : <span className="gallery-tile-caption muted">No caption</span>}
+      <span className="gallery-tile-buttons">
+        <Button variant="ghost" size="sm" aria-label={`Edit the caption of ${name}`} onClick={start}>Edit</Button>
+        <Button variant="danger-ghost" size="sm" aria-label={`Remove ${name}`} onClick={onRemove}>Remove</Button>
+      </span>
+    </div>
+  )
+}
 
 /**
  * Leyah's photos for the home page's Our Works gallery. New photos show first, before the photos of her work that came
@@ -25,12 +95,18 @@ export default function GalleryPage() {
   const [confirming, setConfirming] = useState(null) // the photo Leyah is about to remove
   const [removing, setRemoving] = useState(false)
   const [error, setError] = useState(null)
+  const [columns, gridRef] = useGridColumns()
+  const { page, goTo } = usePageParam('.gallery-admin')
 
   if (photos.loading && !photos.data) return <PageLoader label="Loading photos…" />
   if (photos.error) return <Alert kind="error">{errorMessage(photos.error)}</Alert>
 
   const count = photos.data.length
   const full = count >= MAX_PHOTOS
+  const pageSize = columns * ROWS_PER_PAGE
+  // A removed photo can leave the last page empty: show the page before it instead.
+  const current = Math.min(page, Math.max(1, Math.ceil(count / pageSize)))
+  const shown = photos.data.slice((current - 1) * pageSize, current * pageSize)
 
   const remove = async () => {
     const photo = confirming
@@ -57,21 +133,20 @@ export default function GalleryPage() {
       <AddPhoto full={full} onAdded={(photo) => { photos.setData((list) => [photo, ...list]); setMessage('Photo added to the home page.') }} />
       <Card title={`Your photos · ${count} of ${MAX_PHOTOS}`}>
         {count === 0 ? (
-          <EmptyState title="No photos added yet">The home page already shows the photos of your work that came with the site. Photos you add here show first, newest on top.</EmptyState>
+          <EmptyState title="No photos added yet">Until you add your own, the home page shows the photos of your work that came with the site. Once you add photos here, the home page shows yours, newest first.</EmptyState>
         ) : (
-          <ul className="gallery-admin">
-            {photos.data.map((p) => (
+          <>
+          <ul className="gallery-admin" ref={gridRef}>
+            {shown.map((p) => (
               <li key={p.id} className="gallery-tile">
                 <img src={galleryPhotoSrc(p)} alt={p.caption ?? 'Gallery photo'} loading="lazy" />
-                <div className="gallery-tile-foot">
-                  {p.caption
-                    ? <span className="gallery-tile-caption">{p.caption}</span>
-                    : <span className="gallery-tile-caption muted">No caption</span>}
-                  <Button variant="danger-ghost" size="sm" aria-label={`Remove ${p.caption ?? 'this photo'}`} onClick={() => setConfirming(p)}>Remove</Button>
-                </div>
+                <TileCaption photo={p} onRemove={() => setConfirming(p)}
+                  onSaved={(updated) => { photos.setData((list) => list.map((x) => (x.id === updated.id ? updated : x))); setMessage('Caption saved.') }} />
               </li>
             ))}
           </ul>
+          <ListPaging page={current} count={count} pageSize={pageSize} onChange={goTo} noun={['photo', 'photos']} />
+          </>
         )}
       </Card>
       {confirming && (

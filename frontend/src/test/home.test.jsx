@@ -7,6 +7,35 @@ import { ADMIN, CLIENT, renderApp, signIn } from './helpers'
 
 const TINY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
 
+describe('Header logo', () => {
+  it('goes to the home page from another page, and back to the top when already there', async () => {
+    const user = userEvent.setup()
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    renderApp('/gallery')
+
+    await user.click(await screen.findByRole('link', { name: 'Nails by Leyah: home' }))
+    expect(await screen.findByRole('heading', { name: /What clients say|Services & Pricing/i })).toBeInTheDocument()
+
+    scrollTo.mockClear()
+    await user.click(screen.getByRole('link', { name: 'Nails by Leyah: home' }))
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
+    scrollTo.mockRestore()
+  })
+})
+
+describe('Photo viewer', () => {
+  it('shows the design caption with the larger photo', async () => {
+    const user = userEvent.setup()
+    renderApp('/gallery')
+
+    await user.click(await screen.findByRole('button', { name: 'View Classic white French tips on nude almond nails' }))
+
+    const viewer = screen.getByRole('dialog', { name: 'Nail set photo' })
+    expect(within(viewer).getByText('The design')).toBeInTheDocument()
+    expect(within(viewer).getByText('Classic white French tips on nude almond nails')).toBeInTheDocument()
+  })
+})
+
 describe('Home page', () => {
   it('shows every section', () => {
     renderApp('/')
@@ -241,14 +270,20 @@ describe('Home page', () => {
       expect(within(gallery).getByRole('link', { name: /View full gallery/ })).toHaveAttribute('href', '/gallery')
     })
 
-    it("puts Leah's newest uploads first and fills the rest from the built-in photos", async () => {
+    it("shows only Leah's uploads, newest first, once she has any (the built-in photos are among them)", async () => {
       addUploads('Older set', 'Newest set') // the newest is added last; the gallery lists it first
       const { container } = renderApp('/')
       const gallery = container.querySelector('#gallery')
       await within(gallery).findByRole('button', { name: 'View Newest set' })
       const names = tiles(gallery).map((b) => b.getAttribute('aria-label'))
-      expect(names).toHaveLength(9)
-      expect(names.slice(0, 3)).toEqual(['View Newest set', 'View Older set', 'View Nail set 1'])
+      expect(names).toEqual(['View Newest set', 'View Older set'])
+    })
+
+    it('shows the built-in photos while Leah has uploaded none', async () => {
+      const { container } = renderApp('/')
+      const gallery = container.querySelector('#gallery')
+      expect(await within(gallery).findByRole('button', { name: 'View Black lace French tips with silver studs on nude almond nails' })).toBeInTheDocument()
+      expect(tiles(gallery)).toHaveLength(9)
     })
 
     it('opens a photo larger and closes it with Escape, back on the photo', async () => {
@@ -265,24 +300,24 @@ describe('Home page', () => {
 
     it('the full gallery page shows every photo, four rows of three to a page', async () => {
       const user = userEvent.setup()
-      addUploads('Newest set')
+      addUploads(...Array.from({ length: 14 }, (_, i) => `Set ${i + 1}`)) // Set 14 is the newest
       renderApp('/gallery')
       const page = await screen.findByRole('region', { name: 'Our Works' })
-      await within(page).findByRole('button', { name: 'View Newest set' })
+      await within(page).findByRole('button', { name: 'View Set 14' })
       expect(screen.getByRole('link', { name: /Back to home/ })).toHaveAttribute('href', '/')
 
-      // 14 photos (the upload and the 13 built-in ones): 12 on page 1, the other 2 on page 2.
+      // 14 uploads: 12 on page 1, the other 2 on page 2.
       expect(tiles(page)).toHaveLength(12)
       expect(page).toHaveTextContent('Showing 1–12 of 14')
       await user.click(within(page).getByRole('button', { name: 'Page 2' }))
-      expect(tiles(page).map((b) => b.getAttribute('aria-label'))).toEqual(['View Nail set 12', 'View Nail set 13'])
+      expect(tiles(page).map((b) => b.getAttribute('aria-label'))).toEqual(['View Set 2', 'View Set 1'])
       expect(page).toHaveTextContent('Showing 13–14 of 14')
     })
 
     it('shows the last page for a page number past the end (e.g. photos removed since)', () => {
       renderApp('/gallery?page=5')
       const page = screen.getByRole('region', { name: 'Our Works' })
-      expect(tiles(page).map((b) => b.getAttribute('aria-label'))).toEqual(['View Nail set 13'])
+      expect(tiles(page).map((b) => b.getAttribute('aria-label'))).toEqual(['View Pastel milky nails with 3D flowers, shell shapes, pink blush and gold studs'])
       expect(within(page).getByRole('button', { name: 'Page 2' })).toHaveAttribute('aria-current', 'page')
     })
   })

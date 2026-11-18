@@ -14,6 +14,9 @@ public interface IGalleryService
     Task<GalleryPhotoResponse> AddAsync(int adminId, IFormFile? file, string? caption, CancellationToken ct = default);
     Task RemoveAsync(int id, CancellationToken ct = default);
 
+    /// <summary>Leyah changes a photo's caption (the design shown with it); empty removes it.</summary>
+    Task<GalleryPhotoResponse> UpdateCaptionAsync(int id, string? caption, CancellationToken ct = default);
+
     /// <summary>The photo's bytes and type, or null when it no longer exists.</summary>
     Task<(Stream Content, string ContentType)?> OpenAsync(int id, CancellationToken ct = default);
 }
@@ -38,9 +41,7 @@ public sealed class GalleryService(
     public async Task<GalleryPhotoResponse> AddAsync(int adminId, IFormFile? file, string? caption, CancellationToken ct = default)
     {
         const string field = "file";
-        var text = string.IsNullOrWhiteSpace(caption) ? null : InputNormalizer.Text(caption);
-        if (text?.Length > InputLimits.GalleryCaptionMaxLength)
-            throw new ValidationAppException("caption", $"The caption must be {InputLimits.GalleryCaptionMaxLength} characters or fewer.");
+        var text = CleanCaption(caption);
         if (await photos.CountAsync(ct) >= GalleryPhoto.MaxPhotos)
             throw new ConflictException($"The gallery holds up to {GalleryPhoto.MaxPhotos} photos. Remove one to add another.", "gallery_full");
         if (file is null || file.Length == 0)
@@ -81,6 +82,27 @@ public sealed class GalleryService(
         audit.Record(AuditActions.GalleryPhotoAdded, nameof(GalleryPhoto), photo.Id, $"{format.ContentType}, {bytes.Length} bytes");
         await unitOfWork.SaveChangesAsync(ct);
         return ToResponse(photo);
+    }
+
+    public async Task<GalleryPhotoResponse> UpdateCaptionAsync(int id, string? caption, CancellationToken ct = default)
+    {
+        var photo = await photos.GetByIdAsync(id, ct) ?? throw new NotFoundException("This photo has been removed.");
+        var text = CleanCaption(caption);
+        if (photo.Caption != text)
+        {
+            photo.Caption = text;
+            audit.Record(AuditActions.GalleryCaptionChanged, nameof(GalleryPhoto), id, text is null ? "Caption removed" : "Caption changed");
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        return ToResponse(photo);
+    }
+
+    private static string? CleanCaption(string? caption)
+    {
+        var text = string.IsNullOrWhiteSpace(caption) ? null : InputNormalizer.Text(caption);
+        if (text?.Length > InputLimits.GalleryCaptionMaxLength)
+            throw new ValidationAppException("caption", $"The caption must be {InputLimits.GalleryCaptionMaxLength} characters or fewer.");
+        return text;
     }
 
     public async Task RemoveAsync(int id, CancellationToken ct = default)

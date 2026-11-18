@@ -226,6 +226,9 @@ public sealed record AccountSecurityResponse(DateTime? PreviousSignInAt, string?
 /// <summary>Leyah sent a refund by GCash or Maya; the reference is optional.</summary>
 public sealed record RecordRefundRequest(string? RefundReference);
 
+/// <summary>A gallery photo's new caption; empty removes it.</summary>
+public sealed record GalleryCaptionRequest(string? Caption);
+
 public sealed record ClientSummaryResponse(int Id, string FirstName, string LastName, string Username, string Email, string PhoneNumber,
     string? PhotoUrl = null, string? AdminNote = null); // AdminNote: Leyah's private note; only sent to administrators
 

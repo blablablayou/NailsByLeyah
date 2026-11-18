@@ -121,4 +121,41 @@ describe('Admin gallery: audit fixes', () => {
     expect(create).toHaveBeenCalledTimes(1)
     expect(revoke).toHaveBeenCalledWith('blob:preview-1')
   })
+
+  it('edits a caption in place, and an empty caption removes it', async () => {
+    const user = userEvent.setup()
+    seedPhotos(1)
+    await openGallery()
+
+    await user.click(screen.getByRole('button', { name: 'Edit the caption of Set 1' }))
+    const field = screen.getByLabelText(/^Caption \(the design\)/)
+    await user.clear(field)
+    await user.type(field, 'Pink French tips with hand-painted flowers')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Caption saved.')).toBeInTheDocument()
+    expect(screen.getByText('Pink French tips with hand-painted flowers')).toBeInTheDocument()
+    expect(getDb().galleryPhotos[0].caption).toBe('Pink French tips with hand-painted flowers')
+
+    await user.click(screen.getByRole('button', { name: 'Edit the caption of Pink French tips with hand-painted flowers' }))
+    await user.clear(screen.getByLabelText(/^Caption \(the design\)/))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText('No caption')).toBeInTheDocument()
+    expect(getDb().galleryPhotos[0].caption).toBeNull()
+  })
+
+  it('shows three rows of photos at a time, with Previous and Next', async () => {
+    const user = userEvent.setup()
+    seedPhotos(16)
+    await openGallery()
+
+    // Five to a row here (the default before the screen is measured): 15 on page 1, the last one on page 2.
+    expect(document.querySelectorAll('.gallery-tile')).toHaveLength(15)
+    expect(screen.getByText('Showing 1–15 of 16')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    expect(document.querySelectorAll('.gallery-tile')).toHaveLength(1)
+    expect(screen.getByText('Showing 16–16 of 16')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Previous' }))
+    expect(document.querySelectorAll('.gallery-tile')).toHaveLength(15)
+  })
 })

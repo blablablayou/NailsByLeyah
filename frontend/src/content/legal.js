@@ -12,11 +12,13 @@ const EMAIL = 'nailsbyleyah.bookings@gmail.com'
 
 export const termsAndConditions = {
   title: 'Terms & Conditions',
-  version: '2.4',
-  updated: 'November 11, 2026',
+  version: '2.5',
+  updated: 'November 18, 2026',
   // The key points, shown above the full text. They only summarise it; the full text below is what applies.
   reminders: [
+    'Every visit needs a booking, walk-ins included: book online yourself, or Leyah books it for you.',
     'Every booking needs a ₱150 deposit, paid by GCash or Maya when you book. It counts toward your total.',
+    'Pay the rest at the salon, or online by GCash or Maya before your appointment once it is confirmed.',
     'The deposit is non-refundable if you cancel late or do not show up, unless the salon cancels.',
     'You can reschedule online up to 24 hours before your appointment.',
     'Please cancel at least 24 hours ahead. A late cancellation or no-show keeps the ₱150 deposit as the fee.',
@@ -45,7 +47,9 @@ export const termsAndConditions = {
     {
       heading: '3. Booking an appointment',
       points: [
-        'We work by appointment only; we do not accept walk-ins.',
+        'Every visit needs a booking, walk-ins included. You can book online yourself, or Leyah can book a time for you when you come by or message us. We take one client at a time, so we can only fit you in if a time is free.',
+        'Online bookings must be made at least 2 hours before the appointment, so Leyah can confirm and get ready. For a sooner time, call or message us.',
+        'While you pay online, your chosen time is held for you for 15 minutes. You can have up to 2 bookings waiting for payment at once.',
         'You can book up to 30 days ahead. Appointments start every 30 minutes from 11:00 AM and must end by closing time (usually 9:00 PM). Each appointment is followed by a 30-minute break, so the times you can choose depend on how long your service takes.',
         'You may add up to 3 design reference photos and a note for Leyah. Photos only guide the design; the final result can differ depending on your nails and the design.',
         'Please book only if you are sure you can come. Your time is reserved only for you.',
@@ -63,7 +67,8 @@ export const termsAndConditions = {
       heading: '5. Payment and the booking deposit',
       points: [
         'Every booking needs a ₱150 booking deposit, paid online through GCash or Maya when you book. You may choose to pay the deposit only, or pay the full price.',
-        'The deposit counts toward your total; it is never charged on top. If you pay only the deposit, pay the balance by GCash right after your service. There is no fee for paying the balance late.',
+        'The deposit counts toward your total; it is never charged on top. If your service costs less than ₱150, you pay only its price.',
+        'If you pay only the deposit, you can pay the rest at the salon after your service, or online by GCash or Maya from "My bookings" before your appointment, once Leyah has confirmed your booking. There is no fee for paying the balance late.',
         'Your booking stays "Pending" until Leyah checks your payment and confirms it. We email you when it is confirmed.',
         'The ₱150 booking deposit is non-refundable when you cancel or do not show up. It secures your slot and covers the time spent preparing for your appointment. The only exception is when the salon cancels (see section 7).',
       ],
@@ -71,7 +76,7 @@ export const termsAndConditions = {
     {
       heading: '6. Rescheduling',
       points: [
-        'You can move your appointment online to another available time up to 24 hours before it starts. Within 24 hours, online changes are no longer possible.',
+        'You can move your appointment online to another available time up to 24 hours before it starts. Within 24 hours, online changes are no longer possible. The new time must also be at least 2 hours away.',
         'Your payment moves with your booking.',
         'The salon may need to move an appointment (for example if Leyah is unavailable). We will tell you and agree on a new time with you.',
       ],
@@ -81,7 +86,7 @@ export const termsAndConditions = {
       points: [
         'Please tell us at least 24 hours ahead if you need to cancel. You can cancel online from "My bookings" until your appointment starts.',
         'The fee for a late cancellation (less than 24 hours before) or a no-show is ₱150. It is the deposit we keep, not an extra charge.',
-        'If you paid in full and cancel, or do not show up, the ₱150 deposit is kept and the rest of your payment is refunded to the GCash or Maya account you paid from.',
+        'If you paid more than the deposit (in full, or the balance online) and cancel, or do not show up, the ₱150 deposit is kept and the rest of your payment is refunded to the GCash or Maya account you paid from.',
         'The salon may cancel a booking for reasons such as Leyah not being available or an emergency (for example, if Leyah is sick). If this happens, we will tell you the reason and refund your whole payment, the ₱150 deposit included.',
       ],
     },
@@ -99,7 +104,7 @@ export const termsAndConditions = {
     },
     {
       heading: '10. Feedback',
-      body: 'After your appointment you may rate your experience and leave a comment. Feedback is seen by the salon only. Please keep it respectful.',
+      body: 'After a completed appointment you may rate your experience and leave a comment, once for each appointment. Leyah may show some comments on our home page with your first name and the first letter of your last name, together with the average star rating. Please keep it respectful.',
     },
     {
       heading: '11. Changes to these terms',
@@ -114,8 +119,8 @@ export const termsAndConditions = {
 
 export const privacyPolicy = {
   title: 'Privacy Policy',
-  version: '2.3',
-  updated: 'November 6, 2026',
+  version: '2.4',
+  updated: 'November 18, 2026',
   reminders: [
     'We collect only what we need to run your account and bookings: your name, contact details, bookings, payments and design photos.',
     'We follow the Data Privacy Act of 2012 (Republic Act No. 10173).',
@@ -133,8 +138,9 @@ export const privacyPolicy = {
       points: [
         'Account details: first and last name, username, email address, mobile number, and your password (stored only in a scrambled, one-way form we cannot read).',
         'Booking details: the service and add-ons you choose, the date and time, your note for Leyah, the design reference photos you upload, and any changes or cancellations with the reason you give.',
-        'Payment records: the amount, whether you paid the deposit or in full, GCash or Maya, the payment reference number and when it was paid, and the same for any balance you pay after your service. We never see or store your GCash or Maya PIN, password or card details.',
-        'Feedback: your star rating and comment.',
+        'Payment records: the amount, whether you paid the deposit or in full, GCash or Maya, the payment reference number and when it was paid, the same for any balance you pay online or at the salon, and any refund we send back to you. We never see or store your GCash or Maya PIN, password or card details.',
+        'Walk-ins and bookings made by message: when Leyah books for someone without an account, the name and mobile number given to Leyah.',
+        'Feedback: your star rating and comment, and whether Leyah has chosen to show the comment on our home page.',
         'Security records: when you agreed to our terms, failed sign-in attempts, and a log of important actions on your account with the internet (IP) address they came from.',
       ],
     },
@@ -143,7 +149,7 @@ export const privacyPolicy = {
       points: [
         'To create and protect your account, and confirm your email address.',
         'To manage your appointments: reserve your time, prepare your design, confirm your booking, and let you reschedule or cancel.',
-        'To send you emails about your account and bookings: verification codes, password reset links, booking received, booking confirmed, and a reminder about 24 hours before your appointment. We do not send marketing emails.',
+        'To send you emails about your account and bookings: verification codes, password reset links, booking received, booking confirmed, a reminder about 24 hours before your appointment, and when the salon cancels or moves your booking or sends your refund. We do not send marketing emails.',
         'To keep accurate payment and sales records.',
         'To keep the website secure and investigate misuse.',
       ],
@@ -154,6 +160,7 @@ export const privacyPolicy = {
       points: [
         'Leyah (the salon administrator) can see your account details, bookings, payments, photos and feedback to serve you.',
         'Your design photos can be seen only by you and the salon.',
+        'If Leyah chooses your comment for the home page, anyone visiting the website can see it, with your first name and the first letter of your last name only, and the month you wrote it.',
         'Trusted service providers process information for us only to run the website: our web and database hosting providers, our email delivery provider (Brevo), and GCash or Maya and their payment processor for payments.',
         'We may share information when the law requires it.',
       ],
@@ -174,7 +181,7 @@ export const privacyPolicy = {
     },
     {
       heading: '6. Cookies and browser storage',
-      body: 'We use one essential cookie to keep you signed in. Your browser also remembers, for the current visit only, that you have seen the opening animation. We do not use advertising or tracking cookies. The map on our home page is provided by Google Maps, which may collect information under Google\'s own privacy policy.',
+      body: 'We use one essential cookie to keep you signed in (the salon administrator\'s account also uses two for its email sign-in code). Your browser also remembers, for the current visit only, that you have seen the opening animation. We do not use advertising or tracking cookies. The map on our home page is provided by Google Maps, which may collect information under Google\'s own privacy policy.',
     },
     {
       heading: '7. How long we keep it',
@@ -183,7 +190,7 @@ export const privacyPolicy = {
     {
       heading: '8. Deleting your information',
       body: [
-        'You can ask us to delete your information by contacting us. Please complete or cancel any open booking first. We remove your name, username, email address, mobile number, design photos, notes, feedback comments and security records, and you can no longer sign in. This cannot be undone.',
+        'You can ask us to delete your information by contacting us. Please complete or cancel any open booking first, and any refund owed to you is sent before we delete. We remove your name, username, email address, mobile number, design photos, notes, feedback comments and security records, and you can no longer sign in. This cannot be undone.',
         'We keep your bookings, payment amounts and reference numbers, and star ratings, with no name attached, because they are needed for accurate sales and tax records. Emails already sent to you or to the salon may remain in those inboxes until they are deleted.',
       ],
     },

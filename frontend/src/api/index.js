@@ -170,5 +170,6 @@ export const api = {
     gallery: () => get('/admin/gallery'),
     addGalleryPhoto: (file, caption) => upload('/admin/gallery', file, { caption }),
     removeGalleryPhoto: (id) => del(`/admin/gallery/${id}`),
+    updateGalleryCaption: (id, caption) => put(`/admin/gallery/${id}/caption`, { caption }),
   },
 }

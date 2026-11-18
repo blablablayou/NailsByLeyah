@@ -171,6 +171,7 @@ public static class AuditActions
     public const string FeedbackShownOnHome = "FeedbackShownOnHome";
     public const string GalleryPhotoAdded = "GalleryPhotoAdded";
     public const string GalleryPhotoRemoved = "GalleryPhotoRemoved";
+    public const string GalleryCaptionChanged = "GalleryCaptionChanged";
     public const string BookingCreatedByAdmin = "BookingCreatedByAdmin";
 }
 

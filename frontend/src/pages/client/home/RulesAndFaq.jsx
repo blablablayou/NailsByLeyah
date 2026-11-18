@@ -60,7 +60,7 @@ export function FaqSection({ deposit, hours }) {
   const toggle = (i) => setOpenIndex((current) => (current === i ? null : i))
   const faq = [
     ['Is the reservation deposit refundable?', `No. The ${deposit} deposit is non-refundable because it secures your slot: once your booking is confirmed, that time is reserved only for you and can no longer be offered to other clients. It also covers the time spent preparing for your appointment.`],
-    ['Do you accept walk-ins?', 'No. Nails by Leyah is home-based and works by appointment only, so please book your slot in advance.'],
+    ['Do you accept walk-ins?', 'Yes, but every visit still needs a booking. You can book online yourself, or Leyah can book the time for you when you come by or message us. Nails by Leyah is home-based and takes one client at a time, so we can only fit you in if a time is free.'],
     ['What are your opening hours?', `${hours}, by appointment only. Each appointment is followed by a 30-minute break, so the times you can book depend on how long your service takes.`],
     ['How much is the deposit?', `The deposit is ${deposit}. It secures your slot and is deducted from your total on the day.`],
     ['What is your cancellation policy?', 'Please let us know at least 24 hours in advance if you need to cancel or reschedule. Late cancellations and no-shows incur a fee, and the deposit is not refunded.'],
@@ -68,7 +68,7 @@ export function FaqSection({ deposit, hours }) {
     ['How should I prepare for my appointment?', 'Come with clean, bare nails: no polish, gel or acrylic, unless you booked a removal.'],
     ['Can I bring a friend or my kids?', 'Sorry, no extra guests or kids. Space is limited and it keeps things calm and focused for both of us.'],
     ['What if my nails lift or chip?', 'We offer a 3-day repair for lifting or chipping. Message us within 3 days after your appointment. This covers repairs only.'],
-    ['How do I pay the balance?', 'Pay by GCash right after the service. Late payments incur a fee.'],
+    ['How do I pay the balance?', `Pay the ${deposit} deposit by GCash or Maya when you book. You can pay the rest at the salon after your service, or online by GCash or Maya before your appointment (from My bookings, once Leyah confirms your booking) so it's fully paid. You can also pay the full price online when you book.`],
     ['Where are you located?', 'Nails by Leyah is home-based and works by appointment only. The address, opening hours and map are in "Visit us" below.'],
   ]
   const half = Math.ceil(faq.length / 2)
