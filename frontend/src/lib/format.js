@@ -41,5 +41,6 @@ export function formatClock(iso) {
 
 /** "SomeEnumValue" → "Some enum value" */
 export function humanize(value) {
-  return String(value ?? '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase())
+  // "BookingCancelled" reads "Booking Canceled" (American spelling; the stored name keeps its double l).
+  return String(value ?? '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase()).replace(/\bCancelled\b/g, 'Canceled')
 }

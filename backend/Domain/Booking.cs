@@ -19,16 +19,16 @@ public class Booking : IPayable, ICancellable, ISoftDeletable
     /// <summary>Price of the removal when the booking was made; 0 without one.</summary>
     public decimal RemovalPrice { get; set; }
 
-    /// <summary>The nail colour the client chose (from the salon's list), or null for a removal only.</summary>
+    /// <summary>The nail color the client chose (from the salon's list), or null for a removal only.</summary>
     public string? NailColor { get; set; }
 
     /// <summary>
-    /// Optional colours for each nail as JSON, {"left":[...5],"right":[...5]}, thumb first; a null nail has the main colour.
+    /// Optional colors for each nail as JSON, {"left":[...5],"right":[...5]}, thumb first; a null nail has the main color.
     /// Kept as one text column: it is only ever read and shown with the booking.
     /// </summary>
     public string? PerNailColors { get; set; }
 
-    /// <summary>"Can't find your colour?": the shade the client described, when it isn't on the chart.</summary>
+    /// <summary>"Can't find your color?": the shade the client described, when it isn't on the chart.</summary>
     public string? ColorRequest { get; set; }
 
     /// <summary>Whether Leyah has the requested shade; Pending until she answers. Null without a request.</summary>
@@ -146,7 +146,7 @@ public class Booking : IPayable, ICancellable, ISoftDeletable
     public bool IsUnpaidHold => AmountPaid == 0 && PaymentIdempotencyKey != null
                                 && Status is BookingStatus.AwaitingPayment or BookingStatus.Cancelled;
 
-    /// <summary>The hold ends without a payment (ran out, the client cancelled it, or Xendit couldn't start): the slot is freed.</summary>
+    /// <summary>The hold ends without a payment (ran out, the client canceled it, or Xendit couldn't start): the slot is freed.</summary>
     public void ReleaseHold(DateTime utcNow)
     {
         if (Status != BookingStatus.AwaitingPayment)
@@ -210,7 +210,7 @@ public class Booking : IPayable, ICancellable, ISoftDeletable
     public void MarkCancelled(DateTime utcNow, bool fullRefund)
     {
         if (!CanBeCancelled)
-            throw new ConflictException($"A {Status} booking cannot be cancelled.", "invalid_status");
+            throw new ConflictException($"A {Status} booking cannot be canceled.", "invalid_status");
         Status = BookingStatus.Cancelled;
         RefundDue = fullRefund ? AmountPaid : AmountAboveDeposit;
         UpdatedAt = utcNow;
@@ -316,9 +316,9 @@ public class Booking : IPayable, ICancellable, ISoftDeletable
     public void DecideColorRequest(bool available, DateTime utcNow)
     {
         if (ColorRequestStatus is null)
-            throw new ConflictException("This booking has no colour request.", "no_color_request");
+            throw new ConflictException("This booking has no color request.", "no_color_request");
         if (!IsActive)
-            throw new ConflictException($"A {Status} booking's colour request can no longer be changed.", "invalid_status");
+            throw new ConflictException($"A {Status} booking's color request can no longer be changed.", "invalid_status");
         ColorRequestStatus = available ? Domain.ColorRequestStatus.Available : Domain.ColorRequestStatus.Unavailable;
         UpdatedAt = utcNow;
     }

@@ -142,7 +142,7 @@ describe('Administrator cancellation (7.8)', () => {
     render(<CancelBookingDialog booking={booking} reasons={lookups.adminCancellationReasons} allowExplanation onSubmit={onSubmit} onClose={() => {}} />)
 
     expect(screen.getByLabelText(/Explanation \(optional\)/)).not.toBeRequired()
-    await user.selectOptions(screen.getByLabelText(/Reason for cancelling/), 'ScheduleConflict')
+    await user.selectOptions(screen.getByLabelText(/Reason for canceling/), 'ScheduleConflict')
     await user.click(screen.getByRole('button', { name: 'Cancel booking' }))
 
     expect(onSubmit).toHaveBeenCalledWith({ reason: 'ScheduleConflict', explanation: null })
@@ -173,7 +173,7 @@ describe('Booking flow', () => {
     await signIn(CLIENT)
     renderApp('/book')
 
-    // Step 1: service, colour and add-ons; the total updates as they change (Ref 10.4).
+    // Step 1: service, color and add-ons; the total updates as they change (Ref 10.4).
     await user.click(await screen.findByRole('checkbox', { name: /^With Design/ }))
     const total = () => within(screen.getByRole('complementary')).getByText('Total').nextSibling.textContent
     expect(total()).toBe('₱499.00')
@@ -188,9 +188,9 @@ describe('Booking flow', () => {
     await user.click(screen.getByRole('button', { name: 'Fewer nails for French Tip' }))
     expect(screen.getByText('3 nails')).toBeInTheDocument()
     expect(total()).toBe('₱544.00')
-    // A colour is required for a new set.
+    // A color is required for a new set.
     await user.click(screen.getByRole('button', { name: /^Next:/ }))
-    expect(screen.getByText('Choose a nail colour to continue.')).toBeInTheDocument()
+    expect(screen.getByText('Choose a nail color to continue.')).toBeInTheDocument()
     await pickShade(user, '06')
     expect(within(screen.getByRole('complementary')).getByText('#06 – Light Pink-Lavender')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /^Next:/ }))

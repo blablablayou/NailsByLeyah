@@ -16,7 +16,7 @@ beforeAll(() => {
 })
 
 describe('Design reference photos', () => {
-  // Design photos are added under "Choose a colour", on the first step.
+  // Design photos are added under "Choose a color", on the first step.
   async function goToDesignStep(user) {
     await user.click(await screen.findByRole('checkbox', { name: /^With Design/ }))
     await pickShade(user, '06')

@@ -35,7 +35,7 @@ public sealed class BookingOptions
     public decimal DepositAmount { get; set; } = 150m;
     public int RescheduleMinimumHours { get; set; } = 24;
 
-    /// <summary>Nail colours a client can choose for a new set of nails. Leyah's list goes in appsettings.</summary>
+    /// <summary>Nail colors a client can choose for a new set of nails. Leyah's list goes in appsettings.</summary>
     public string[] NailColors { get; set; } = [];
 }
 

@@ -46,7 +46,6 @@ export function MeetLeyah() {
           <svg className="hm-about-stroke" viewBox="0 0 300 14" preserveAspectRatio="none" aria-hidden="true">
             <path d="M4 9c60-6 150-8 292-3" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
           </svg>
-          {!story && <p className="hm-about-sample">Sample story · details to be confirmed</p>}
           <div className="hm-about-story">
             {(story ?? sampleStory).map((text) => <p key={text}>{text}</p>)}
           </div>

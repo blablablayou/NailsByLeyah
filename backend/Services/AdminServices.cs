@@ -115,7 +115,7 @@ public sealed class ReportService(IBookingRepository bookings, IPaymentRepositor
     }
 
     /// <summary>
-    /// "Made" and "cancelled" count by the day it happened; deposits and balances by the day they were paid; refunds by the day they were sent;
+    /// "Made" and "canceled" count by the day it happened; deposits and balances by the day they were paid; refunds by the day they were sent;
     /// completed services, no-shows and unpaid balances by appointment date. All days are salon-local.
     /// Everything is read for the whole period first (six queries) and then sorted into days, so a month costs the same
     /// few round trips to the database as a single day.
@@ -125,7 +125,7 @@ public sealed class ReportService(IBookingRepository bookings, IPaymentRepositor
         var (fromUtc, toUtc) = SalonDay.UtcRange(clock, from, to);
         var appointments = await bookings.GetInDateRangeAsync(from, to, ct);
         var paid = await payments.GetSucceededBetweenAsync(fromUtc, toUtc, ct);
-        var cancelled = await bookings.GetCancelledBetweenAsync(fromUtc, toUtc, ct);
+        var canceled = await bookings.GetCancelledBetweenAsync(fromUtc, toUtc, ct);
         var made = await bookings.GetCreatedTimesBetweenAsync(fromUtc, toUtc, ct);
         var balances = await bookings.GetBalancesReceivedBetweenAsync(fromUtc, toUtc, ct);
         var refunds = await bookings.GetRefundsSentBetweenAsync(fromUtc, toUtc, ct);
@@ -139,7 +139,7 @@ public sealed class ReportService(IBookingRepository bookings, IPaymentRepositor
                 day,
                 made.Count(at => at >= dayFrom && at < dayTo),
                 completed.Count,
-                cancelled.Count(b => b.Cancellation!.CancelledAt >= dayFrom && b.Cancellation.CancelledAt < dayTo),
+                canceled.Count(b => b.Cancellation!.CancelledAt >= dayFrom && b.Cancellation.CancelledAt < dayTo),
                 appointments.Count(b => b.BookingDate == day && b.Status == BookingStatus.NoShow),
                 paid.Where(p => p.PaidAt >= dayFrom && p.PaidAt < dayTo).Sum(p => p.Amount),
                 balances.Where(b => b.ReceivedAt >= dayFrom && b.ReceivedAt < dayTo).Sum(b => b.Amount),

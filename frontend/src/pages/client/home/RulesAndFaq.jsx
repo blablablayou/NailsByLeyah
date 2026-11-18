@@ -6,13 +6,13 @@ const style = (i) => ({ '--i': Math.min(i, 6) })
 /** Nail rules from Leyah's reminder cards, plus "Before your appointment" and her note. */
 export function RulesSection({ deposit }) {
   const rules = [
-    ['Book with intention', 'Please book only if you are sure you can make it. Your slot is reserved especially for you.'],
-    ['Deposit is required', `A non-refundable deposit of ${deposit} is required to secure your appointment.`],
+    ['Book with intention', 'Please book only if you are sure you can make it, at least 2 hours ahead. Your slot is reserved especially for you. Walk-ins need a booking too.'],
+    ['Deposit is required', `A ${deposit} deposit, paid by GCash or Maya when you book, secures your appointment. It counts toward your total and is non-refundable.`],
     ['Be on time', 'Please arrive on time. Late arrivals may result in a shorter service or rescheduling.'],
-    ['Cancellations', 'Kindly let us know at least 24 hours in advance if you need to cancel or reschedule.'],
-    ['Cancellation fee', 'Late cancellations or no-shows will incur a fee. This protects the time reserved for you.'],
+    ['Cancellations', 'Kindly let us know at least 24 hours in advance if you need to cancel or reschedule. You can do both yourself in My bookings.'],
+    ['Cancellation fee', `Late cancellations (less than 24 hours before) and no-shows keep the ${deposit} deposit as the fee. This protects the time reserved for you.`],
     ['3-day repair', 'We repair any lifting or chipping. Let us know within 3 days after your appointment.', 'Valid for repairs only.'],
-    ['Payment policy', 'Send your GCash payment right after the service. Late payments will incur a fee.'],
+    ['Payment policy', 'Pay the balance at the salon after your service, or online by GCash or Maya before your appointment once Leyah confirms your booking.'],
   ]
   return (
     <section className="hm-rules hm-section" id="rules" tabIndex={-1} aria-labelledby="rules-title">
@@ -20,11 +20,12 @@ export function RulesSection({ deposit }) {
       <ol className="hm-rule-grid">
         {rules.map(([title, text, fine], i) => (
           <li key={title} className="hm-rule hm-reveal" style={style(i)}>
-            <span className="hm-rule-num" aria-hidden="true">{i + 1}</span>
-            <div>
+            {/* The number beside the title, then the text across the whole card. */}
+            <div className="hm-rule-head">
+              <span className="hm-rule-num" aria-hidden="true">{i + 1}</span>
               <h3>{title}</h3>
-              <p>{text}{fine && <span className="hm-fine">{fine}</span>}</p>
             </div>
+            <p>{text}{fine && <span className="hm-fine">{fine}</span>}</p>
           </li>
         ))}
       </ol>

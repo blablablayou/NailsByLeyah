@@ -135,7 +135,7 @@ public sealed class BalancePaymentService(
             booking = await OwnedAsync(clientId, bookingId, ct);
             if (HasPaidBalance(booking))
                 return new PaymentStatusResponse("Paid", null, null);
-            // The money was taken but couldn't go on the booking (cancelled or settled meanwhile): Leyah sends it back.
+            // The money was taken but couldn't go on the booking (canceled or settled meanwhile): Leyah sends it back.
             if (outcome == ConfirmationOutcome.PaidButNeedsRefund)
                 return new PaymentStatusResponse("PaidRefundDue", null, null, status.Amount);
         }
@@ -214,7 +214,7 @@ public sealed class BalancePaymentService(
         return ConfirmationOutcome.Confirmed;
     }
 
-    /// <summary>How the audit entry for a balance payment that wasn't accepted begins; it is how a repeat is recognised.</summary>
+    /// <summary>How the audit entry for a balance payment that wasn't accepted begins; it is how a repeat is recognized.</summary>
     private static string RejectedNote(string reference) => $"Balance payment {reference} of";
 
     private static bool HasPaidBalance(Booking booking) =>

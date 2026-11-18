@@ -45,7 +45,7 @@ export function Alert({ kind = 'info', title, children, onClose }) {
   )
 }
 
-export const STATUS_LABELS = { NoShow: 'No-show', AwaitingPayment: 'Awaiting payment' }
+export const STATUS_LABELS = { NoShow: 'No-show', AwaitingPayment: 'Awaiting payment', Cancelled: 'Canceled' }
 
 export function StatusBadge({ status }) {
   return <span className={`badge badge-${String(status).toLowerCase()}`}>{STATUS_LABELS[status] ?? status}</span>
@@ -73,7 +73,7 @@ export function StatCard({ label, value, hint, dot, action }) {
   )
 }
 
-/** The page numbers to show: always the first and last, the current one and its neighbours, "…" for the gaps. */
+/** The page numbers to show: always the first and last, the current one and its neighbors, "…" for the gaps. */
 function pageNumbers(page, pages) {
   const wanted = [...new Set([1, page - 1, page, page + 1, pages])].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b)
   return wanted.flatMap((n, i) => (i > 0 && n - wanted[i - 1] > 1 ? [n - wanted[i - 1] === 2 ? n - 1 : '…', n] : [n]))

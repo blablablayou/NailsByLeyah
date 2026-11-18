@@ -47,7 +47,7 @@ public interface IAdminBookingService
     /// <summary>The balance of an already completed booking was paid later.</summary>
     Task<BookingResponse> RecordBalanceAsync(int bookingId, RecordBalanceRequest request, CancellationToken ct = default);
 
-    /// <summary>Leyah sent back what a cancelled or no-show booking was owed.</summary>
+    /// <summary>Leyah sent back what a canceled or no-show booking was owed.</summary>
     Task<BookingResponse> RecordRefundAsync(int bookingId, RecordRefundRequest request, CancellationToken ct = default);
 
     /// <summary>Leyah says whether she has the shade a client asked for.</summary>
@@ -125,7 +125,7 @@ public sealed class BookingService(
         var rules = await bookingRules.GetAsync(ct);
         var colorRequest = ResolveColorRequest(selection.Service, request.ColorRequest, request.ColorRequestImageId);
         var perNailColors = ResolvePerNailColors(selection.Service, request.PerNailColors, rules);
-        // A colour request, or a colour on every nail, stands in for the one main colour.
+        // A color request, or a color on every nail, stands in for the one main color.
         var everyNail = request.PerNailColors is { Left: { } l, Right: { } r } && l.Count(c => !string.IsNullOrWhiteSpace(c)) == StoneAddOn.MaxNailsPerHand
                         && r.Count(c => !string.IsNullOrWhiteSpace(c)) == StoneAddOn.MaxNailsPerHand;
         var nailColor = ResolveColor(selection.Service, request.NailColor, colorRequest is not null || (perNailColors is not null && everyNail), rules);
@@ -311,23 +311,23 @@ public sealed class BookingService(
         if (booking.Status == BookingStatus.AwaitingPayment)
             return await CancelHoldAsync(clientId, booking, request, ct);
         if (booking.StartsAtLocal <= clock.LocalNow)
-            throw new ConflictException("This appointment has already started or passed and can no longer be cancelled.", "invalid_status");
+            throw new ConflictException("This appointment has already started or passed and can no longer be canceled.", "invalid_status");
 
         // Only "Others" takes the client's own words; the listed reasons speak for themselves.
         var explanation = request.Reason == ClientCancellationReason.Others ? InputNormalizer.Text(request.Explanation) : null;
         if (request.Reason == ClientCancellationReason.Others && string.IsNullOrEmpty(explanation))
             throw new ValidationAppException("explanation", ClientCancelRequestValidator.ExplanationRequired);
         await CancelCoreAsync(booking, clientId, request.Reason.ToString(), explanation, fullRefund: false, ct);
-        var cancelled = await ReloadAsync(booking.Id, ct);
+        var canceled = await ReloadAsync(booking.Id, ct);
         var reasonLabel = Labels.ForCancellationReason(request.Reason.ToString()) + (explanation is null ? "" : $": {explanation}");
         if (await salonProfile.WantsAlertAsync(SalonAlert.Cancellation, ct))
-            await background.EnqueueAsync((n, stop) => n.SendSalonCancellationAsync(cancelled, reasonLabel, stop), $"cancellation alert for booking {booking.Id}");
-        return Map(cancelled, includeClient: false);
+            await background.EnqueueAsync((n, stop) => n.SendSalonCancellationAsync(canceled, reasonLabel, stop), $"cancellation alert for booking {booking.Id}");
+        return Map(canceled, includeClient: false);
     }
 
     /// <summary>
-    /// The colour must be one on the salon's list; a removal on its own has none. With a colour request the client
-    /// describes a shade that isn't listed, so no listed colour is needed.
+    /// The color must be one on the salon's list; a removal on its own has none. With a color request the client
+    /// describes a shade that isn't listed, so no listed color is needed.
     /// </summary>
     private string? ResolveColor(CatalogService service, string? requested, bool hasColorRequest, BookingRules? rules)
     {
@@ -338,8 +338,8 @@ public sealed class BookingService(
         if (colors.Length == 0)
             return color; // no list configured: nothing to choose from, so nothing is required
         if (color is null)
-            return hasColorRequest ? null : throw new ValidationAppException("nailColor", "Choose a nail colour.");
-        var listed = MatchListed(color) ?? throw new ValidationAppException("nailColor", "Choose one of the listed colours.");
+            return hasColorRequest ? null : throw new ValidationAppException("nailColor", "Choose a nail color.");
+        var listed = MatchListed(color) ?? throw new ValidationAppException("nailColor", "Choose one of the listed colors.");
         return InStock(listed, rules, "nailColor");
     }
 
@@ -352,16 +352,16 @@ public sealed class BookingService(
     private string? MatchListed(string color) =>
         bookingOptions.Value.NailColors.FirstOrDefault(c => string.Equals(c, color, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>"Can't find your colour?": a photo needs a description, and only a new set has a colour.</summary>
+    /// <summary>"Can't find your color?": a photo needs a description, and only a new set has a color.</summary>
     private static string? ResolveColorRequest(CatalogService service, string? description, int? imageId)
     {
         var text = string.IsNullOrWhiteSpace(description) ? null : InputNormalizer.Text(description);
         if (text is null && imageId is not null)
-            throw new ValidationAppException("colorRequest", "Describe the colour you're looking for.");
+            throw new ValidationAppException("colorRequest", "Describe the color you're looking for.");
         return service.NeedsColor() ? text : null;
     }
 
-    /// <summary>Each nail's colour, from the chart only; stored as JSON with five places per hand, thumb first.</summary>
+    /// <summary>Each nail's color, from the chart only; stored as JSON with five places per hand, thumb first.</summary>
     private string? ResolvePerNailColors(CatalogService service, NailColorsRequest? requested, BookingRules rules)
     {
         if (requested is null || !service.NeedsColor())
@@ -375,7 +375,7 @@ public sealed class BookingService(
                 if (color is null)
                     continue;
                 result[i] = InStock((MatchListed(color) is { } listed && listed.StartsWith('#') ? listed : null)
-                            ?? throw new ValidationAppException(field, "Choose each nail's colour from the colour chart."), rules, field);
+                            ?? throw new ValidationAppException(field, "Choose each nail's color from the color chart."), rules, field);
             }
             return result;
         }
@@ -424,7 +424,7 @@ public sealed class BookingService(
         var reference = CleanBalanceReference(request.PaymentReference);
 
         var selection = await prices.ResolveSelectionAsync(request.ServiceId, request.AddOns, request.RemovalServiceId, ct);
-        // Leyah may leave the colour for the salon, and may use a shade she has just run out of.
+        // Leyah may leave the color for the salon, and may use a shade she has just run out of.
         var nailColor = string.IsNullOrWhiteSpace(request.NailColor) ? null : ResolveColor(selection.Service, request.NailColor, hasColorRequest: true, rules: null);
         var quote = prices.Calculate(selection);
         var duration = selection.DurationMinutes;
@@ -659,17 +659,17 @@ public sealed class BookingService(
     public async Task<BookingResponse> CancelAsync(int adminId, int bookingId, AdminCancelRequest request, CancellationToken ct = default)
     {
         var booking = await ReloadAsync(bookingId, ct);
-        // The salon cancelling is not the client's doing, so everything comes back; a client who stopped answering keeps the
+        // The salon canceling is not the client's doing, so everything comes back; a client who stopped answering keeps the
         // usual rule (the deposit is kept).
         var fullRefund = request.Reason != AdminCancellationReason.ClientDidNotRespond;
         await CancelCoreAsync(booking, adminId, request.Reason.ToString(), request.Explanation, fullRefund, ct);
-        var cancelled = await ReloadAsync(bookingId, ct);
-        // Leyah cancelled it, so the client wouldn't otherwise know. A walk-in without an account has no email.
-        if (cancelled.GuestName is null && cancelled.Client is not null) // a walk-in sits on Leyah's own account: no email
-            await background.EnqueueAsync((n, stop) => n.SendBookingCancelledBySalonAsync(cancelled,
-                    Labels.ForCancellationReason(request.Reason.ToString()), cancelled.Cancellation?.Explanation, stop),
+        var canceled = await ReloadAsync(bookingId, ct);
+        // Leyah canceled it, so the client wouldn't otherwise know. A walk-in without an account has no email.
+        if (canceled.GuestName is null && canceled.Client is not null) // a walk-in sits on Leyah's own account: no email
+            await background.EnqueueAsync((n, stop) => n.SendBookingCancelledBySalonAsync(canceled,
+                    Labels.ForCancellationReason(request.Reason.ToString()), canceled.Cancellation?.Explanation, stop),
                 $"cancelled-by-salon email for booking {bookingId}");
-        return Map(cancelled, includeClient: true);
+        return Map(canceled, includeClient: true);
     }
 
     // ---- Shared ----
@@ -677,7 +677,7 @@ public sealed class BookingService(
     private async Task CancelCoreAsync(Booking booking, int cancelledByUserId, string reason, string? explanation, bool fullRefund, CancellationToken ct)
     {
         if (!booking.CanBeCancelled)
-            throw new ConflictException($"A {booking.Status} booking cannot be cancelled.", "invalid_status");
+            throw new ConflictException($"A {booking.Status} booking cannot be canceled.", "invalid_status");
 
         var now = clock.UtcNow;
         booking.MarkCancelled(now, fullRefund);
@@ -697,7 +697,7 @@ public sealed class BookingService(
     }
 
     /// <summary>
-    /// The booking is cancelled, a no-show, or its balance was paid at the salon: a balance payment page the client still
+    /// The booking is canceled, a no-show, or its balance was paid at the salon: a balance payment page the client still
     /// has open is closed, so they can't pay money that would only have to be sent back. Best effort, after the change
     /// is saved; a page that can't be closed is still caught when its payment arrives (Leyah is told to refund it).
     /// </summary>
@@ -903,7 +903,7 @@ public sealed class BookingService(
             Explanation = explanation,
             CancelledAt = now,
         });
-        audit.Record(AuditActions.BookingCancelled, nameof(Booking), booking.Id, "Client cancelled before paying on Xendit");
+        audit.Record(AuditActions.BookingCancelled, nameof(Booking), booking.Id, "Client canceled before paying on Xendit");
         await unitOfWork.SaveChangesAsync(ct);
         if (booking.CheckoutSessionId is { } session)
             await TryExpireAsync(session, ct);
@@ -946,7 +946,7 @@ public sealed class BookingService(
             $"Nails by Leyah booking #{booking.Id} {what}");
     }
 
-    /// <summary>Frees the slot of a hold that won't be paid. Recorded as cancelled by the client, "Payment not completed".</summary>
+    /// <summary>Frees the slot of a hold that won't be paid. Recorded as canceled by the client, "Payment not completed".</summary>
     private async Task ReleaseHoldAsync(Booking booking, int byUserId, string why, CancellationToken ct)
     {
         var now = clock.UtcNow;
@@ -1081,7 +1081,7 @@ public static class BookingMapper
     }
 }
 
-/// <summary>The per-nail colours column: {"left":[5],"right":[5]}, a null for a nail with the main colour.</summary>
+/// <summary>The per-nail colors column: {"left":[5],"right":[5]}, a null for a nail with the main color.</summary>
 public static class PerNailColorsJson
 {
     private sealed record Stored(string?[] Left, string?[] Right);

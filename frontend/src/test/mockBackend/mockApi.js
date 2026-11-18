@@ -8,7 +8,7 @@ import { schedule, policies } from '../../content/salon'
 import { termsAndConditions } from '../../content/legal'
 
 // Same as Booking:NailColors in backend/appsettings.json.
-// Same as Booking:NailColors in appsettings.json: the colour chart's shades #01–#58, then "not sure".
+// Same as Booking:NailColors in appsettings.json: the color chart's shades #01–#58, then "not sure".
 export const NAIL_COLORS = [...Array.from({ length: 58 }, (_, i) => `#${String(i + 1).padStart(2, '0')}`), 'Not sure yet (decide at the salon)']
 import { lookups, reasonLabel } from './data/lookups'
 import { categoryLabels } from './data/services'
@@ -553,13 +553,13 @@ function createBooking(db, user, body) {
     colorRequest = String(body.colorRequest ?? '').trim() || null
     const listed = (c) => NAIL_COLORS.find((x) => same(x, String(c).trim()) && x.startsWith('#'))
     if (body.perNailColors) {
-      const hand = (list) => Array.from({ length: 5 }, (_, i) => (list?.[i] ? listed(list[i]) ?? invalid('perNailColors.left', "Choose each nail's colour from the colour chart.") : null))
+      const hand = (list) => Array.from({ length: 5 }, (_, i) => (list?.[i] ? listed(list[i]) ?? invalid('perNailColors.left', "Choose each nail's color from the color chart.") : null))
       perNailColors = { left: hand(body.perNailColors.left), right: hand(body.perNailColors.right) }
     }
     const everyNail = perNailColors && [...perNailColors.left, ...perNailColors.right].every(Boolean)
     if (String(body.nailColor ?? '').trim())
-      nailColor = NAIL_COLORS.find((c) => same(c, String(body.nailColor).trim())) ?? invalid('nailColor', 'Choose one of the listed colours.')
-    else if (!colorRequest && !everyNail) invalid('nailColor', 'Choose a nail colour.')
+      nailColor = NAIL_COLORS.find((c) => same(c, String(body.nailColor).trim())) ?? invalid('nailColor', 'Choose one of the listed colors.')
+    else if (!colorRequest && !everyNail) invalid('nailColor', 'Choose a nail color.')
     // Like the backend: a shade Leyah has run out of can't be booked.
     const out = bookingRules(db).outOfStockColors
     for (const c of [nailColor, ...(perNailColors ? [...perNailColors.left, ...perNailColors.right] : [])])
@@ -649,7 +649,7 @@ function moveBooking(db, user, booking, body) {
 }
 
 function cancelBooking(db, user, booking, reason, explanation, fullRefund = false) {
-  if (!isActive(booking)) conflict(`A ${booking.status} booking cannot be cancelled.`, 'invalid_status')
+  if (!isActive(booking)) conflict(`A ${booking.status} booking cannot be canceled.`, 'invalid_status')
   booking.status = 'Cancelled'
   booking.refundDue = fullRefund ? paidOf(booking) : aboveDeposit(booking)
   booking.updatedAt = nowIso()
@@ -1252,7 +1252,7 @@ const routes = [
     const booking = ownedBooking(db, user, params.id)
     const paidAlready = () => db.payments.some((p) => p.bookingId === booking.id && p.option === 'Balance' && p.status === 'Succeeded')
     const pagePaid = booking.balanceCheckout && (db.flags.paidBalances ?? []).includes(booking.id)
-    // Paid after the booking was cancelled: the money can't go on it, so Leyah sends it back.
+    // Paid after the booking was canceled: the money can't go on it, so Leyah sends it back.
     if (!paidAlready() && pagePaid && booking.status !== 'Confirmed')
       return { status: 'PaidRefundDue', checkoutUrl: null, holdUntil: null, amount: booking.balanceCheckout.amount }
     if (!paidAlready() && pagePaid) {
@@ -1291,7 +1291,7 @@ const routes = [
       return bookingResponse(db, booking, false)
     }
     if (startsAt(booking.bookingDate, booking.startTime) <= new Date())
-      conflict('This appointment has already started or passed and can no longer be cancelled.', 'invalid_status')
+      conflict('This appointment has already started or passed and can no longer be canceled.', 'invalid_status')
     cancelBooking(db, user, booking, body.reason, ownReason)
     return bookingResponse(db, booking, false)
   }],
@@ -1470,7 +1470,7 @@ const routes = [
   ['POST', '/admin/bookings/:id/color-request', (db, { params, body }) => {
     requireUser(db, 'Administrator')
     const booking = findBooking(db, params.id)
-    if (!booking.colorRequestStatus) conflict('This booking has no colour request.', 'no_color_request')
+    if (!booking.colorRequestStatus) conflict('This booking has no color request.', 'no_color_request')
     booking.colorRequestStatus = body.available ? 'Available' : 'Unavailable'
     saveDb()
     return bookingResponse(db, booking, true)
@@ -1508,7 +1508,7 @@ const routes = [
   }],
   ['PUT', '/admin/booking-rules/colors', (db, { body }) => {
     const admin = requireUser(db, 'Administrator')
-    const listed = NAIL_COLORS.find((c) => same(c, body.color)) ?? invalid('color', 'Choose one of the colours on the chart.')
+    const listed = NAIL_COLORS.find((c) => same(c, body.color)) ?? invalid('color', 'Choose one of the colors on the chart.')
     const out = (db.salonSettings.outOfStockColors ?? []).filter((c) => c !== listed)
     db.salonSettings.outOfStockColors = body.inStock ? out : [...out, listed]
     audit(db, admin.id, 'ColorStockChanged', 'SalonSettings', 1, `${listed} ${body.inStock ? 'back in stock' : 'out of stock'}`)
@@ -1535,7 +1535,7 @@ const routes = [
     if (!['None', 'Deposit', 'Full'].includes(body.paid ?? 'None')) invalid('paid', 'Choose what was paid: nothing yet, the deposit or the full amount.')
     const selection = resolveSelection(db, body.serviceId, (body.addOns ?? []).map((a) => ({ hand: 'Both', ...a })), { requireHand: true, removalServiceId: body.removalServiceId ?? null })
     const nailColor = selection.service.category !== 'Removal' && String(body.nailColor ?? '').trim()
-      ? NAIL_COLORS.find((c) => same(c, body.nailColor)) ?? invalid('nailColor', 'Choose one of the listed colours.') : null
+      ? NAIL_COLORS.find((c) => same(c, body.nailColor)) ?? invalid('nailColor', 'Choose one of the listed colors.') : null
     ensureBookable(db, body.bookingDate, body.startTime, selection.durationMinutes, null, true) // Leyah: no notice
     const quote = quoteFor(selection, db)
     const option = body.paid && body.paid !== 'None' ? body.paid : null

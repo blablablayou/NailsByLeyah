@@ -71,7 +71,7 @@ export function Layout() {
     [user?.id, user?.role, isClientPage && location.pathname])
   const canRate = (visits.data ?? []).some((b) => b.status === 'Completed')
   const links = user ? clientLinks(canRate) : []
-  // Left of the centred logo: booking first, then the two landing sections (HomePage glides to the hash).
+  // Left of the centered logo: booking first, then the two landing sections (HomePage glides to the hash).
   // Guests are sent to sign up when they book, as the hero's button does.
   const bookLink = user ? links[0] : { to: '/register', label: 'Book now' }
   const homeLinks = [{ to: '/#services', label: 'Services' }, { to: '/#gallery', label: 'Gallery' }]
@@ -97,7 +97,7 @@ export function Layout() {
           {isAdmin ? (
             <AdminNav user={user} onSignOut={signOut} menuOpen={menuOpen} />
           ) : (
-            // Wide screens: these two groups sit either side of the centred logo; phones show them stacked in the menu.
+            // Wide screens: these two groups sit either side of the centered logo; phones show them stacked in the menu.
             <nav id="site-nav" className={menuOpen ? 'site-nav open' : 'site-nav'} aria-label="Main">
               <div className="nav-side nav-side-start">
                 <NavLink to={bookLink.to} className="nav-link">{bookLink.label}</NavLink>
@@ -111,7 +111,7 @@ export function Layout() {
                 <Link to="/#visit" className="nav-link">Contact</Link>
                 {user ? (
                   // My bookings and Rate us live in the account menu, so the right side matches a guest's
-                  // (About, Contact, then one item) and stays clear of the centred logo.
+                  // (About, Contact, then one item) and stays clear of the centered logo.
                   <ClientAccountMenu user={user} links={links.slice(1)} photo={apiPhotoSrc(user.photoUrl, user.photoDataUrl)} onSignOut={signOut} />
                 ) : (
                   // Sign in is the header's call to action. Signing up is reached through Book now, the hero's button and

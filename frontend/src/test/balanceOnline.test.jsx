@@ -75,7 +75,7 @@ describe('Paying the balance online', () => {
     expect(paid).toHaveLength(1)
   })
 
-  it('paying after the booking was cancelled says the money was received and will be sent back', async () => {
+  it('paying after the booking was canceled says the money was received and will be sent back', async () => {
     const booking = confirmedWithBalance()
     const user = userEvent.setup()
     await signIn(CLIENT)

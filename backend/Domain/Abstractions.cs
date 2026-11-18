@@ -45,13 +45,13 @@ public interface IPayable
     void RecordPayment(PaymentOption option, decimal amount);
 }
 
-/// <summary>Something that can be cancelled by a client or an administrator.</summary>
+/// <summary>Something that can be canceled by a client or an administrator.</summary>
 public interface ICancellable
 {
     int Id { get; }
     BookingStatus Status { get; }
     bool CanBeCancelled { get; }
 
-    /// <summary>fullRefund: the salon cancelled, so everything paid goes back, the deposit included.</summary>
+    /// <summary>fullRefund: the salon canceled, so everything paid goes back, the deposit included.</summary>
     void MarkCancelled(DateTime utcNow, bool fullRefund);
 }

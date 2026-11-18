@@ -12,7 +12,7 @@ const CheckIcon = ({ className = 'pay-review-check' }) => <Icon className={class
 /** An open book, on "Read Booking & Payment Policy". */
 const BookIcon = () => <Icon className="pay-read-icon"><path d="M12 6.5C10.3 5.2 7.8 4.6 4 4.6v13.2c3.8 0 6.3.6 8 1.9 1.7-1.3 4.2-1.9 8-1.9V4.6c-3.8 0-6.3.6-8 1.9z" /><path d="M12 6.5v13.2" /></Icon>
 
-// The wallets' own logos (frontend/public/img), so clients recognise them at a glance.
+// The wallets' own logos (frontend/public/img), so clients recognize them at a glance.
 const WALLET_LOGOS = { GCash: '/img/wallet-gcash.png', Maya: '/img/wallet-maya.jpg' }
 
 const METHODS = [

@@ -1,7 +1,7 @@
 /**
- * Leyah's gel colour chart: the Conspiracy Theories collection, swatches #01 to #58 in the order of the chart.
+ * Leyah's gel color chart: the Conspiracy Theories collection, swatches #01 to #58 in the order of the chart.
  * A booking stores the shade as its number ("#06"); the list the server accepts is Booking:NailColors in appsettings.json.
- * The colours are matched to the chart photo, for the swatches on screen only.
+ * The colors are matched to the chart photo, for the swatches on screen only.
  */
 export const COLLECTION = { name: 'Conspiracy Theories', code: '#A58' }
 
@@ -29,14 +29,14 @@ export const SHADE_NAMES = {
   '02': { name: 'Soft White', description: 'A gentle, milky white for a soft and natural clean look.' },
   '03': { name: 'Ivory Cream', description: 'A warm cream with a hint of ivory, subtle and elegant.' },
   '04': { name: 'Beige', description: 'A soft beige nude that goes with every outfit.' },
-  '05': { name: 'Pale Grey-Lilac', description: 'A pale grey with a whisper of lilac, calm and modern.' },
+  '05': { name: 'Pale Gray-Lilac', description: 'A pale gray with a whisper of lilac, calm and modern.' },
   '06': { name: 'Light Pink-Lavender', description: 'A light pink with a touch of lavender, sweet and dreamy.' },
   '07': { name: 'Pastel Pink', description: 'A soft pastel pink, delicate and feminine.' },
   '08': { name: 'Peachy Blush', description: 'A warm peachy blush that flatters every skin tone.' },
   '09': { name: 'Rose Pink', description: 'A bright rose pink, fresh and cheerful.' },
   '10': { name: 'Coral Pink', description: 'A lively coral pink with a warm summer glow.' },
-  '11': { name: 'Light Grey', description: 'A soft light grey, simple and chic.' },
-  '12': { name: 'Blue-Grey', description: 'A cool blue-grey with a calm, stormy feel.' },
+  '11': { name: 'Light Gray', description: 'A soft light gray, simple and chic.' },
+  '12': { name: 'Blue-Gray', description: 'A cool blue-gray with a calm, stormy feel.' },
   '13': { name: 'Periwinkle', description: 'A soft periwinkle blue, light and airy.' },
   '14': { name: 'Soft Blue-Lavender', description: 'A gentle blue with a lavender tint, soft and dreamy.' },
   '15': { name: 'Lime Green', description: 'A zesty lime green that stands out.' },
@@ -58,7 +58,7 @@ export const SHADE_NAMES = {
   '31': { name: 'Peach Nude', description: 'A soft peach nude, warm and natural.' },
   '32': { name: 'Tan', description: 'A warm tan, earthy and easy to wear.' },
   '33': { name: 'Caramel', description: 'A sweet caramel brown with a warm glow.' },
-  '34': { name: 'Mocha', description: 'A soft mocha, like your favourite coffee.' },
+  '34': { name: 'Mocha', description: 'A soft mocha, like your favorite coffee.' },
   '35': { name: 'Milk Chocolate', description: 'A smooth milk chocolate brown, cosy and warm.' },
   '36': { name: 'Chocolate Brown', description: 'A rich chocolate brown, deep and elegant.' },
   '37': { name: 'Forest Green', description: 'A deep forest green with a hint of teal, moody and refined.' },
@@ -70,7 +70,7 @@ export const SHADE_NAMES = {
   '43': { name: 'Violet', description: 'A vivid violet, bright and expressive.' },
   '44': { name: 'Deep Purple', description: 'A deep, rich purple, regal and dramatic.' },
   '45': { name: 'Dusty Mauve', description: 'A soft dusty mauve, muted and romantic.' },
-  '46': { name: 'Plum-Grey', description: 'A plum with a grey undertone, subtle and chic.' },
+  '46': { name: 'Plum-Gray', description: 'A plum with a gray undertone, subtle and chic.' },
   '47': { name: 'Deep Mauve', description: 'A deeper mauve plum, warm and sophisticated.' },
   '48': { name: 'Magenta', description: 'A bold magenta, bright and confident.' },
   '49': { name: 'Hot Pink', description: 'A vibrant hot pink that turns heads.' },
@@ -85,7 +85,7 @@ export const SHADE_NAMES = {
   '58': { name: 'Dark Plum-Black', description: 'A plum so dark it is almost black, bold and mysterious.' },
 }
 
-// Colours from before the chart, so older bookings still show a dot.
+// Colors from before the chart, so older bookings still show a dot.
 const OLD_COLORS = {
   nude: '#dcb7a4', 'milky white': '#f5efe8', 'soft pink': '#f2c3cd', red: '#c0392b', maroon: '#6d1f2c', black: '#262022', lilac: '#c9a7d6',
 }
@@ -93,7 +93,7 @@ const OLD_COLORS = {
 /** "#06" → "06"; anything else (such as "Not sure yet…") → null. */
 export const shadeNumber = (value) => /^#(\d{2})$/.exec(String(value ?? '').trim())?.[1] ?? null
 
-/** The swatch colour for a stored colour value, or null when it has none (such as "Not sure yet"). */
+/** The swatch color for a stored color value, or null when it has none (such as "Not sure yet"). */
 export function colorFor(value) {
   const number = shadeNumber(value)
   if (number) return SHADE_COLORS[number] ?? null
@@ -108,7 +108,7 @@ export function colorLabel(value) {
   return name ? `#${number} – ${name}` : `#${number}`
 }
 
-/** "Left: #06, #06, #30, #30, #30 · Right: #01, …" for a booking's colours per nail; null without any. */
+/** "Left: #06, #06, #30, #30, #30 · Right: #01, …" for a booking's colors per nail; null without any. */
 export function perNailText(nails) {
   if (!nails) return null
   const hand = (label, list) => (list?.some(Boolean) ? `${label}: ${list.map((c) => c ?? '–').join(', ')}` : null)
@@ -117,5 +117,5 @@ export function perNailText(nails) {
 
 const REQUEST_STATUS = { Pending: 'pending confirmation', Available: 'confirmed by Leyah', Unavailable: 'not available' }
 
-/** "Colour request: pending confirmation". */
-export const colorRequestLabel = (status) => `Colour request: ${REQUEST_STATUS[status] ?? 'pending confirmation'}`
+/** "Color request: pending confirmation". */
+export const colorRequestLabel = (status) => `Color request: ${REQUEST_STATUS[status] ?? 'pending confirmation'}`

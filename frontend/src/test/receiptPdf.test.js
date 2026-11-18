@@ -34,7 +34,7 @@ describe('PDF receipt after a cancellation', () => {
   it('shows the refund instead of a balance', () => {
     const text = buildReceiptPdf(jsPDF, { ...receipt, paymentOption: 'Full', amountPaid: 570, balanceDue: 0, bookingStatus: 'Cancelled',
       refundDue: 420, refundSentAt: '2026-11-12T02:00:00Z', refundReference: 'GC-RF-1' }).output()
-    for (const part of ['CANCELLED', 'REFUNDED', 'PHP 420.00', 'GC-RF-1', 'Refunded']) expect(text).toContain(part)
+    for (const part of ['CANCELED', 'REFUNDED', 'PHP 420.00', 'GC-RF-1', 'Refunded']) expect(text).toContain(part)
     expect(text).not.toContain('Remaining balance')
   })
 

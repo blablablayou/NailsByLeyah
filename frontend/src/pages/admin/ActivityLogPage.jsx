@@ -22,7 +22,7 @@ const ACTIONS = [
 ].map((a) => ({ value: a, label: humanize(a) }))
 
 
-/** The colour of an entry's dot: problems red, payments green, bookings rose, price list and schedule amber, accounts blue. */
+/** The color of an entry's dot: problems red, payments green, bookings rose, price list and schedule amber, accounts blue. */
 function tone(action) {
   if (/Failed|Locked|Deleted$/.test(action) && action !== 'ServiceDeleted') return 'problem'
   if (action.startsWith('Payment') || action.startsWith('Refund') || action === 'BalanceReceived') return 'payment'

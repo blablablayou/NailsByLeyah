@@ -113,7 +113,7 @@ function DepositReturn({ bookingId }) {
         <>
           <PageHeader title="Payment received" subtitle={`We received ${formatMoney(state.amount)}, but couldn't keep this time for you.`} />
           <Card className="payment-return">
-            <p>The booking had already been cancelled or its time was taken before the payment came through. Leyah will refund
+            <p>The booking had already been canceled or its time was taken before the payment came through. Leyah will refund
               the full amount to the account you paid from — you don&apos;t need to do anything.</p>
             <div className="row">
               <Link to="/bookings" className="btn btn-primary">Go to My bookings</Link>

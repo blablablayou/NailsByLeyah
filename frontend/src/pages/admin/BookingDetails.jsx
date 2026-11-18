@@ -39,7 +39,7 @@ function PaymentCheck({ booking: b }) {
 
 /** One booking at a glance: when it is, who it's for, what they're having, what's been paid, and what happened so far. */
 export function BookingDetails({ booking, onClose, onChanged }) {
-  // Kept here so answering a colour request shows straight away; the page behind reloads through onChanged.
+  // Kept here so answering a color request shows straight away; the page behind reloads through onChanged.
   const [b, setBooking] = useState(booking)
   const [deciding, setDeciding] = useState(null)
   const [decideError, setDecideError] = useState(null)
@@ -79,7 +79,7 @@ export function BookingDetails({ booking, onClose, onChanged }) {
 
         {b.cancellation && (
           <div className="bd-cancelled">
-            <strong>Cancelled by {b.cancellation.cancelledByRole === 'Administrator' ? 'the salon' : 'the client'}: {b.cancellation.reasonLabel}</strong>
+            <strong>Canceled by {b.cancellation.cancelledByRole === 'Administrator' ? 'the salon' : 'the client'}: {b.cancellation.reasonLabel}</strong>
             {b.cancellation.explanation && <p>{b.cancellation.explanation}</p>}
           </div>
         )}
@@ -113,7 +113,7 @@ export function BookingDetails({ booking, onClose, onChanged }) {
               )}
               <Row label={b.serviceName}><Money amount={b.servicePrice} /></Row>
               {b.nailColor && (
-                <Row label="Colour">
+                <Row label="Color">
                   {colorFor(b.nailColor) && <span className="bd-swatch" style={{ background: colorFor(b.nailColor) }} aria-hidden="true" />}
                   {colorLabel(b.nailColor)}
                 </Row>
@@ -122,7 +122,7 @@ export function BookingDetails({ booking, onClose, onChanged }) {
                 <Row label="Each nail"><span className="bd-nails">{perNailText(b.perNailColors)}</span></Row>
               )}
               {b.colorRequest && (
-                <Row label="Colour request">
+                <Row label="Color request">
                   <span className="bd-color-request">
                     <span>{b.colorRequest}</span>
                     <span className={`color-request-badge is-${(b.colorRequestStatus ?? 'Pending').toLowerCase()}`}>{colorRequestLabel(b.colorRequestStatus)}</span>
@@ -205,7 +205,7 @@ export function BookingDetails({ booking, onClose, onChanged }) {
               {b.payment?.paidAt && <li><span>Paid</span><time>{formatDateTime(b.payment.paidAt)}</time></li>}
               {b.payment?.confirmedAt && <li><span>Confirmed</span><time>{formatDateTime(b.payment.confirmedAt)}</time></li>}
               {balanceReceived && <li><span>Balance received</span><time>{formatDateTime(b.payment.balanceReceivedAt)}</time></li>}
-              {b.cancellation && <li><span>Cancelled</span><time>{formatDateTime(b.cancellation.cancelledAt)}</time></li>}
+              {b.cancellation && <li><span>Canceled</span><time>{formatDateTime(b.cancellation.cancelledAt)}</time></li>}
               {b.payment?.refundSentAt && <li><span>Refund sent</span><time>{formatDateTime(b.payment.refundSentAt)}</time></li>}
             </ol>
           </Section>

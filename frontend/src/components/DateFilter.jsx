@@ -30,7 +30,7 @@ function monthGrid(firstOfMonth) {
 
 /**
  * One-day filter: "Any date", "Today" and "Tomorrow" in one tap, arrows to step a day at a time, and a
- * calendar in the salon's colours behind the date button. `value` is "yyyy-mm-dd" or '' for any date.
+ * calendar in the salon's colors behind the date button. `value` is "yyyy-mm-dd" or '' for any date.
  */
 export function DateFilter({ label, value, onChange }) {
   const labelId = useId()
@@ -59,7 +59,7 @@ export function DateFilter({ label, value, onChange }) {
 }
 
 /** A required day ("yyyy-mm-dd") with the same stepper and calendar as the bookings filter, e.g. the daily sales report. */
-/** A single day in the salon's style. `min` (yyyy-mm-dd) greys out earlier days, e.g. today for a new booking. */
+/** A single day in the salon's style. `min` (yyyy-mm-dd) grays out earlier days, e.g. today for a new booking. */
 export function DayPicker({ label, value, onChange, align, min, required = false }) {
   const labelId = useId()
   return (

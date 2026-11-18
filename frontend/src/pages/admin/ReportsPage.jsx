@@ -83,7 +83,7 @@ function Totals({ report, previous, previousLabel, soFar }) {
         <h3 className="report-section-title">Bookings</h3>
         <dl className="report-counts">
           <div><dt><span className="stat-dot stat-dot-made" aria-hidden="true" />Made</dt><dd>{report.bookingsMade}</dd><dd className="report-hint">New bookings placed</dd></div>
-          <div><dt><span className="stat-dot stat-dot-cancelled" aria-hidden="true" />Cancelled</dt><dd>{report.bookingsCancelled}</dd><dd className="report-hint">By clients or the salon</dd></div>
+          <div><dt><span className="stat-dot stat-dot-cancelled" aria-hidden="true" />Canceled</dt><dd>{report.bookingsCancelled}</dd><dd className="report-hint">By clients or the salon</dd></div>
           <div><dt><span className="stat-dot stat-dot-noshow" aria-hidden="true" />No-show</dt><dd>{report.bookingsNoShow}</dd><dd className="report-hint">Client did not come</dd></div>
         </dl>
       </section>

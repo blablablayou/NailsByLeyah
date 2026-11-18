@@ -64,45 +64,45 @@ describe('Booking revisions', () => {
     expect(screen.getByRole('checkbox', { name: /Rhinestone/ })).not.toBeChecked()
   })
 
-  it("books a colour that isn't on the chart as a request waiting for Leyah", async () => {
+  it("books a color that isn't on the chart as a request waiting for Leyah", async () => {
     const user = userEvent.setup()
     await signIn(CLIENT)
     renderApp('/book')
 
     await user.click(await screen.findByRole('checkbox', { name: /^Plain/ }))
-    await user.click(screen.getByRole('button', { name: 'Open the colour chart' }))
-    const chart = screen.getByRole('dialog', { name: 'Choose Nail Colour' })
-    await user.click(within(chart).getByRole('radio', { name: "Can't find your colour?" }))
-    expect(within(chart).getByRole('button', { name: 'Ask Leyah for This Colour' })).toBeDisabled()
-    expect(within(chart).getByText(/Describe the colour you're looking for/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Open the color chart' }))
+    const chart = screen.getByRole('dialog', { name: 'Choose Nail Color' })
+    await user.click(within(chart).getByRole('radio', { name: "Can't find your color?" }))
+    expect(within(chart).getByRole('button', { name: 'Ask Leyah for This Color' })).toBeDisabled()
+    expect(within(chart).getByText(/Describe the color you're looking for/)).toBeInTheDocument()
 
-    await user.type(within(chart).getByLabelText(/Describe the colour you'd like/), 'Dusty sage green')
-    await user.click(within(chart).getByRole('button', { name: 'Ask Leyah for This Colour' }))
-    expect(screen.getByRole('button', { name: 'Colour request. Change colour' })).toHaveTextContent('Dusty sage green')
-    expect(screen.getByLabelText(/Photo of the colour/)).toBeInTheDocument() // the photo is added on the page
+    await user.type(within(chart).getByLabelText(/Describe the color you'd like/), 'Dusty sage green')
+    await user.click(within(chart).getByRole('button', { name: 'Ask Leyah for This Color' }))
+    expect(screen.getByRole('button', { name: 'Color request. Change color' })).toHaveTextContent('Dusty sage green')
+    expect(screen.getByLabelText(/Photo of the color/)).toBeInTheDocument() // the photo is added on the page
     await payFromServiceStep(user)
 
     expect(getDb().bookings.at(-1)).toMatchObject({ nailColor: null, colorRequest: 'Dusty sage green', colorRequestStatus: 'Pending' })
   })
 
-  it('takes a colour for as few nails as the client likes, on either hand, with the main colour for the rest', async () => {
+  it('takes a color for as few nails as the client likes, on either hand, with the main color for the rest', async () => {
     const user = userEvent.setup()
     await signIn(CLIENT)
     renderApp('/book')
 
     await user.click(await screen.findByRole('checkbox', { name: /^Plain/ }))
-    await user.click(screen.getByRole('button', { name: 'Open the colour chart' }))
-    const chart = screen.getByRole('dialog', { name: 'Choose Nail Colour' })
+    await user.click(screen.getByRole('button', { name: 'Open the color chart' }))
+    const chart = screen.getByRole('dialog', { name: 'Choose Nail Color' })
 
     // One nail on the right hand, straight away: tap the nail, then a shade.
     await user.click(within(chart).getByRole('button', { name: /^Right hand, ring/ }))
     await user.click(shade(chart, '30'))
-    expect(within(chart).getByRole('button', { name: 'Use These Colours' })).toBeDisabled()
+    expect(within(chart).getByRole('button', { name: 'Use These Colors' })).toBeDisabled()
     expect(within(chart).getByText(/Tap a shade for your other nails/)).toBeInTheDocument()
 
-    // A shade with no nail tapped is the main colour for the other nine.
+    // A shade with no nail tapped is the main color for the other nine.
     await user.click(shade(chart, '06'))
-    await user.click(within(chart).getByRole('button', { name: 'Use These Colours' }))
+    await user.click(within(chart).getByRole('button', { name: 'Use These Colors' }))
     await payFromServiceStep(user)
 
     const booking = getDb().bookings.at(-1)

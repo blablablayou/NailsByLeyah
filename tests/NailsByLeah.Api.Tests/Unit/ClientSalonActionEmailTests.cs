@@ -18,7 +18,7 @@ public sealed class ClientSalonActionEmailTests
 
         var mail = Assert.Single(sent.Mails);
         Assert.Equal("kyla@example.test", mail.To);
-        Assert.Contains("was cancelled", mail.Subject);
+        Assert.Contains("was canceled", mail.Subject);
         Assert.Contains("Thursday, November 12, 2026", mail.Body);
         Assert.Contains("2:00 PM", mail.Body);
         Assert.Contains("Leyah is not available", mail.Body);

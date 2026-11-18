@@ -30,7 +30,7 @@ const isHold = (b) => b.status === 'AwaitingPayment'
 const TABS = [
   { value: 'upcoming', label: 'Upcoming', empty: 'No upcoming appointments' },
   { value: 'completed', label: 'Completed', empty: 'No completed appointments yet' },
-  { value: 'cancelled', label: 'Cancelled', empty: 'No cancelled bookings' },
+  { value: 'canceled', label: 'Canceled', empty: 'No canceled bookings' },
 ]
 
 /** A client has had a successful visit once any booking is Completed; "Book again" and "Rate us" wait for that. */
@@ -51,7 +51,7 @@ export default function MyBookingsPage() {
   const lists = {
     upcoming,
     completed: bookings.filter((b) => !isUpcoming(b) && !isCancelled(b) && !isHold(b)),
-    cancelled: bookings.filter((b) => !isUpcoming(b) && isCancelled(b)),
+    canceled: bookings.filter((b) => !isUpcoming(b) && isCancelled(b)),
   }
   const shown = lists[tab]
   const holds = bookings.filter(isHold)
@@ -102,7 +102,7 @@ export default function MyBookingsPage() {
         <CancelBookingDialog booking={dialog.booking} reasons={lookups.clientCancellationReasons} onClose={() => setDialog(null)}
           onSubmit={async (body) => {
             await api.bookings.cancel(dialog.booking.id, body)
-            done('Your booking has been cancelled.')
+            done('Your booking has been canceled.')
           }} />
       )}
       {dialog?.kind === 'reschedule' && (
@@ -223,11 +223,11 @@ function BookingCard({ booking: b, onAction }) {
 
       {(b.nailColor || b.perNailColors || b.colorRequest || b.addOns.length > 0) && (
         <div className="booking-card-details">
-          {b.nailColor && <div className="muted small">Colour: {colorLabel(b.nailColor)}</div>}
+          {b.nailColor && <div className="muted small">Color: {colorLabel(b.nailColor)}</div>}
           {b.perNailColors && <div className="muted small">Each nail: {perNailText(b.perNailColors)}</div>}
           {b.colorRequest && (
             <div className="muted small">
-              Colour: {b.colorRequest} <span className={`color-request-badge is-${(b.colorRequestStatus ?? 'Pending').toLowerCase()}`}>{colorRequestLabel(b.colorRequestStatus)}</span>
+              Color: {b.colorRequest} <span className={`color-request-badge is-${(b.colorRequestStatus ?? 'Pending').toLowerCase()}`}>{colorRequestLabel(b.colorRequestStatus)}</span>
             </div>
           )}
           {b.addOns.length > 0 && (
@@ -254,7 +254,7 @@ function BookingCard({ booking: b, onAction }) {
       <ReferenceImageGallery images={b.referenceImages} />
       {b.cancellation && (
         <p className="muted small">
-          Cancelled by {b.cancellation.cancelledByRole === 'Administrator' ? 'the salon' : 'you'}: {b.cancellation.reasonLabel}
+          Canceled by {b.cancellation.cancelledByRole === 'Administrator' ? 'the salon' : 'you'}: {b.cancellation.reasonLabel}
           {b.cancellation.explanation && ` — ${b.cancellation.explanation}`}
         </p>
       )}

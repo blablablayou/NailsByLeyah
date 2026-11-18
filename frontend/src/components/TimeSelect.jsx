@@ -19,7 +19,7 @@ const hourOf = (value) => Number(value.slice(0, 2))
 const partOfDay = (value) => (hourOf(value) < 12 ? 'Morning' : hourOf(value) < 18 ? 'Afternoon' : 'Evening')
 
 /**
- * A time chooser in the salon's colours: the times in a short grid grouped by part of the day, instead of a long
+ * A time chooser in the salon's colors: the times in a short grid grouped by part of the day, instead of a long
  * browser dropdown. Arrow keys move between times, Home and End go to the first and last, Escape closes it.
  * `options` are { value: 'hh:mm:ss', label }.
  */

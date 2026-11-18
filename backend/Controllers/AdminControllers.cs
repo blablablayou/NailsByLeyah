@@ -72,7 +72,7 @@ public sealed class AdminBookingsController(IAdminBookingService bookings, IOnli
     [HttpPost("{id:int}/no-show")]
     public Task<BookingResponse> NoShow(int id, CancellationToken ct) => bookings.MarkNoShowAsync(id, ct);
 
-    /// <summary>Whether the salon has the shade a client asked for with "Can't find your colour?".</summary>
+    /// <summary>Whether the salon has the shade a client asked for with "Can't find your color?".</summary>
     [HttpPost("{id:int}/color-request")]
     public Task<BookingResponse> DecideColorRequest(int id, ColorRequestDecision request, CancellationToken ct) =>
         bookings.DecideColorRequestAsync(id, request, ct);
@@ -93,7 +93,7 @@ public sealed class AdminBookingsController(IAdminBookingService bookings, IOnli
 [Route("api/admin/clients")]
 public sealed class AdminClientDataController(IClientDataService clients, IClientProfileService clientProfile) : ControllerBase
 {
-    /// <summary>A client's profile photo, so Leyah recognises who is coming.</summary>
+    /// <summary>A client's profile photo, so Leyah recognizes who is coming.</summary>
     [HttpGet("{id:int}/photo")]
     public async Task<IActionResult> Photo(int id, CancellationToken ct)
     {

@@ -93,7 +93,7 @@ export function PhotoViewer({ photo: current, open, onClose }) {
 
   useEffect(() => {
     if (!open) return undefined
-    // Focus moves to Close a frame later (once the viewer shows); cancelled if it closes first, so focus stays on the photo.
+    // Focus moves to Close a frame later (once the viewer shows); canceled if it closes first, so focus stays on the photo.
     const frame = requestAnimationFrame(() => closeRef.current?.focus())
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -113,7 +113,7 @@ export function PhotoViewer({ photo: current, open, onClose }) {
             <figcaption className="hm-viewer-caption">
               <span className="hm-viewer-eyebrow">The design</span>
               <span className="hm-viewer-text">{current.caption}</span>
-              <span className="hm-viewer-by">By Leyah, Nails by Leyah</span>
+              <span className="hm-viewer-by">By Leyah</span>
             </figcaption>
           )}
         </figure>

@@ -51,7 +51,7 @@ public enum PaymentStatus
     Failed,
 }
 
-/// <summary>Reasons a client may give when cancelling (Ref 2.5).</summary>
+/// <summary>Reasons a client may give when canceling (Ref 2.5).</summary>
 public enum ClientCancellationReason
 {
     ChangeOfSchedule,
@@ -61,7 +61,7 @@ public enum ClientCancellationReason
     Others,
 }
 
-/// <summary>Reasons an administrator may give when cancelling (Ref 3.1).</summary>
+/// <summary>Reasons an administrator may give when canceling (Ref 3.1).</summary>
 public enum AdminCancellationReason
 {
     StaffUnavailable,
@@ -79,7 +79,7 @@ public enum NailHand
     Both,
 }
 
-/// <summary>A colour request waits for Leyah to say whether she has the shade.</summary>
+/// <summary>A color request waits for Leyah to say whether she has the shade.</summary>
 public enum ColorRequestStatus
 {
     Pending,

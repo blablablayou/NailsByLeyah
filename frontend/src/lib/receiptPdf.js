@@ -62,12 +62,12 @@ export function buildReceiptPdf(JsPdf, receipt, generatedAt = new Date()) {
   text('Soft gel · BIAB · Removal', LEFT, { size: 9, color: MUTED })
   text(`Receipt no. ${receipt.referenceNumber}`, RIGHT, { size: 9, color: INK, align: 'right' })
 
-  // Status pill: paid and verified, or what happened since (cancelled / no-show, and the refund).
+  // Status pill: paid and verified, or what happened since (canceled / no-show, and the refund).
   const closed = receipt.bookingStatus === 'Cancelled' || receipt.bookingStatus === 'NoShow'
   const refund = Number(receipt.refundDue ?? 0)
   const pill = !closed
     ? `PAID · VERIFIED ${receipt.verifiedAt ? new Date(receipt.verifiedAt).toLocaleDateString('en-PH', { dateStyle: 'medium' }) : ''}`
-    : `${receipt.bookingStatus === 'NoShow' ? 'NO-SHOW' : 'CANCELLED'}${refund > 0 ? (receipt.refundSentAt ? ' · REFUNDED' : ' · REFUND DUE') : ''}`
+    : `${receipt.bookingStatus === 'NoShow' ? 'NO-SHOW' : 'CANCELED'}${refund > 0 ? (receipt.refundSentAt ? ' · REFUNDED' : ' · REFUND DUE') : ''}`
   y = 156
   doc.setFillColor(...(closed ? [253, 240, 210] : [223, 243, 232]))
   doc.roundedRect(LEFT, y - 14, Math.max(170, doc.getTextWidth(pill) * 1.1 + 30), 22, 11, 11, 'F')
@@ -98,7 +98,7 @@ export function buildReceiptPdf(JsPdf, receipt, generatedAt = new Date()) {
   }
   row('Payment status', receipt.verified ? `Verified by the salon${receipt.verifiedAt ? ` on ${when(receipt.verifiedAt)}` : ''}` : 'Paid')
   if (closed) {
-    row('Booking status', receipt.bookingStatus === 'NoShow' ? 'No-show' : 'Cancelled')
+    row('Booking status', receipt.bookingStatus === 'NoShow' ? 'No-show' : 'Canceled')
     if (refund > 0) {
       row('Refund', receipt.refundSentAt ? `Sent ${when(receipt.refundSentAt)}` : 'To be sent to the account you paid from')
       if (receipt.refundReference) row('Refund reference', receipt.refundReference)

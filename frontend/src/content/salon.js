@@ -4,7 +4,7 @@ export const salon = {
   name: 'Nails by Leyah',
   addressLines: ['201 Mabuhay Compound', 'Sauyo Road, Quezon City'],
   // The map pin is found by this address (the same search as Leyah's Google Maps link);
-  // the coordinates are where that search centres, used to frame the map.
+  // the coordinates are where that search centers, used to frame the map.
   mapQuery: '201 Mabuhay Compound Sauyo Road, QC',
   latitude: 14.6935373,
   longitude: 121.0428484,
@@ -47,7 +47,7 @@ export const policies = {
 }
 
 /**
- * Meet Leyah: the sample story from the design brief, shown (labelled "Sample story · details to be confirmed") until
+ * Meet Leyah: the sample story from the design brief, shown until
  * Leyah writes her own in admin → Salon settings → Bio (decision D9). The brief's start year is left out: it isn't confirmed.
  */
 export const sampleStory = [

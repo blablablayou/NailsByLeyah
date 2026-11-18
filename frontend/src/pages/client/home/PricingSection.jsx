@@ -9,7 +9,7 @@ import { BrandLogo } from '../../../components/BrandLogo'
 
 /** The website's own line for each card, used until Leah writes one on admin Services (D6). */
 const DEFAULT_LINES = {
-  plain: 'A clean, glossy soft gel in one colour.',
+  plain: 'A clean, glossy soft gel in one color.',
   biab: 'A builder gel overlay that strengthens your natural nails.',
   'soft gel extension': 'Longer nails, shaped and built with soft gel.',
   addOns: 'Chrome, cat eye, French tips, rhinestones and more.',
@@ -64,7 +64,7 @@ function serviceCards({ services, addOns }) {
     name: base.name,
     blurb: base.description || DEFAULT_LINES[key(base.name)] || '',
     price: base.price,
-    note: design ? `With design · ${peso(design.price)}` : !base.allowsAddOns ? 'Plain colour only' : null,
+    note: design ? `With design · ${peso(design.price)}` : !base.allowsAddOns ? 'Plain color only' : null,
     duration: base.durationMinutes ? hours(base.durationMinutes) : null,
   }))
   if (extras.length) cards.push({

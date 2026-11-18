@@ -16,7 +16,7 @@ import { netReceived } from '../../lib/reportExcel'
 import { colorFor, colorLabel } from '../../lib/shades'
 import { apiPhotoSrc } from '../../lib/photos'
 
-/* ---- Small line icons (24px grid, drawn with the current text colour) ---- */
+/* ---- Small line icons (24px grid, drawn with the current text color) ---- */
 const Icon = ({ children, className = '' }) => (
   <svg className={`dash-icon ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
@@ -24,7 +24,7 @@ const Icon = ({ children, className = '' }) => (
 const CalendarIcon = () => <Icon><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /><circle cx="12" cy="15" r="1" fill="currentColor" /></Icon>
 const ChevronIcon = ({ dir = 'right' }) => <Icon className={`dash-chevron dash-chevron-${dir}`}><path d="M9 6l6 6-6 6" /></Icon>
 
-/** The small muted icon beside each section heading: one thin-line style, never in a coloured tile. */
+/** The small muted icon beside each section heading: one thin-line style, never in a colored tile. */
 const HEAD_ICONS = {
   attention: <><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z" /><path d="M10 20.5a2 2 0 0 0 4 0" /></>,
   day: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>,
@@ -233,12 +233,12 @@ function FeedbackCard() {
   )
 }
 
-/** Busy-day view: every appointment of the day in time order, finished and cancelled ones included. */
+/** Busy-day view: every appointment of the day in time order, finished and canceled ones included. */
 function DayScheduleCard({ bookings: all, count, date, isToday }) {
   const [open, setOpen] = useState(null)
-  // The same appointments the count above counts; cancelled ones are only mentioned, so the two always agree.
+  // The same appointments the count above counts; canceled ones are only mentioned, so the two always agree.
   const bookings = all.filter((b) => b.status !== 'Cancelled')
-  const cancelled = all.length - bookings.length
+  const canceled = all.length - bookings.length
   return (
     <section className="dash-section dash-day" aria-labelledby="dash-day">
       <div className="dash-card-head">
@@ -266,9 +266,9 @@ function DayScheduleCard({ bookings: all, count, date, isToday }) {
           ))}
         </ul>
       )}
-      {cancelled > 0 && (
+      {canceled > 0 && (
         <p className="dash-quiet dash-cancelled-note">
-          {cancelled} cancelled {cancelled === 1 ? 'booking' : 'bookings'} not shown. <Link to={`/admin/bookings?date=${date}&status=Cancelled`}>See {cancelled === 1 ? 'it' : 'them'}</Link>
+          {canceled} canceled {canceled === 1 ? 'booking' : 'bookings'} not shown. <Link to={`/admin/bookings?date=${date}&status=Cancelled`}>See {canceled === 1 ? 'it' : 'them'}</Link>
         </p>
       )}
       {open && <BookingDetails booking={open} onClose={() => setOpen(null)} />}
@@ -305,7 +305,7 @@ const ATTENTION = {
   DatePassed: { tone: 'blue', title: 'Did they come?' },
   BalanceNotRecorded: { tone: 'amber', title: 'Balance not recorded' },
   RefundDue: { tone: 'rose', title: 'Refund to send' },
-  ColorRequest: { tone: 'amber', title: 'Colour request' },
+  ColorRequest: { tone: 'amber', title: 'Color request' },
 }
 
 function attentionLine(kind, b) {
@@ -319,7 +319,7 @@ function attentionLine(kind, b) {
   if (kind === 'RefundDue') {
     return refundProcessing(b)
       ? `${when} · ${formatMoney(b.payment?.refundDue)} on its way back to their ${b.payment?.method ?? 'account'}`
-      : `${when} · ${formatMoney(b.payment?.refundDue)} to send back (${b.status === 'NoShow' ? 'no-show' : 'cancelled'})`
+      : `${when} · ${formatMoney(b.payment?.refundDue)} to send back (${b.status === 'NoShow' ? 'no-show' : 'canceled'})`
   }
   return `${when} · date passed, still ${(STATUS_LABELS[b.status] ?? b.status).toLowerCase()}`
 }
@@ -348,7 +348,7 @@ function AttentionCard({ items, onChanged }) {
     setError(null)
     try {
       await api.admin.decideColorRequest(b.id, available)
-      onChanged(available ? `Colour request for booking #${b.id} confirmed.` : `Booking #${b.id}: colour marked as not available.`)
+      onChanged(available ? `Color request for booking #${b.id} confirmed.` : `Booking #${b.id}: color marked as not available.`)
     } catch (err) {
       setError(errorMessage(err))
     } finally {
@@ -485,7 +485,7 @@ function NextClientCard({ booking: b, date, isToday, isPast, now, elapsed, upcom
             <dd>{!isWalkIn(b) && apiPhotoSrc(b.client?.photoUrl, b.client?.photoDataUrl) && <img className="dash-client-photo" src={apiPhotoSrc(b.client?.photoUrl, b.client?.photoDataUrl)} alt="" />}{clientName(b)}{bookingClientPhone(b) && <> · <a href={`tel:${bookingClientPhone(b)}`}>{bookingClientPhone(b)}</a></>}{isWalkIn(b) && <span className="muted"> · walk-in</span>}</dd>
             <dt>Services</dt>
             <dd>{servicesInOrder(b)}</dd>
-            {b.nailColor && (<><dt>Colour</dt><dd><ColorDot name={b.nailColor} /> {colorLabel(b.nailColor)}</dd></>)}
+            {b.nailColor && (<><dt>Color</dt><dd><ColorDot name={b.nailColor} /> {colorLabel(b.nailColor)}</dd></>)}
             {b.addOns.length > 0 && (<><dt>Stones</dt><dd>{stonesText(b)}</dd></>)}
             {b.note && (<><dt>Note</dt><dd className="dash-note">{b.note}</dd></>)}
           </dl>

@@ -32,7 +32,7 @@ const COLUMNS = [
   { header: 'Date', key: 'date', width: 16 },
   { header: 'Made', key: 'bookingsMade', width: 9, format: COUNT },
   { header: 'Completed', key: 'bookingsCompleted', width: 12, format: COUNT },
-  { header: 'Cancelled', key: 'bookingsCancelled', width: 12, format: COUNT },
+  { header: 'Canceled', key: 'bookingsCancelled', width: 12, format: COUNT },
   { header: 'No-show', key: 'bookingsNoShow', width: 10, format: COUNT },
   { header: 'Paid online', key: 'depositsCollected', width: 15, format: PESO },
   { header: 'Balances received', key: 'balancesReceived', width: 19, format: PESO },
@@ -168,7 +168,7 @@ export function buildSalesReportWorkbook(ExcelJS, { period, report, generatedAt 
   line('Balances unpaid', report.balancesUnpaid, PESO, { note: 'completed, not recorded yet' })
   line('Bookings made', report.bookingsMade, COUNT, { note: 'new bookings placed' })
   line('Completed', report.bookingsCompleted, COUNT, { note: 'appointments finished' })
-  line('Cancelled', report.bookingsCancelled, COUNT, { note: 'by clients or the salon' })
+  line('Canceled', report.bookingsCancelled, COUNT, { note: 'by clients or the salon' })
   line('No-show', report.bookingsNoShow, COUNT, { note: 'client did not come' })
   for (let c = 1; c <= LAST; c += 1) sheet.getCell(r - 1, c).border = { bottom: thin }
 

@@ -79,7 +79,7 @@ public sealed class BookingRulesService(
     {
         var listed = bookingOptions.Value.NailColors
             .FirstOrDefault(c => string.Equals(c, request.Color?.Trim(), StringComparison.OrdinalIgnoreCase))
-            ?? throw new ValidationAppException("color", "Choose one of the colours on the chart.");
+            ?? throw new ValidationAppException("color", "Choose one of the colors on the chart.");
 
         var row = await settings.GetAsync(ct);
         var outOfStock = ReadColors(row.OutOfStockColors).Where(c => !string.Equals(c, listed, StringComparison.OrdinalIgnoreCase)).ToList();

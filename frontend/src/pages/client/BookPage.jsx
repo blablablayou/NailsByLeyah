@@ -65,7 +65,7 @@ const SparkleIcon = () => (
 )
 
 /**
- * "Book again" from the profile: a new draft with the same set, removal, colour and Stones as an earlier booking, keeping
+ * "Book again" from the profile: a new draft with the same set, removal, color and Stones as an earlier booking, keeping
  * only what is still offered. Date, time, note and photos start empty.
  */
 function repeatDraft(catalog, booking) {
@@ -84,7 +84,7 @@ function repeatDraft(catalog, booking) {
   }
 }
 
-/** An earlier booking's colours per nail, keeping only shades still on the chart. */
+/** An earlier booking's colors per nail, keeping only shades still on the chart. */
 function listedNails(catalog, nails) {
   const listed = (c) => (c && (catalog.nailColors ?? []).includes(c) ? c : null)
   const hand = (list) => Array.from({ length: 5 }, (_, i) => listed(list?.[i]))
@@ -132,9 +132,9 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
   const [serviceId, setServiceId] = useState(() => draftService(catalog, draft)) // the new set (Soft Gel), if any
   const [removalId, setRemovalId] = useState(() => draftRemoval(catalog, draft)) // a removal, on its own or before the set
   const [color, setColor] = useState(draft?.color ?? '')
-  const [perNail, setPerNail] = useState(draft?.perNail ?? EMPTY_NAILS) // a colour for each nail (optional)
-  const [colorRequest, setColorRequest] = useState(draft?.colorRequest ?? null) // "Can't find your colour?" text; null when not asked
-  const [colorImages, setColorImages] = useState(draft?.colorImages ?? []) // at most one photo of that colour
+  const [perNail, setPerNail] = useState(draft?.perNail ?? EMPTY_NAILS) // a color for each nail (optional)
+  const [colorRequest, setColorRequest] = useState(draft?.colorRequest ?? null) // "Can't find your color?" text; null when not asked
+  const [colorImages, setColorImages] = useState(draft?.colorImages ?? []) // at most one photo of that color
   const [nails, setNails] = useState(draft?.nails ?? {}) // addOnId → nail count
   const [hands, setHands] = useState(draft?.hands ?? {}) // addOnId → 'Left' | 'Right' | 'Both'
   const [date, setDate] = useState(draft?.date ?? '')
@@ -199,13 +199,13 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
   const quote = calculateQuote(service, selectedAddOns, catalog.depositAmount, removalFirst)
   // The total and the review name the set the way it was chosen ("Plain with design").
   const shownQuote = { ...quote, lines: quote.lines.map((l) => (l.category === 'SoftGel' ? { ...l, name: setName(catalog, byId(catalog, l.itemId)) || l.name } : l)) }
-  // How the colour reads in the total and the summary: the chart shade, the request, or "one per nail".
+  // How the color reads in the total and the summary: the chart shade, the request, or "one per nail".
   const colorText = colorRequest !== null
-    ? (colorRequest.trim() ? `Colour request: ${colorRequest.trim()}` : null)
+    ? (colorRequest.trim() ? `Color request: ${colorRequest.trim()}` : null)
     : [color && colorLabel(color), nailsStarted(perNail) && `Each nail: ${perNailText(perNail)}`].filter(Boolean).join(' · ') || null
 
   // One key per set of booking details: repeated or retried Pay clicks for the same booking are
-  // recognised by the server and never charged twice (Ref 12.4).
+  // recognized by the server and never charged twice (Ref 12.4).
   const detailsKey = JSON.stringify([serviceId, removalId, color, perNail, colorRequest, colorImages.map((r) => r.id), nails, hands, date, time, note,
     paymentOption, referenceImages.map((r) => r.id)])
   // A new key when the details change, or when Xendit couldn't start (that attempt's hold was released).
@@ -266,9 +266,9 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
 
   const colorProblem = () => {
     if (!needsColor) return null
-    if (colorRequest !== null) return colorRequest.trim() ? null : "Describe the colour you're looking for, or pick one from the chart."
-    if (nailsStarted(perNail) && !nailsComplete(perNail) && !color) return 'Choose a main colour for the nails without their own colour.'
-    return color || nailsComplete(perNail) ? null : 'Choose a nail colour to continue.'
+    if (colorRequest !== null) return colorRequest.trim() ? null : "Describe the color you're looking for, or pick one from the chart."
+    if (nailsStarted(perNail) && !nailsComplete(perNail) && !color) return 'Choose a main color for the nails without their own color.'
+    return color || nailsComplete(perNail) ? null : 'Choose a nail color to continue.'
   }
 
   const next = () => {
@@ -559,13 +559,13 @@ function ServiceStep({
         )}
       </fieldset>
 
-      {/* Always shown, so clients see a colour comes next; greyed out until a set is chosen (a removal alone needs none). */}
+      {/* Always shown, so clients see a color comes next; grayed out until a set is chosen (a removal alone needs none). */}
       {colors.length > 0 && (
         <fieldset className="choice-fieldset" disabled={!softGel} id="book-colour">
           <legend className="step-heading">
-            <span><h2>Choose a colour</h2><span className="step-hint">Pick a shade from the colour chart for your {softGel ? setPhrase(catalog, softGel) : 'set'}.</span></span>
+            <span><h2>Choose a color</h2><span className="step-hint">Pick a shade from the color chart for your {softGel ? setPhrase(catalog, softGel) : 'set'}.</span></span>
           </legend>
-          {!softGel && <p className="book-folded">Choose a service to pick a colour.</p>}
+          {!softGel && <p className="book-folded">Choose a service to pick a color.</p>}
           {softGel && <div className="stack">
             <ColorChooser colors={colors} value={colorRequest === null ? color : ''}
               onChange={(c) => { onColorRequest(null); onColor(c) }}
@@ -651,10 +651,10 @@ function ServiceStep({
   )
 }
 
-/** A photo of the colour asked for in the chart's "Can't find your colour?" (optional): it helps Leyah match the shade. */
+/** A photo of the color asked for in the chart's "Can't find your color?" (optional): it helps Leyah match the shade. */
 function ColorRequestPhoto({ images, onImages }) {
   return (
-    <ReferenceImagePicker images={images} onChange={onImages} max={1} compact title="Photo of the colour" photoName="colour photo"
+    <ReferenceImagePicker images={images} onChange={onImages} max={1} compact title="Photo of the color" photoName="color photo"
       hint="Helps Leyah match the shade · JPG, PNG or WebP" />
   )
 }
@@ -705,7 +705,7 @@ const SummaryIcon = ({ children }) => (
   <svg className="yt-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">{children}</svg>
 )
 
-/** The "Your total" card beside each step: prices, total, deposit and balance, then time, colour and appointment. */
+/** The "Your total" card beside each step: prices, total, deposit and balance, then time, color and appointment. */
 function Summary({ quote, hands = {}, color, swatchOf, durationMinutes, date, time, onEdit }) {
   const edit = (step, section, what) => onEdit && (
     <button type="button" className="yt-edit" onClick={() => onEdit(step, section)} aria-label={`Change ${what}`}>Change</button>
@@ -744,7 +744,7 @@ function Summary({ quote, hands = {}, color, swatchOf, durationMinutes, date, ti
         )}
         {color && (
           <div>
-            <dt><SummaryIcon><path d="M12 3.5c3 3.6 5.5 6.6 5.5 9.6a5.5 5.5 0 0 1-11 0c0-3 2.5-6 5.5-9.6z" /></SummaryIcon>Colour{edit(0, 'book-colour', 'colour')}</dt>
+            <dt><SummaryIcon><path d="M12 3.5c3 3.6 5.5 6.6 5.5 9.6a5.5 5.5 0 0 1-11 0c0-3 2.5-6 5.5-9.6z" /></SummaryIcon>Color{edit(0, 'book-colour', 'color')}</dt>
             <dd className="yt-color">
               <span className={swatch ? 'yt-swatch' : 'yt-swatch yt-swatch-unknown'} style={swatch ? { background: swatch } : undefined} aria-hidden="true" />
               {color}
@@ -804,7 +804,7 @@ function Review({ quote, option, hands, durationMinutes, color, date, time, note
             </li>
           ))}
         </ul>
-        {color && <p className="review-color"><span className="muted">Colour</span> {color}</p>}
+        {color && <p className="review-color"><span className="muted">Color</span> {color}</p>}
         <div className="summary-total"><span>Total</span><Money amount={quote.total} /></div>
         {/* Follows the payment option chosen below. */}
         <div className="review-split" aria-live="polite">
@@ -837,7 +837,7 @@ function Review({ quote, option, hands, durationMinutes, color, date, time, note
         <div className="review-head"><h3>Booking policy</h3></div>
         <ul className="policy-list">
           <li>You can reschedule online up to 24 hours before your appointment.</li>
-          <li>Cancelling less than 24 hours before, or not showing up, may incur a fee.</li>
+          <li>Canceling less than 24 hours before, or not showing up, may incur a fee.</li>
           <li>Please arrive on time and come alone, with clean, bare nails unless you booked a removal.</li>
         </ul>
       </section>

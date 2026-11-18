@@ -53,9 +53,9 @@ describe('Leyah books for a client herself', () => {
     const user = userEvent.setup()
     const dialog = await openNewBooking(user)
     await user.click(within(within(dialog).getByRole('radiogroup', { name: 'Removal only' })).getByRole('radio', { name: /^My Work/ }))
-    // A removal takes no removal first, colour or nail art.
+    // A removal takes no removal first, color or nail art.
     expect(within(dialog).queryByRole('radiogroup', { name: 'Removal first' })).toBeNull()
-    expect(within(dialog).queryByRole('combobox', { name: /^Colour/ })).toBeNull()
+    expect(within(dialog).queryByRole('combobox', { name: /^Color/ })).toBeNull()
     expect(within(dialog).queryByRole('button', { name: /^More nails with/ })).toBeNull()
     expect(within(dialog).getByRole('complementary', { name: 'Booking summary' })).toHaveTextContent('Removal only: My Work')
 

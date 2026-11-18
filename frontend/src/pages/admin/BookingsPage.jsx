@@ -32,7 +32,7 @@ const STATUSES = [
   { value: 'Pending', label: 'Pending', title: 'Pending bookings', icon: <ClockIcon /> },
   { value: 'Confirmed', label: 'Confirmed', title: 'Confirmed bookings', icon: <CheckIcon /> },
   { value: 'Completed', label: 'Completed', title: 'Completed bookings', icon: <CheckIcon /> },
-  { value: 'Cancelled', label: 'Cancelled', title: 'Cancelled bookings', icon: <CrossIcon /> },
+  { value: 'Cancelled', label: 'Canceled', title: 'Canceled bookings', icon: <CrossIcon /> },
   { value: 'NoShow', label: 'No-show', title: 'No-shows', icon: <BanIcon /> },
   // Held while the client pays on Xendit's page; not a booking until paid, so only listed here.
   { value: 'AwaitingPayment', label: 'Awaiting payment', title: 'Awaiting payment (held while the client pays)', icon: <HourglassIcon /> },
@@ -272,7 +272,7 @@ const csvCell = (value) => {
 }
 
 function downloadCsv(bookings) {
-  const head = ['Booking', 'Date', 'Start', 'End', 'Client', 'Username', 'Service', 'Removal', 'Colour', 'Add-ons', 'Total', 'Paid online', 'Balance due', 'Status', 'Reference']
+  const head = ['Booking', 'Date', 'Start', 'End', 'Client', 'Username', 'Service', 'Removal', 'Color', 'Add-ons', 'Total', 'Paid online', 'Balance due', 'Status', 'Reference']
   const lines = bookings.map((b) => [
     b.id, b.bookingDate, b.startTime.slice(0, 5), b.endTime.slice(0, 5), bookingClientName(b),
     b.client?.username, b.serviceName, b.removalServiceName, b.nailColor,

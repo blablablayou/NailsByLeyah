@@ -4,7 +4,7 @@ import { ADMIN, renderApp, signIn } from './helpers'
 import { getDb, saveDb } from './mockBackend/db'
 import { addDays, today } from '../lib/dates'
 
-/** Booking 8, paid by GCash on the payment page (an online payment id), then cancelled with a refund owed. */
+/** Booking 8, paid by GCash on the payment page (an online payment id), then canceled with a refund owed. */
 function paidOnlineThenCancelled({ amountPaid = 300, refundDue = 300, mockRefund, ...overrides } = {}) {
   const db = getDb()
   const booking = db.bookings.find((b) => b.id === 8)
@@ -45,7 +45,7 @@ describe('Sending a refund back online', () => {
     const sum = within(dialog).getByRole('list', { name: 'Refund' })
     expect(sum).toHaveTextContent('Paid by GCash₱300.00')
     expect(sum).toHaveTextContent('To refund₱300.00')
-    expect(sum).not.toHaveTextContent('Deposit kept') // the salon cancelled: everything goes back
+    expect(sum).not.toHaveTextContent('Deposit kept') // the salon canceled: everything goes back
 
     await user.click(within(dialog).getByRole('button', { name: 'Refund ₱300.00 to their GCash' }))
     expect(await within(dialog).findByText('Refund processing')).toBeInTheDocument()

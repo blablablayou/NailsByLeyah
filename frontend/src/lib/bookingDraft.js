@@ -6,7 +6,7 @@
 
 import { api } from '../api'
 
-// 3: three steps (photos with the colour, the note with the date and time), colours per nail and colour requests.
+// 3: three steps (photos with the color, the note with the date and time), colors per nail and color requests.
 const VERSION = 3
 
 /** The signed-in client's saved draft, or null. Drafts from an older version of the page are ignored. */

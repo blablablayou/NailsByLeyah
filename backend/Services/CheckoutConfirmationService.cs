@@ -120,7 +120,7 @@ public sealed class CheckoutConfirmationService(
                 await BookingEmails.QueuePaidAsync(background, salonProfile, done, paid);
             else if (result.Outcome == ConfirmationOutcome.PaidButNeedsRefund)
                 await background.EnqueueAsync((n, stop) => n.SendSalonPaymentProblemAsync(done,
-                    $"PHP {paid.Amount:0.00} was paid online (reference {paid.ReferenceNumber}) after the booking was cancelled or its time had passed. Refund due: PHP {done.RefundDue:0.00}.", stop),
+                    $"PHP {paid.Amount:0.00} was paid online (reference {paid.ReferenceNumber}) after the booking was canceled or its time had passed. Refund due: PHP {done.RefundDue:0.00}.", stop),
                     $"refund-needed alert for booking {done.Id}");
         }
         return result.Outcome;

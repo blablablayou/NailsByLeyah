@@ -51,7 +51,7 @@ describe('Find bookings polish', () => {
     expect(within(row).queryByRole('button', { name: /more$/ })).toBeNull()
   })
 
-  it('4: the status is the same coloured badge as everywhere else', async () => {
+  it('4: the status is the same colored badge as everywhere else', async () => {
     await openPage()
     expect(within(rowOf(9)).getByText('Pending', { selector: '.badge' })).toHaveClass('badge-pending')
   })

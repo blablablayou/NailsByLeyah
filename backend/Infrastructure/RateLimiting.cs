@@ -15,7 +15,7 @@ public static class RateLimitPolicies
     public const string Email = "email";
     /// <summary>Endpoints that check a code or reset link, so they can't be guessed.</summary>
     public const string Code = "code";
-    /// <summary>Making, moving and cancelling bookings.</summary>
+    /// <summary>Making, moving and canceling bookings.</summary>
     public const string Booking = "booking";
     /// <summary>Uploading design photos.</summary>
     public const string Upload = "upload";

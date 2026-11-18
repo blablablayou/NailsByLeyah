@@ -106,7 +106,7 @@ describe('Mock backend', () => {
       .rejects.toMatchObject({ code: 'reschedule_window_passed' })
   })
 
-  it('needs the current Terms version, a listed colour, and no add-ons with Plain', async () => {
+  it('needs the current Terms version, a listed color, and no add-ons with Plain', async () => {
     await signIn(CLIENT)
     await expect(call('POST', '/bookings', { body: booking({ termsVersion: '0.1' }) })).rejects.toMatchObject({ code: 'terms_outdated' })
     await expect(call('POST', '/bookings', { body: booking({ nailColor: 'Gold' }) })).rejects.toMatchObject({ status: 400 })

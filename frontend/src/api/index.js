@@ -133,7 +133,7 @@ export const api = {
     /** Asks again whether a refund sent back online has arrived. */
     checkRefund: (id) => post(`/admin/bookings/${id}/refund/check`),
     markNoShow: (id) => post(`/admin/bookings/${id}/no-show`),
-    /** Leyah's answer to "Can't find your colour?": whether she has that shade. */
+    /** Leyah's answer to "Can't find your color?": whether she has that shade. */
     decideColorRequest: (id, available) => post(`/admin/bookings/${id}/color-request`, { available }),
     reschedule: (id, body) => post(`/admin/bookings/${id}/reschedule`, body),
     cancel: (id, body) => post(`/admin/bookings/${id}/cancel`, body),

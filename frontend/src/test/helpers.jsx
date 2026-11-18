@@ -12,12 +12,12 @@ export const ADMIN = demoAccounts.find((a) => a.username === 'leah')
 
 /** Signs in through the mock backend before the app renders, like returning with a valid session cookie. */
 /** Opens the Terms from the payment step, reads to the end (all of it fits in the test page), closes it, and agrees. */
-/** Opens the colour chart, picks shade #NN and confirms it with Use This Colour. */
+/** Opens the color chart, picks shade #NN and confirms it with Use This Color. */
 export async function pickShade(user, number) {
-  await user.click(screen.getByRole('button', { name: /Open the colour chart|Change colour/ }))
-  const chart = screen.getByRole('dialog', { name: 'Choose Nail Colour' })
+  await user.click(screen.getByRole('button', { name: /Open the color chart|Change color/ }))
+  const chart = screen.getByRole('dialog', { name: 'Choose Nail Color' })
   await user.click(within(chart).getByRole('radio', { name: new RegExp(`^Shade #${number},`) }))
-  await user.click(within(chart).getByRole('button', { name: 'Use This Colour' }))
+  await user.click(within(chart).getByRole('button', { name: 'Use This Color' }))
 }
 
 /** Opens the full Booking & Payment Policy from the payment step ("Read Booking & Payment Policy"). */

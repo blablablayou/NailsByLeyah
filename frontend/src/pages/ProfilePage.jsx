@@ -47,7 +47,7 @@ export default function ProfilePage() {
   )
 }
 
-/** The client's own photo: in their top bar, and with their bookings so Leyah recognises who is coming. */
+/** The client's own photo: in their top bar, and with their bookings so Leyah recognizes who is coming. */
 function ClientPhotoCard({ onDone }) {
   const { user, updateUser } = useAuth()
   const input = useRef(null)
@@ -92,7 +92,7 @@ function ClientPhotoCard({ onDone }) {
 }
 
 /**
- * The client's last finished visit, with Book again: the booking page opens with the same services, removal, colour and
+ * The client's last finished visit, with Book again: the booking page opens with the same services, removal, color and
  * Stones already chosen, so only a date and time are left to pick.
  */
 function LastVisitCard() {
@@ -119,7 +119,7 @@ function LastVisitCard() {
             <div><dt>Services</dt><dd>{last.removalServiceName ? `Removal (${last.removalServiceName}), then ${last.serviceName}`
               : last.serviceCategory === 'Removal' ? `Removal (${last.serviceName})` : last.serviceName}</dd></div>
             {last.nailColor && (
-              <div><dt>Colour</dt><dd>
+              <div><dt>Color</dt><dd>
                 {colorFor(last.nailColor) && <span className="bd-swatch" style={{ background: colorFor(last.nailColor) }} aria-hidden="true" />}
                 {colorLabel(last.nailColor)}
               </dd></div>

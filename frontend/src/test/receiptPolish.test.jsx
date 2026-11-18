@@ -74,7 +74,7 @@ describe('Payment receipt polish', () => {
     expect(within(steps).getAllByRole('listitem').every((s) => s.classList.contains('done'))).toBe(true)
   })
 
-  it('has no progress line for a cancelled booking', () => {
+  it('has no progress line for a canceled booking', () => {
     show({ bookingStatus: 'Cancelled' }, { status: 'Cancelled' })
     expect(screen.queryByRole('list', { name: 'Booking progress' })).toBeNull()
     expect(screen.getByText(/None \(the deposit is kept\)/)).toBeInTheDocument()

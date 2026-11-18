@@ -47,7 +47,7 @@ function CopyReference({ value, valueRef }) {
 
 /**
  * Where a paid booking is: paid, then Leyah checks the payment, then the appointment is confirmed. Not shown for a
- * cancelled or no-show booking, where the status badge and the refund line say what happened.
+ * canceled or no-show booking, where the status badge and the refund line say what happened.
  */
 function Progress({ status, verified }) {
   const confirmed = status === 'Confirmed' || status === 'Completed'
@@ -81,7 +81,7 @@ export function Receipt({ receipt, booking }) {
   const status = booking?.status ?? receipt.bookingStatus
   const total = booking?.totalPrice ?? receipt.totalAmount
   const balance = booking?.balanceDue ?? receipt.balanceDue
-  // A cancelled or no-show booking owes no balance; what matters is the refund, if any.
+  // A canceled or no-show booking owes no balance; what matters is the refund, if any.
   const closed = status === 'Cancelled' || status === 'NoShow'
   const refundDue = booking?.payment?.refundDue ?? receipt.refundDue ?? 0
   const refundSentAt = booking?.payment?.refundSentAt ?? receipt.refundSentAt

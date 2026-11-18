@@ -7,7 +7,7 @@ import { NailPair } from '../../components/ColorPicker'
 import { colorFor, colorLabel, shadeNumber } from '../../lib/shades'
 
 /**
- * Which chart shades Leyah has. A shade she has run out of shows as "Out of stock" on the client's colour chart and
+ * Which chart shades Leyah has. A shade she has run out of shows as "Out of stock" on the client's color chart and
  * can't be picked; tapping it again puts it back.
  */
 export function ColorStockCard() {
@@ -16,8 +16,8 @@ export function ColorStockCard() {
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
 
-  if (catalog.loading && !catalog.data) return <Card title="Colour chart stock"><PageLoader label="Loading shades…" /></Card>
-  if (catalog.error) return <Card title="Colour chart stock"><Alert kind="error">{errorMessage(catalog.error)}</Alert></Card>
+  if (catalog.loading && !catalog.data) return <Card title="Color chart stock"><PageLoader label="Loading shades…" /></Card>
+  if (catalog.error) return <Card title="Color chart stock"><Alert kind="error">{errorMessage(catalog.error)}</Alert></Card>
 
   const shades = (catalog.data.nailColors ?? []).filter((c) => shadeNumber(c))
   const out = outOfStock ?? catalog.data.outOfStockColors ?? []
@@ -35,7 +35,7 @@ export function ColorStockCard() {
   }
 
   return (
-    <Card title="Colour chart stock">
+    <Card title="Color chart stock">
       <p className="card-intro">
         Tap a shade you&apos;ve run out of. Clients see it as out of stock and can&apos;t pick it until you tap it again.
         {out.length > 0 && <strong> {out.length} out of stock.</strong>}

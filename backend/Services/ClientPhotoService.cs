@@ -31,7 +31,7 @@ public static class UploadedImage
 
 /// <summary>
 /// A client's own profile photo. Only the client changes it; the client and administrators can see it, so Leyah
-/// recognises who is coming.
+/// recognizes who is coming.
 /// </summary>
 public interface IClientProfileService
 {

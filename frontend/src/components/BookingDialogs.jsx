@@ -52,7 +52,7 @@ export function CancelBookingDialog({ booking, reasons, allowExplanation = false
         </p>
         <RefundNote booking={booking} bySalon={allowExplanation} reason={reason} />
         {error && <Alert kind="error">{error}</Alert>}
-        <SelectField label="Reason for cancelling" required value={reason} placeholder="Select a reason"
+        <SelectField label="Reason for canceling" required value={reason} placeholder="Select a reason"
           options={reasons} error={fieldError} onChange={(e) => { setReason(e.target.value); setFieldError(null); setExplanationError(null) }} />
         {ownReason && (
           <Field label="Your reason" required error={explanationError} counter={`${explanation.length}/${LIMITS.explanationMax}`}>
@@ -142,7 +142,7 @@ export function BalanceDialog({ booking, completing = false, onSubmit, onClose }
   )
 }
 
-/** What happens to the money if this booking is cancelled now, worded for whoever is cancelling. */
+/** What happens to the money if this booking is canceled now, worded for whoever is canceling. */
 function RefundNote({ booking, bySalon, reason }) {
   if (booking.status === 'AwaitingPayment')
     return <Alert kind="info">Nothing has been charged. The time held for you will be released.</Alert>
@@ -160,7 +160,7 @@ function RefundNote({ booking, bySalon, reason }) {
     }
     return (
       <Alert kind="info">
-        The salon is cancelling, so the client gets back everything they paid: <strong><Money amount={paid} /></strong>, the deposit
+        The salon is canceling, so the client gets back everything they paid: <strong><Money amount={paid} /></strong>, the deposit
         included. Send it by GCash or Maya, then record it from the booking&apos;s menu.
       </Alert>
     )
@@ -255,7 +255,7 @@ export function RefundDialog({ booking, onSubmit, onRefundOnline, onCheck, onSet
     <Modal title={pay.canRefundOnline ? 'Send refund' : 'Record refund'} onClose={close}>
       <div className="stack">
         <p className="muted small refund-who">
-          {bookingClientName(current)} · booking #{current.id} · {current.status === 'NoShow' ? 'no-show' : 'cancelled'}
+          {bookingClientName(current)} · booking #{current.id} · {current.status === 'NoShow' ? 'no-show' : 'canceled'}
         </p>
         <ul className="summary-lines refund-sum" aria-label="Refund">
           <li><span>Paid{pay.method ? ` by ${pay.method}` : ''}</span><Money amount={pay.amountPaid ?? 0} /></li>

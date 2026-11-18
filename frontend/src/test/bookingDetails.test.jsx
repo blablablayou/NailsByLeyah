@@ -51,7 +51,7 @@ describe('Booking details window', () => {
     show({ ...fullyPaid, status: 'Cancelled',
       cancellation: { cancelledAt: '2026-11-05T08:00:00Z', cancelledByRole: 'Client', reasonLabel: 'Change of schedule', explanation: 'Moving away' } })
 
-    expect(screen.getByText('Cancelled by the client: Change of schedule')).toBeInTheDocument()
+    expect(screen.getByText('Canceled by the client: Change of schedule')).toBeInTheDocument()
     expect(screen.getByText('Moving away')).toBeInTheDocument()
   })
 

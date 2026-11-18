@@ -190,12 +190,12 @@ describe('Hands for Stone add-ons', () => {
     expect(aside.getByText('Total').nextSibling).toHaveTextContent('₱599.00') // ₱499 + ₱100
     expect(aside.getByText('~ 4 hr')).toBeInTheDocument()
 
-    // Only one removal at a time, and a removal alone needs no colour.
+    // Only one removal at a time, and a removal alone needs no color.
     await user.click(screen.getByRole('checkbox', { name: /^Not My Work/ }))
     expect(screen.getByRole('checkbox', { name: /^My Work/ })).not.toBeChecked()
     // A second tap on the Soft Gel Extension card un-chooses the set, design and all.
     await user.click(screen.getByRole('checkbox', { name: /^Soft Gel Extension/ }))
-    expect(screen.queryByRole('radiogroup', { name: 'Nail colour' })).toBeNull()
+    expect(screen.queryByRole('radiogroup', { name: 'Nail color' })).toBeNull()
     await user.click(screen.getByRole('button', { name: /^Next:/ }))
     expect(await screen.findByRole('radiogroup', { name: /Choose a date/ })).toBeInTheDocument()
   })
@@ -236,7 +236,7 @@ describe('Booking drafts', () => {
     // Going back keeps every choice.
     expect(screen.getByRole('checkbox', { name: /^With Design/ })).toBeChecked()
     expect(screen.getByRole('radio', { name: 'Right hand' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('button', { name: 'Colour #46 – Plum-Grey. Change colour' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Color #46 – Plum-Gray. Change color' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /^Next:/ }))
     await waitFor(() => expect(getDb().bookingDrafts.find((d) => d.clientId === 2)?.data).toMatchObject({ step: 1, serviceId: 8, color: '#46', hands: { 2: 'Right' } }))
     first.unmount()

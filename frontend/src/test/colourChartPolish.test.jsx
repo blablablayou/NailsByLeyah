@@ -2,25 +2,25 @@ import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CLIENT, pickShade, renderApp, signIn } from './helpers'
 
-// The colour chart polish of 2026-11-16: quick compare, one Tab stop, the locked right hand explained, and the phone
+// The color chart polish of 2026-11-16: quick compare, one Tab stop, the locked right hand explained, and the phone
 // header and Use bar.
 
-const chart = () => screen.getByRole('dialog', { name: 'Choose Nail Colour' })
+const chart = () => screen.getByRole('dialog', { name: 'Choose Nail Color' })
 const shade = (n) => within(chart()).getByRole('radio', { name: new RegExp(`^Shade #${n},`) })
 
 async function openChart(user) {
   await signIn(CLIENT)
   renderApp('/book')
   await user.click(await screen.findByRole('checkbox', { name: /^Plain/ }))
-  await user.click(screen.getByRole('button', { name: 'Open the colour chart' }))
+  await user.click(screen.getByRole('button', { name: 'Open the color chart' }))
 }
 
-describe('Colour chart polish', () => {
-  it('spells colour the same way everywhere', async () => {
+describe('Color chart polish', () => {
+  it('spells color the same way everywhere', async () => {
     const user = userEvent.setup()
     await openChart(user)
-    expect(within(chart()).getByRole('button', { name: 'Use This Colour' })).toBeDisabled()
-    expect(within(chart()).getByText(/No colour selected yet/)).toBeInTheDocument()
+    expect(within(chart()).getByRole('button', { name: 'Use This Color' })).toBeDisabled()
+    expect(within(chart()).getByText(/No color selected yet/)).toBeInTheDocument()
   })
 
   it('previews a shade on hover without choosing it', async () => {
@@ -30,10 +30,10 @@ describe('Colour chart polish', () => {
     expect(within(chart()).getByRole('heading', { name: 'Bubblegum Pink' })).toBeInTheDocument()
     expect(within(chart()).getByText('Previewing')).toBeInTheDocument()
     expect(shade('41')).not.toBeChecked()
-    expect(within(chart()).getByRole('button', { name: 'Use This Colour' })).toBeDisabled()
+    expect(within(chart()).getByRole('button', { name: 'Use This Color' })).toBeDisabled()
 
     await user.unhover(shade('41'))
-    expect(within(chart()).getByText(/No colour selected yet/)).toBeInTheDocument()
+    expect(within(chart()).getByText(/No color selected yet/)).toBeInTheDocument()
   })
 
   it('previews on a long press without choosing', async () => {
@@ -72,12 +72,12 @@ describe('Colour chart polish', () => {
     expect(shade('01').tabIndex).toBe(0)
   })
 
-  it('opens every nail on both hands, and says empty nails get the main colour', async () => {
+  it('opens every nail on both hands, and says empty nails get the main color', async () => {
     const user = userEvent.setup()
     await openChart(user)
     expect(within(chart()).getByRole('button', { name: /^Right hand, little/ })).toBeEnabled()
     expect(within(chart()).queryByText('Opens after all 5 left nails')).toBeNull()
-    expect(within(chart()).getByText(/Nails you leave empty get your main colour/)).toBeInTheDocument()
+    expect(within(chart()).getByText(/Nails you leave empty get your main color/)).toBeInTheDocument()
     expect(within(chart()).getByText('Other options')).toBeInTheDocument()
   })
 
@@ -87,9 +87,9 @@ describe('Colour chart polish', () => {
     await user.click(shade('06'))
     const dialog = chart()
     const head = dialog.querySelector(':scope > .cp-head')
-    expect(within(head).getByRole('heading', { name: 'Choose Nail Colour' })).toBeInTheDocument()
+    expect(within(head).getByRole('heading', { name: 'Choose Nail Color' })).toBeInTheDocument()
     expect(head.querySelector('.cp-now')).toHaveTextContent('Selected: #06 Light Pink-Lavender')
-    expect(dialog.querySelector(':scope > .cp-usebar')).toContainElement(within(dialog).getByRole('button', { name: 'Use This Colour' }))
+    expect(dialog.querySelector(':scope > .cp-usebar')).toContainElement(within(dialog).getByRole('button', { name: 'Use This Color' }))
   })
 
   // Review fixes, 2026-11-16.
@@ -126,14 +126,14 @@ describe('Colour chart polish', () => {
     expect(chart().querySelector('.cp-pick')).toHaveAttribute('aria-live', 'polite')
   })
 
-  it('arrow keys never colour a nail', async () => {
+  it('arrow keys never color a nail', async () => {
     const user = userEvent.setup()
     await openChart(user)
     await user.click(within(chart()).getByRole('button', { name: /^Left hand, thumb/ }))
     shade('06').focus()
     await user.keyboard('{ArrowRight}{ArrowRight}{ArrowDown}{End}')
-    expect(within(chart()).getByRole('button', { name: 'Left hand, thumb: choose a colour' })).toHaveAttribute('aria-pressed', 'true')
-    expect(within(chart()).getAllByRole('button', { name: /: choose a colour$/ })).toHaveLength(10)
+    expect(within(chart()).getByRole('button', { name: 'Left hand, thumb: choose a color' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(chart()).getAllByRole('button', { name: /: choose a color$/ })).toHaveLength(10)
   })
 
   it('opens with focus on the chosen shade', async () => {
@@ -142,17 +142,17 @@ describe('Colour chart polish', () => {
     renderApp('/book')
     await user.click(await screen.findByRole('checkbox', { name: /^Plain/ }))
     await pickShade(user, 30)
-    await user.click(screen.getByRole('button', { name: /^Colour #30.*Change colour$/ }))
+    await user.click(screen.getByRole('button', { name: /^Color #30.*Change color$/ }))
     expect(shade('30')).toHaveFocus()
   })
 
-  it('the header line matches the Use button when asking for a colour after starting the nails', async () => {
+  it('the header line matches the Use button when asking for a color after starting the nails', async () => {
     const user = userEvent.setup()
     await openChart(user)
     await user.click(within(chart()).getByRole('button', { name: /^Left hand, thumb/ }))
     await user.click(shade('06'))
-    await user.click(within(chart()).getByRole('radio', { name: "Can't find your colour?" }))
-    expect(within(chart()).getByRole('button', { name: 'Ask Leyah for This Colour' })).toBeInTheDocument()
-    expect(chart().querySelector('.cp-now')).toHaveTextContent('Selected: Colour request')
+    await user.click(within(chart()).getByRole('radio', { name: "Can't find your color?" }))
+    expect(within(chart()).getByRole('button', { name: 'Ask Leyah for This Color' })).toBeInTheDocument()
+    expect(chart().querySelector('.cp-now')).toHaveTextContent('Selected: Color request')
   })
 })

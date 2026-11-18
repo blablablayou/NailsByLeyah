@@ -157,7 +157,7 @@ describe('Paying on Xendit when something goes wrong', () => {
     expect(screen.queryByText(/You have not been charged/)).not.toBeInTheDocument()
   })
 
-  it('cancelling a hold says nothing was charged, not that a deposit is kept', async () => {
+  it('canceling a hold says nothing was charged, not that a deposit is kept', async () => {
     holdForKyla()
     const user = userEvent.setup()
     await signIn(CLIENT)

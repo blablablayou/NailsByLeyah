@@ -115,7 +115,7 @@ export default function ClientDataPage() {
             <dt>Email</dt><dd>{client.email}</dd>
             <dt>Phone</dt><dd>{client.phoneNumber}</dd>
             <dt>Bookings</dt><dd>{client.bookingCount}</dd>
-            <dt>Cancelled</dt><dd>{client.cancelledCount ?? 0}</dd>
+            <dt>Canceled</dt><dd>{client.cancelledCount ?? 0}</dd>
             <dt>No-shows</dt>
             <dd className={client.noShowCount > 0 ? 'client-noshows' : undefined}>
               {client.noShowCount ?? 0}{client.noShowCount >= 2 && ' · consider asking for the full payment next time'}
@@ -126,7 +126,7 @@ export default function ClientDataPage() {
           <ClientNote key={client.id} client={client} onSaved={setClient} />
           {client.activeBookingCount > 0 ? (
             <Alert kind="warning" title="This client still has an open booking.">
-              A pending or confirmed booking stays open until it is completed or cancelled. Complete or cancel{' '}
+              A pending or confirmed booking stays open until it is completed or canceled. Complete or cancel{' '}
               {client.activeBookingCount === 1 ? 'it' : `all ${client.activeBookingCount}`} on the Bookings page first.
               A booking can be completed from its appointment date.
             </Alert>

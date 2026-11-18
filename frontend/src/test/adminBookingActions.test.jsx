@@ -141,7 +141,7 @@ describe('Refunds', () => {
     payment: { amountPaid: 300 }, client: { firstName: 'Kyla', lastName: 'Santos' } }
   const reasons = [{ value: 'StaffUnavailable', label: 'Leyah is not available' }, { value: 'ClientDidNotRespond', label: 'Client did not respond' }]
 
-  it('tells a client who paid in full what comes back when cancelling', () => {
+  it('tells a client who paid in full what comes back when canceling', () => {
     render(<CancelBookingDialog booking={paidInFull} reasons={[]} onSubmit={() => {}} onClose={() => {}} />)
     expect(screen.getByRole('dialog')).toHaveTextContent('You paid ₱300.00. The ₱150.00 deposit is non-refundable, so ₱150.00 will be refunded')
   })
@@ -155,13 +155,13 @@ describe('Refunds', () => {
     const user = userEvent.setup()
     render(<CancelBookingDialog booking={paidInFull} reasons={reasons} allowExplanation onSubmit={() => {}} onClose={() => {}} />)
     expect(screen.getByRole('dialog')).toHaveTextContent('everything they paid: ₱300.00, the deposit included')
-    await user.selectOptions(screen.getByLabelText(/Reason for cancelling/), 'ClientDidNotRespond')
+    await user.selectOptions(screen.getByLabelText(/Reason for canceling/), 'ClientDidNotRespond')
     expect(screen.getByRole('dialog')).toHaveTextContent('the ₱150.00 deposit is kept, and ₱150.00 is refunded')
   })
 
   it('lists a refund to send on the dashboard until Leyah records it', async () => {
     const user = userEvent.setup()
-    // Leyah cancelled this paid-in-full booking because she was sick, so all ₱300 goes back.
+    // Leyah canceled this paid-in-full booking because she was sick, so all ₱300 goes back.
     const booking = stage({ bookingDate: addDays(today(), 4), startTime: '11:00:00', status: 'Cancelled', amountPaid: 300, paymentOption: 'Full', refundDue: 300 })
     await openDashboard()
     const item = await attentionRow(booking.id)
@@ -216,7 +216,7 @@ describe('Dashboard', () => {
     expect(getDb().bookings.find((b) => b.id === booking.id).status).toBe('Confirmed')
   })
 
-  it('shows the next client with the colour, Stones and note, and another day from the date stepper', async () => {
+  it('shows the next client with the color, Stones and note, and another day from the date stepper', async () => {
     const user = userEvent.setup()
     const day = addDays(today(), 3)
     stage({ bookingDate: day, startTime: '11:00:00', status: 'Confirmed', nailColor: '#06', note: 'Short almond' })
@@ -454,7 +454,7 @@ describe('Sales report Excel file', () => {
 
     // Column headings, repeated on every printed page
     const head = rowWith(sheet, 'Date')
-    expect(sheet.getRow(head).values.slice(1)).toEqual(['Date', 'Made', 'Completed', 'Cancelled', 'No-show', 'Paid online', 'Balances received', 'Total received', 'Refunds sent', 'Net received'])
+    expect(sheet.getRow(head).values.slice(1)).toEqual(['Date', 'Made', 'Completed', 'Canceled', 'No-show', 'Paid online', 'Balances received', 'Total received', 'Refunds sent', 'Net received'])
     expect(sheet.pageSetup.printTitlesRow).toBe(`${head}:${head}`)
 
     // Details: Nov 4 had nothing, so it's left out; then the grand total adds the rows up
@@ -477,7 +477,7 @@ describe('Sales report Excel file', () => {
     expect(valueOf(sheet, 'Balances unpaid')).toBe(150)
     expect(valueOf(sheet, 'Bookings made')).toBe(4)
     expect(valueOf(sheet, 'Completed')).toBe(3)
-    expect(valueOf(sheet, 'Cancelled')).toBe(1)
+    expect(valueOf(sheet, 'Canceled')).toBe(1)
     expect(valueOf(sheet, 'No-show')).toBe(2)
 
     // Page footer: the note, and page numbers

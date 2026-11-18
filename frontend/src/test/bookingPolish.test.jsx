@@ -40,7 +40,7 @@ describe('Booking page polish', () => {
     expect(within(bar).getByRole('button', { name: /^Next:/ })).toBeInTheDocument()
   })
 
-  it('jumps from Your total back to the colour, and on to the appointment', async () => {
+  it('jumps from Your total back to the color, and on to the appointment', async () => {
     const user = userEvent.setup()
     await plainWithColour(user)
     await user.click(screen.getByRole('button', { name: /^Next:/ }))
@@ -48,8 +48,8 @@ describe('Booking page polish', () => {
     await user.click(await screen.findByRole('button', { name: /^11:00.*Available/ }))
 
     const total = screen.getByRole('complementary')
-    await user.click(within(total).getByRole('button', { name: 'Change colour' }))
-    expect(await screen.findByRole('heading', { name: 'Choose a colour' })).toBeInTheDocument()
+    await user.click(within(total).getByRole('button', { name: 'Change color' }))
+    expect(await screen.findByRole('heading', { name: 'Choose a color' })).toBeInTheDocument()
 
     await user.click(within(screen.getByRole('complementary')).getByRole('button', { name: 'Change appointment' }))
     expect(await screen.findByRole('heading', { name: /Choose a date/ })).toBeInTheDocument()
@@ -60,7 +60,7 @@ describe('Booking page polish', () => {
     await signIn(CLIENT)
     renderApp('/book')
     await screen.findByRole('checkbox', { name: /^Plain/ })
-    // No service yet: nail art waits for one, without a wall of greyed photos.
+    // No service yet: nail art waits for one, without a wall of grayed photos.
     expect(screen.getByText('Choose a service to add nail art.')).toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: /Chrome/ })).toBeNull()
 

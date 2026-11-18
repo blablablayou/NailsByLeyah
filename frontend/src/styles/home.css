@@ -3,7 +3,7 @@
 
 html { scroll-padding-top: var(--header-h); }
 .hm-section:focus { outline: none; box-shadow: none; }
-/* One background, cream, from the hero to Visit Us: every section uses it, and only the cards on it carry colour. */
+/* One background, cream, from the hero to Visit Us: every section uses it, and only the cards on it carry color. */
 .page-home { max-width: none; padding: 0; gap: 0; overflow-x: clip; background: var(--cream); }
 .page-home > .alert { margin: 16px; }
 
@@ -109,7 +109,7 @@ html { scroll-padding-top: var(--header-h); }
   transform: scale(.94); transition: transform .35s cubic-bezier(.2,.8,.2,1); }
 .hm-viewer.open img { transform: none; }
 /* The design caption: a white card under the photo on a phone or tablet. On a wide screen it sits to the left of the
-   photo without moving it: the photo stays centred where it would be with no caption. */
+   photo without moving it: the photo stays centered where it would be with no caption. */
 .hm-viewer-figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 100%; }
 .hm-viewer-figure.has-caption img { max-height: calc(100svh - 190px); }
 .hm-viewer-caption { display: flex; flex-direction: column; gap: 6px; width: min(100%, 520px); padding: 16px 20px; text-align: left;
@@ -121,7 +121,7 @@ html { scroll-padding-top: var(--header-h); }
 .hm-viewer-by { font-size: var(--fs-small); color: var(--muted); }
 @media (min-width: 1100px) {
   .hm-viewer-figure.has-caption { position: relative; display: block; }
-  /* Room for the card on the left (and the same on the right, so the photo stays centred). */
+  /* Room for the card on the left (and the same on the right, so the photo stays centered). */
   .hm-viewer-figure.has-caption img { display: block; max-height: calc(100svh - 40px); max-width: calc(100vw - 2 * (300px + 28px + 20px)); }
   .hm-viewer-figure.has-caption .hm-viewer-caption { position: absolute; right: calc(100% + 28px); top: 50%; width: 300px; padding: 22px 24px;
     transform: translate(8px, -50%); }
@@ -151,7 +151,7 @@ html { scroll-padding-top: var(--header-h); }
 .hm-reveal { opacity: 0; transform: translateY(12px); transition: opacity .5s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); transition-delay: calc(var(--i, 0) * 70ms); }
 .hm-reveal[data-in] { opacity: 1; transform: none; }
 
-/* ===== Services & Pricing (Phase 3): white cards, three to a row and the rest centred under them (3 + 2), equal
+/* ===== Services & Pricing (Phase 3): white cards, three to a row and the rest centered under them (3 + 2), equal
    heights, the price at the same height on every card in a row; two to a row on tablets, one on phones. They fade up
    once (12 px, one after another), then the full price list unfolds on demand. ===== */
 .hm-prices { padding: 80px 20px 70px; text-align: center; background: var(--cream); }
@@ -217,7 +217,6 @@ html { scroll-padding-top: var(--header-h); }
 .hm-about-heart { flex: none; width: .62em; height: .62em; transform: rotate(-8deg) translateY(-.08em); }
 /* A soft brush stroke under the name. */
 .hm-about-stroke { display: block; width: min(300px, 70%); height: 12px; margin: 2px 0 0 .3em; color: var(--blush); }
-.hm-about-sample { margin: 16px 0 0; font-size: var(--fs-caption); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .hm-about-story { margin-top: 22px; }
 .hm-about-story p { max-width: 60ch; margin: 0 0 14px; font-size: 1.05rem; line-height: 1.6; color: var(--ink); text-wrap: pretty; }
 /* Three highlights in a row, each a round icon and a two-line label, with thin dividers between them. */
@@ -248,11 +247,19 @@ html { scroll-padding-top: var(--header-h); }
 
 /* ===== Nail rules ===== */
 .hm-rules { padding: 80px 20px; background: var(--cream); }
-.hm-rule-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); max-width: 1180px; margin: 0 auto; list-style: none; padding: 0; }
-.hm-rule { display: flex; gap: 16px; align-items: flex-start; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 22px; }
-.hm-rule-num { flex: none; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--rose-100); color: var(--rose-700); font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; }
-.hm-rule h3 { margin: 2px 0 6px; text-transform: uppercase; letter-spacing: .06em; }
-.hm-rule p { color: var(--ink-soft); font-size: .95rem; }
+/* Seven cards: four on a laptop, three on a tablet, two on a small tablet, one on a phone. Every card in a row is the
+   same height, and a short last row is centered. The number sits beside the title; the text uses the card's full width. */
+.hm-rule-grid { --gap: 18px; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--gap); max-width: 1180px; margin: 0 auto;
+  list-style: none; padding: 0; }
+.hm-rule { flex: 0 1 100%; display: flex; flex-direction: column; gap: 12px; background: #fff; border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: var(--shadow); padding: 22px 24px 24px; }
+.hm-rule-head { display: flex; align-items: center; gap: 12px; }
+.hm-rule-num { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--rose-100); color: var(--rose-700); font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; }
+.hm-rule h3 { margin: 0; text-transform: uppercase; letter-spacing: .06em; line-height: 1.3; }
+.hm-rule p { margin: 0; color: var(--ink-soft); font-size: .95rem; line-height: 1.6; }
+@media (min-width: 560px) { .hm-rule { flex-basis: calc((100% - var(--gap)) / 2); } }
+@media (min-width: 820px) { .hm-rule { flex-basis: calc((100% - 2 * var(--gap)) / 3); } }
+@media (min-width: 1100px) { .hm-rule { flex-basis: calc((100% - 3 * var(--gap)) / 4); } }
 .hm-fine { display: block; margin-top: 4px; font-size: .8rem; color: var(--rose-600); }
 .hm-notes { max-width: 1180px; margin: 22px auto 0; display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 .hm-note { background: var(--rose-100); border-radius: 18px; padding: 24px 26px; }
@@ -333,13 +340,13 @@ html[data-home-section="visit"] .nav-link[href="/#visit"] { background: var(--ro
 a.visit-pill { color: inherit; text-decoration: none; }
 a.visit-pill:hover { color: var(--rose-700); }
 
-/* What clients say: the comments Leyah picked, as white cards on the cream page, centred however many there are. */
+/* What clients say: the comments Leyah picked, as white cards on the cream page, centered however many there are. */
 .hm-reviews { padding: 72px 20px 76px; text-align: center; background: var(--cream); }
 .hm-reviews .hm-head { margin-bottom: 14px; }
 .hm-reviews-summary { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; margin: 0 0 34px;
   color: var(--ink-soft); font-weight: 500; }
 .hm-reviews-list { list-style: none; margin: 0 auto; padding: 0; max-width: 1120px; display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; }
-/* One card a row on a phone, two on a tablet, three on a laptop; a short last row stays centred. */
+/* One card a row on a phone, two on a tablet, three on a laptop; a short last row stays centered. */
 .hm-review { flex: 0 1 100%; max-width: 440px; display: flex; flex-direction: column; gap: 14px; padding: 26px 24px 20px; text-align: left;
   background: var(--white); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
 .hm-review blockquote { flex: 1; margin: 0; }

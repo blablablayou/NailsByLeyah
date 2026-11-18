@@ -18,17 +18,17 @@ export function Intro({ plan }) {
     const reduce = prefersReducedMotion()
     const hideAt = reduce ? 300 : plan.lettersDone + 1000
     const timers = []
-    let cancelled = false
+    let canceled = false
     // Start once the wordmark's script font has loaded (or after 1.5 s at the latest) so the wipe never runs over a stand-in font.
     const ready = document.fonts?.ready ?? Promise.resolve()
     Promise.race([ready, new Promise((r) => setTimeout(r, 1500))]).then(() => {
-      if (cancelled) return
+      if (canceled) return
       timers.push(setTimeout(() => setStage('show'), reduce ? 0 : 200))
       timers.push(setTimeout(() => setStage('done'), plan.lettersDone))
       timers.push(setTimeout(() => setStage('hidden'), hideAt))
       timers.push(setTimeout(() => setStage('gone'), hideAt + 700))
     })
-    return () => { cancelled = true; timers.forEach(clearTimeout) }
+    return () => { canceled = true; timers.forEach(clearTimeout) }
   }, [plan])
 
   if (stage === 'gone') return null

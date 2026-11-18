@@ -96,7 +96,7 @@ public sealed class RemovalService : CatalogService
 
 public static class CatalogServiceExtensions
 {
-    /// <summary>A new set of nails needs a colour; a removal on its own doesn't.</summary>
+    /// <summary>A new set of nails needs a color; a removal on its own doesn't.</summary>
     public static bool NeedsColor(this CatalogService service) => service is not RemovalService;
 }
 

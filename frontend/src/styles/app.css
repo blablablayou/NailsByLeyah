@@ -107,7 +107,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
    caret browsing (F7) is on. In fields it is burgundy so it is easy to see. */
 html { caret-color: transparent; }
 input, textarea, [contenteditable="true"] { caret-color: var(--burgundy); }
-/* The mouse text pointer over fields, drawn in burgundy with a white edge: visible on white boxes whatever pointer colour
+/* The mouse text pointer over fields, drawn in burgundy with a white edge: visible on white boxes whatever pointer color
    Windows uses (a white pointer would otherwise disappear). Falls back to the normal text pointer. */
 .input, textarea {
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='24' viewBox='0 0 16 24'%3E%3Cpath d='M4 2h8M8 2v20M4 22h8' fill='none' stroke='%23fff' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M4 2h8M8 2v20M4 22h8' fill='none' stroke='%23682c43' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 8 12, text;
@@ -165,7 +165,7 @@ select.input { cursor: pointer; }
 /* Client and guest header: the two link groups stack in the phone menu. */
 .nav-side { display: flex; flex-direction: column; gap: 4px; }
 /* Sign in: the header's one call to action. A filled burgundy rectangle with rounded corners; same text size and weight
-   as the other links (only the colour and box differ), so the row reads as one line of type. */
+   as the other links (only the color and box differ), so the row reads as one line of type. */
 .nav-link.nav-cta, .nav-link.nav-cta.active { align-self: flex-start; padding: 10px 18px; border-radius: 8px; background: var(--burgundy); color: var(--white); line-height: 1.2; }
 .nav-link.nav-cta:hover { background: #561f35; color: var(--white); }
 .nav-link.nav-cta:focus-visible { outline: none; box-shadow: var(--focus); }
@@ -177,7 +177,7 @@ select.input { cursor: pointer; }
   .menu-toggle { display: none; }
   .site-nav, .site-nav.open { display: flex; flex-direction: row; align-items: center; width: auto; padding: 0; gap: 2px; }
 
-  /* Logo centred, booking and the landing sections to its left, the account links to its right (as in the reference). */
+  /* Logo centered, booking and the landing sections to its left, the account links to its right (as in the reference). */
   .header-split { position: relative; min-height: 76px; }
   .header-split .brand { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; }
   .header-split .brand-logo { height: 64px; }
@@ -191,8 +191,8 @@ select.input { cursor: pointer; }
 
 /* Footer: logo on the left, legal and support links in the middle, social icons on the right. */
 .site-footer { border-top: 1px solid var(--line); background: var(--white); }
-/* One slim row on wider screens: copyright left, legal links centred, social icons right.
-   On phones the three stack, centred: links, icons, then copyright. Everything shares one small type size. */
+/* One slim row on wider screens: copyright left, legal links centered, social icons right.
+   On phones the three stack, centered: links, icons, then copyright. Everything shares one small type size. */
 .footer-inner { max-width: 1120px; margin: 0 auto; padding: 14px 16px; display: grid; gap: 8px; justify-items: center; align-items: center; text-align: center;
   grid-template-areas: "links" "social" "copy"; font-size: var(--fs-caption); }
 @media (min-width: 760px) { .footer-inner { grid-template-columns: 1fr auto 1fr; grid-template-areas: "copy links social"; padding: 12px 16px; } }
@@ -208,7 +208,7 @@ select.input { cursor: pointer; }
 .social-plain .social-icon svg { width: 18px; height: 18px; }
 .social-plain .social-link:hover .social-icon { box-shadow: none; color: var(--rose-600); }
 .social-plain .social-link:hover { transform: translateY(-2px) scale(1.08); }
-/* Facebook / Instagram links: brand-coloured logos on white, so they are recognisable at a glance. */
+/* Facebook / Instagram links: brand-coloured logos on white, so they are recognizable at a glance. */
 .social-links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
 .social-link { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); border-radius: 99px; transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .social-icon { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--white); border: 1px solid var(--line); flex: none; }
@@ -253,7 +253,7 @@ select.input { cursor: pointer; }
 .badge-completed { background: var(--green-100); color: var(--green-700); }
 .badge-cancelled { background: var(--gray-100); color: var(--ink-soft); }
 .badge-noshow { background: var(--red-100); color: var(--red-700); }
-/* Drafts are unfinished bookings, not appointments: dashed outline instead of a filled status colour. */
+/* Drafts are unfinished bookings, not appointments: dashed outline instead of a filled status color. */
 .badge-draft { background: var(--white); color: var(--rose-700); border: 1px dashed var(--rose-500); }
 .draft-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px;
   border: 1px dashed var(--rose-500); border-radius: var(--radius); background: var(--rose-50); }
@@ -389,7 +389,7 @@ select.input { appearance: auto; }
 .stepper li { display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 4px; transition: border-color .25s, color .25s, background .25s; border-radius: 99px; background: var(--white); border: 1px solid var(--line); color: var(--muted); font-size: var(--fs-small); white-space: nowrap; }
 .stepper li.current { border-color: var(--rose-500); color: var(--rose-700); font-weight: 600; background: var(--rose-50); }
 .stepper li.done { color: var(--green-700); }
-/* Digits sit half a pixel high in Inter; 1px of top padding centres them in every numbered circle. */
+/* Digits sit half a pixel high in Inter; 1px of top padding centers them in every numbered circle. */
 .step-number, .pay-step-title i { box-sizing: border-box; padding-top: 1px; }
 .step-number { width: 24px; height: 24px; flex: none; border-radius: 50%; background: var(--nude-100); display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-small); font-weight: 600; line-height: 1; font-variant-numeric: lining-nums tabular-nums; }
 .stepper li.current .step-number { background: var(--rose-600); color: var(--white); }
@@ -596,7 +596,7 @@ select.input { appearance: auto; }
 .report-head .date-filter > .field-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } /* the picker shows the date; its label is only read out */
 .report-head h2 { margin: 0; color: var(--burgundy); font-family: var(--font-display); font-size: var(--fs-title); }
 .report-controls { max-width: 100%; }
-/* On phones the picker takes the full row, so its calendar can centre on the screen. */
+/* On phones the picker takes the full row, so its calendar can center on the screen. */
 @media (max-width: 559px) { .report-controls { width: 100%; } }
 .report-totals { display: flex; flex-direction: column; gap: 18px; }
 .report-section-title { margin: 0 0 8px; color: var(--muted); font-size: var(--fs-caption); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
@@ -704,7 +704,7 @@ select.input { appearance: auto; }
 @keyframes modal-fade { from { opacity: 0; } }
 @keyframes modal-in { from { opacity: 0; transform: translateY(16px) scale(0.98); } }
 @media (prefers-reduced-motion: reduce) { .modal-backdrop, .modal, .modal-bare { animation: none; } }
-/* A bare pop-up: only its content (a card) on the dimmed page, centred, scrolling inside when it is taller than the screen. */
+/* A bare pop-up: only its content (a card) on the dimmed page, centered, scrolling inside when it is taller than the screen. */
 .modal-backdrop.modal-backdrop-bare { align-items: center; padding: 16px; }
 .modal-bare { position: relative; width: 100%; max-width: 440px; max-height: calc(100svh - 32px); overflow-y: auto; outline: none; border-radius: 18px;
   scrollbar-width: none; animation: modal-in .28s var(--ease) both; }
@@ -867,7 +867,7 @@ select.input { appearance: auto; }
 .date-stepper-pick:hover { background: var(--rose-50); }
 .date-stepper.is-open { border-color: var(--rose-600); box-shadow: var(--focus); }
 
-/* Calendar popover in the salon's colours: white card, rose selection, a ring around today. */
+/* Calendar popover in the salon's colors: white card, rose selection, a ring around today. */
 .date-picker { position: relative; }
 .calendar-pop { position: absolute; z-index: 30; top: calc(100% + 8px); left: 0; width: 300px; padding: 14px; background: var(--white);
   border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 4px 10px rgb(48 37 42 / 0.06), 0 18px 40px rgb(104 44 67 / 0.18);
@@ -1268,7 +1268,7 @@ select.input { appearance: auto; }
 /* Numbered sections, and one round selector for every card, so choosing looks the same everywhere. */
 .step-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 14px !important; }
 .step-heading h2 { font-family: var(--font-display); font-size: var(--fs-title); font-weight: 600; }
-/* A single extra photo (the colour asked for): a small button, then a thumbnail. */
+/* A single extra photo (the color asked for): a small button, then a thumbnail. */
 .reference-compact { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
 .reference-compact-list { display: contents; list-style: none; }
 .reference-compact-tile { position: relative; width: 64px; height: 64px; flex: none; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
@@ -1369,7 +1369,7 @@ select.input { appearance: auto; }
 @media (max-width: 559px) { .addon-photo { aspect-ratio: 4 / 3; object-position: 60% 62%; } }
 
 
-/* ---- Closed days in the booking calendar, nail colours ---- */
+/* ---- Closed days in the booking calendar, nail colors ---- */
 .book-cal-day.is-closed { text-decoration: line-through; }
 .color-chips { margin-top: 4px; }
 .color-chip { display: inline-flex; align-items: center; gap: 8px; }
@@ -1498,7 +1498,7 @@ select.input { appearance: auto; }
 /* One calendar size, whether it is on its own or beside the day's bookings, so hiding the details doesn't resize it. */
 .fb-panels:not(.is-both) #fb-calendar { max-width: 340px; }
 @media (min-width: 960px) { .fb-panels.is-both { grid-template-columns: 340px minmax(0, 1fr); } }
-/* "Action" sits centred over the Confirm / Complete buttons: the cell's own padding on the left, the ⋯ button (32px + 6px gap) and padding on the right. */
+/* "Action" sits centered over the Confirm / Complete buttons: the cell's own padding on the left, the ⋯ button (32px + 6px gap) and padding on the right. */
 .bookings-table .actions-head, .fb-day .bookings-table .actions-head { text-align: center; padding-left: 10px; padding-right: 48px; }
 .fb-day .bookings-table .actions-head { padding-left: 8px; padding-right: 46px; }
 /* The wallets' own logos: GCash's sits on a white tile, Maya's square logo fills its tile. */
@@ -1514,7 +1514,7 @@ select.input { appearance: auto; }
 /* ---- Dashboard: action first, two columns ----
    A wide main column (what needs Leyah, then the day) and a narrow side column (next client, balance, the week), each a
    plain white panel with its sections split by hairlines. No icon tiles, stat tiles or decoration: headings are text,
-   counts sit beside them, and colour is kept for buttons, links and statuses. Below 1024 px the columns dissolve into
+   counts sit beside them, and color is kept for buttons, links and statuses. Below 1024 px the columns dissolve into
    one list of panels in the page's own order (attention, today, next client, this month, week, feedback), so the Tab
    key and the screen agree. */
 .dash { gap: 20px; }
@@ -1576,7 +1576,7 @@ select.input { appearance: auto; }
 .dash-countdown { margin-left: auto; color: var(--rose-700); font-weight: 600; }
 .dash-head-link { margin-left: auto; font-size: var(--fs-small); }
 
-/* Needs your attention: rows split by hairlines; a small dot gives the kind its colour. */
+/* Needs your attention: rows split by hairlines; a small dot gives the kind its color. */
 .dash-attn-list { list-style: none; margin: 0; padding: 0; }
 .dash-attn { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
 .dash-attn + .dash-attn { border-top: 1px solid var(--line); }
@@ -1699,7 +1699,7 @@ select.input { appearance: auto; }
 .yt-swatch-unknown { background: repeating-linear-gradient(45deg, var(--rose-100) 0 3px, var(--white) 3px 6px); }
 @media (min-width: 900px) { .your-total .summary-next { border-top: 0; padding-top: 4px; } }
 
-/* ---- Colour chart picker (booking step 1) ---- */
+/* ---- Color chart picker (booking step 1) ---- */
 .nail-pair { display: block; width: 100%; height: auto; overflow: visible; }
 
 .cc { display: flex; flex-direction: column; gap: 10px; }
@@ -1741,7 +1741,7 @@ select.input { appearance: auto; }
 .cp-chart { position: relative; margin: 14px 0 14px 14px; padding: 78px 20px 16px; border: 2px solid #e2b4a0; border-radius: 200px 200px 30px 30px / 110px 110px 30px 30px;
   background: linear-gradient(180deg, #fdeaf0, #fbe3ea 60%, #fae0e7); box-shadow: inset 0 0 0 6px rgb(255 255 255 / .55); }
 .cp-bow { position: absolute; top: -34px; left: -30px; width: 210px; filter: drop-shadow(0 6px 10px rgb(150 60 90 / .25)); pointer-events: none; z-index: 2; }
-.cp-arc { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: 58%; overflow: visible; } /* centred over the title */
+.cp-arc { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: 58%; overflow: visible; } /* centered over the title */
 .cp-arc text { font: 600 10px var(--font); letter-spacing: .1em; fill: var(--burgundy); }
 .cp-chart-head { position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 14px; }
 .cp-collection { display: flex; flex-direction: column; align-items: center; font-family: var(--font-display); color: var(--burgundy); font-weight: 700; line-height: 1; text-transform: uppercase;
@@ -1882,12 +1882,12 @@ select.input { appearance: auto; }
 .profile-visit-actions { align-items: center; gap: 12px; flex-wrap: wrap; }
 .profile-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 
-/* ---- Booking revisions (2026-11-12): "With design" option, colour request, colour for each nail ---- */
+/* ---- Booking revisions (2026-11-12): "With design" option, color request, color for each nail ---- */
 .choice.is-disabled { opacity: .55; cursor: not-allowed; }
 .choice.is-disabled .choice-photo { filter: grayscale(.5); }
 
 
-/* Colour for each nail, inside the chart window: two rows of five nails under "Selected Color". */
+/* Color for each nail, inside the chart window: two rows of five nails under "Selected Color". */
 .cp-nails { padding: 14px 16px; border-radius: 18px; background: rgb(255 255 255 / .6); border: 1px solid #f6dbe2; }
 .cp-nails-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .cp-nails-head h3 { font-family: var(--font-display); color: var(--burgundy); font-size: var(--fs-lead); }
@@ -2017,7 +2017,7 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 .nb-sum-total .is-due dt, .nb-sum-total .is-due dd { color: var(--burgundy); font-weight: 700; }
 @media (max-width: 859px) { .nb-summary { position: static; } }
 
-/* ---- Admin: colour chart stock and booking rules ---- */
+/* ---- Admin: color chart stock and booking rules ---- */
 .stock-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
 .stock-shade { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 1px solid var(--line); border-radius: 12px;
   background: var(--white); cursor: pointer; font: inherit; }
@@ -2032,7 +2032,7 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 .rules-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px; align-items: start; }
 .rules-actions { grid-column: 1 / -1; }
 
-/* Out-of-stock shades on the client's colour chart */
+/* Out-of-stock shades on the client's color chart */
 .cp-swatch.is-out { cursor: not-allowed; }
 .cp-swatch.is-out .nail-pair { opacity: .3; filter: grayscale(.8); }
 .cp-out { position: absolute; top: 34%; left: 50%; transform: translateX(-50%) rotate(-12deg); padding: 1px 5px; border-radius: 6px; background: rgb(255 255 255 / .92);
@@ -2198,7 +2198,7 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 .book .choice-fieldset + .choice-fieldset { margin-top: 0; padding-top: 22px; border-top: 1px solid var(--line); }
 .book .choice-fieldset { padding-bottom: 22px; }
 .book .choice-fieldset:last-child { padding-bottom: 0; }
-/* Something that doesn't apply yet: one quiet line instead of greyed cards. */
+/* Something that doesn't apply yet: one quiet line instead of grayed cards. */
 .book-folded { margin: 0; padding: 10px 14px; border: 1px dashed var(--nude-200); border-radius: 12px; color: var(--muted); font-size: var(--fs-small); background: #fffbfa; }
 .book .design-row.is-folded { display: block; }
 .book .design-row.is-folded > * + * { margin-top: 12px; }
@@ -2264,8 +2264,8 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 /* A jump from Your total lands below the sticky header, not under it. */
 .book #book-colour, .book #book-when { scroll-margin-top: 84px; }
 
-/* ---- Colour chart polish (2026-11-16): header and Use bar, quiet right side ---- */
-/* The middle row grows with its content (a colour request box can open), so nothing is drawn over it. */
+/* ---- Color chart polish (2026-11-16): header and Use bar, quiet right side ---- */
+/* The middle row grows with its content (a color request box can open), so nothing is drawn over it. */
 .cp { grid-template-rows: auto 1fr auto; }
 .cp-chart { grid-column: 1; grid-row: 1 / span 3; }
 .cp-head { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 4px; padding: 72px 28px 0 24px; min-width: 0; }
@@ -2478,7 +2478,7 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 }
 
 /* ---- Phones with large text (2026-11-16): nothing squeezed to one word a line, nothing off the screen ---- */
-/* The policy button: the book sits in the line of text, so a label that wraps stays centred with it. */
+/* The policy button: the book sits in the line of text, so a label that wraps stays centered with it. */
 .pay-read { display: block; padding: 10px 16px; text-align: center; line-height: 1.3; }
 .pay-read-icon { display: inline-block; margin-right: 8px; vertical-align: -3px; }
 
@@ -2491,13 +2491,13 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 }
 
 @media (max-width: 560px) {
-  /* The colour card: chart (or nails) and text side by side, the button under the text. */
+  /* The color card: chart (or nails) and text side by side, the button under the text. */
   .cc-card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; row-gap: 8px; }
   .cc-card .cc-action { grid-column: 2; justify-self: start; }
 }
 
 /* ---- Speed (2026-11-16): no "frosted glass" blur behind pop-ups and pinned bars ----
-   A backdrop blur makes the browser re-blur everything behind it whenever anything in front changes: in the colour chart
+   A backdrop blur makes the browser re-blur everything behind it whenever anything in front changes: in the color chart
    that cost ~300 ms per hover. A slightly stronger solid scrim / solid bar looks nearly the same and costs nothing. */
 .modal-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgb(48 37 42 / .55); }
 @media (max-width: 899px) {

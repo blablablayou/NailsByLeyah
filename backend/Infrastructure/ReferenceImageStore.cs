@@ -77,7 +77,7 @@ public sealed class FileSystemReferenceImageStore : IReferenceImageStore
     }
 }
 
-/// <summary>Recognises JPEG, PNG and WebP from their first bytes, so a renamed file of another type is refused.</summary>
+/// <summary>Recognizes JPEG, PNG and WebP from their first bytes, so a renamed file of another type is refused.</summary>
 public static class ImageSignature
 {
     public sealed record Format(string ContentType, string Extension);

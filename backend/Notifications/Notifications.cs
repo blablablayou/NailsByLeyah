@@ -22,7 +22,7 @@ public interface INotificationService
 
     // To the client, about what the salon did (they did not do it themselves, so they would not otherwise know).
 
-    /// <summary>Leyah cancelled the booking: the reason, her explanation if any, and what happens to the money.</summary>
+    /// <summary>Leyah canceled the booking: the reason, her explanation if any, and what happens to the money.</summary>
     Task SendBookingCancelledBySalonAsync(Booking booking, string reasonLabel, string? explanation, CancellationToken ct = default);
 
     /// <summary>Leyah moved the booking; <paramref name="fromDate"/> and <paramref name="fromTime"/> are the old slot.</summary>
@@ -42,7 +42,7 @@ public interface INotificationService
     /// <summary>Tells Leyah a client paid the rest of their booking online before the appointment.</summary>
     Task SendSalonBalancePaidAsync(Booking booking, Payment payment, CancellationToken ct = default);
 
-    /// <summary>A client cancelled their booking.</summary>
+    /// <summary>A client canceled their booking.</summary>
     Task SendSalonCancellationAsync(Booking booking, string reasonLabel, CancellationToken ct = default);
 
     /// <summary>Money arrived online that couldn't go on the booking (wrong amount, paid twice, or too late): Leyah checks it and sends it back.</summary>
@@ -95,9 +95,9 @@ public sealed class EmailNotificationService(
             """, ct);
 
     public Task SendSalonCancellationAsync(Booking booking, string reasonLabel, CancellationToken ct = default) =>
-        ToSalon($"Booking cancelled: {booking.Client.FirstName} {booking.Client.LastName}, {booking.BookingDate:MMM d} at {booking.StartTime:h:mm tt}",
+        ToSalon($"Booking canceled: {booking.Client.FirstName} {booking.Client.LastName}, {booking.BookingDate:MMM d} at {booking.StartTime:h:mm tt}",
             $"""
-            A client cancelled their booking. The time is free again for other clients.
+            A client canceled their booking. The time is free again for other clients.
 
             {AppointmentLines(booking)}
             Reason: {reasonLabel}
@@ -146,7 +146,7 @@ public sealed class EmailNotificationService(
             Client: {booking.Client.FirstName} {booking.Client.LastName} (@{booking.Client.Username})
             Contact: {booking.Client.Email}, {booking.Client.PhoneNumber}
             Service: {booking.Service.CategoryLabel} - {booking.ServiceDescription}
-            Colour: {booking.NailColor ?? "None"}
+            Color: {booking.NailColor ?? "None"}
             Add-ons: {addOns}
             Date: {booking.BookingDate:dddd, MMMM d, yyyy}
             Time: {booking.StartTime:h\:mm tt} - {booking.EndTime:h\:mm tt}
@@ -250,7 +250,7 @@ public sealed class EmailNotificationService(
                 ? $"The PHP {Math.Min(booking.AmountPaid, booking.DepositAmount):0.00} deposit is kept, so nothing is refunded."
                 : "Nothing was paid, so there is nothing to refund.";
         var note = string.IsNullOrWhiteSpace(explanation) ? "" : $"{Environment.NewLine}Leyah's note: {explanation}";
-        return email.SendAsync(booking.Client.Email, FullName(booking.Client), "Your Nails by Leyah appointment was cancelled",
+        return email.SendAsync(booking.Client.Email, FullName(booking.Client), "Your Nails by Leyah appointment was canceled",
             $"""
             Hi {booking.Client.FirstName},
 

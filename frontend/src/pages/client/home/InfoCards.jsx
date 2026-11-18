@@ -34,7 +34,7 @@ const PhoneIcon = () => (
 
 export function Location({ hours }) {
   const { phone } = useSalon()
-  // The pin comes from the address search, centred on the salon's coordinates.
+  // The pin comes from the address search, centered on the salon's coordinates.
   const query = encodeURIComponent(salon.mapQuery)
   const center = `${salon.latitude},${salon.longitude}`
   // With an API key (VITE_GOOGLE_MAPS_API_KEY) the official Embed API is used; otherwise the keyless embed.

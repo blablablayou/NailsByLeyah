@@ -12,7 +12,7 @@ import { BookingDetails } from './BookingDetails'
 
 const isActive = (b) => b.status === 'Pending' || b.status === 'Confirmed'
 const hasStarted = (b) => startsAt(b.bookingDate, b.startTime) <= new Date()
-// A cancelled booking or a no-show owes nothing more, so no balance is shown for them.
+// A canceled booking or a no-show owes nothing more, so no balance is shown for them.
 const isClosed = (b) => b.status === 'Cancelled' || b.status === 'NoShow'
 // Paid and waiting for Leyah to check the payment: the one row that needs her before anything else.
 const needsAction = (b) => b.status === 'Pending' && (b.payment?.amountPaid ?? 0) > 0
@@ -47,7 +47,7 @@ function AddOnSummary({ addOns }) {
   )
 }
 
-/** Booking status as a small coloured dot and its name, kept apart from the payment pill. */
+/** Booking status as a small colored dot and its name, kept apart from the payment pill. */
 export const StatusDot = ({ status }) => (
   <span className={`status-dot status-dot-${String(status).toLowerCase()}`}>{STATUS_LABELS[status] ?? status}</span>
 )
@@ -138,7 +138,7 @@ export function AdminBookingTable({ bookings, onChanged, emptyTitle = 'No bookin
                   <td data-label="Service">
                     <span className="cell-main">{serviceName(b)}</span>
                     {b.removalServiceName && <span className="muted small">+ Removal ({b.removalServiceName}) first</span>}
-                    {b.colorRequestStatus === 'Pending' && <span className="color-request-badge">Colour request</span>}
+                    {b.colorRequestStatus === 'Pending' && <span className="color-request-badge">Color request</span>}
                     {b.addOns.length > 0 && <AddOnSummary addOns={b.addOns} />}
                     {b.referenceImages?.length > 0 && (
                       <span className="muted small">📎 {b.referenceImages.length} design {b.referenceImages.length === 1 ? 'photo' : 'photos'}</span>
@@ -191,7 +191,7 @@ export function AdminBookingTable({ bookings, onChanged, emptyTitle = 'No bookin
           onClose={() => setDialog(null)}
           onSubmit={async (body) => {
             await api.admin.cancel(dialog.booking.id, body)
-            closeAnd(`Booking #${dialog.booking.id} cancelled.`)
+            closeAnd(`Booking #${dialog.booking.id} canceled.`)
           }} />
       )}
       {dialog?.kind === 'reschedule' && (

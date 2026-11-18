@@ -70,7 +70,7 @@ export function BalanceReturn({ bookingId }) {
         <>
           <PageHeader title="Payment received" subtitle={`We received ${formatMoney(state.amount)}, but couldn't add it to this booking.`} />
           <Card className="payment-return">
-            <p>The booking had already been cancelled or its balance settled before the payment came through. Leyah will send the
+            <p>The booking had already been canceled or its balance settled before the payment came through. Leyah will send the
               full amount back to the account you paid from. You don&apos;t need to do anything.</p>
             <div className="row"><Link to="/bookings" className="btn btn-primary">Go to My bookings</Link></div>
           </Card>

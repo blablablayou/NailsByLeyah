@@ -28,7 +28,7 @@ public interface IReferenceImageAttacher
     /// <summary>Attaches the client's pending photos to <paramref name="booking"/> (which must already have its id).</summary>
     Task AttachAsync(int clientId, Booking booking, IReadOnlyList<int>? imageIds, CancellationToken ct = default);
 
-    /// <summary>Attaches the photo of a colour the client asked for, marked as a colour reference.</summary>
+    /// <summary>Attaches the photo of a color the client asked for, marked as a color reference.</summary>
     Task AttachColorReferenceAsync(int clientId, Booking booking, int imageId, CancellationToken ct = default);
 }
 

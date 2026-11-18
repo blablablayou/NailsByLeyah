@@ -121,7 +121,7 @@ internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
         b.HasIndex(x => x.ClientId).HasDatabaseName("ix_bookings_client_id");
 
         // Overlaps are prevented under the per-day booking lock (IBookingRepository.LockDayAsync). This index
-        // is the last line of defence for the simplest case: two active bookings starting at the same time.
+        // is the last line of defense for the simplest case: two active bookings starting at the same time.
         b.HasIndex(x => new { x.BookingDate, x.StartTime }, IndexNames.BookingsActiveSlot)
             .HasDatabaseName(IndexNames.BookingsActiveSlot)
             .IsUnique()

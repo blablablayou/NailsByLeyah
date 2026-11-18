@@ -213,7 +213,7 @@ export function NewBookingDialog({ onClose, onCreated }) {
             )}
 
             {isSet && colors.length > 0 && (
-              <SelectField label="Colour" placeholder="Decide at the salon" value={color}
+              <SelectField label="Color" placeholder="Decide at the salon" value={color}
                 options={colors.map((c) => ({ value: c, label: colorLabel(c) }))} onChange={(e) => setColor(e.target.value)} />
             )}
 

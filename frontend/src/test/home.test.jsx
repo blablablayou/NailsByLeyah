@@ -69,7 +69,7 @@ describe('Home page', () => {
       renderApp('/')
       const section = await cardsIn()
       expect(card(section, 'Plain')).toHaveTextContent('₱300')
-      expect(card(section, 'Plain')).toHaveTextContent('Plain colour only')
+      expect(card(section, 'Plain')).toHaveTextContent('Plain color only')
       expect(card(section, 'BIAB')).toHaveTextContent('₱250')
       expect(card(section, 'BIAB')).toHaveTextContent('With design · ₱350')
       expect(card(section, 'Soft Gel Extension')).toHaveTextContent('₱399')
@@ -95,7 +95,7 @@ describe('Home page', () => {
       renderApp('/')
       const section = await cardsIn()
       expect(card(section, 'BIAB')).toHaveTextContent('Strength for your own nails.')
-      expect(card(section, 'Plain')).toHaveTextContent('A clean, glossy soft gel in one colour.')
+      expect(card(section, 'Plain')).toHaveTextContent('A clean, glossy soft gel in one color.')
     })
 
     it('drops a service that Leah turned off', async () => {
@@ -231,10 +231,10 @@ describe('Home page', () => {
       expect(about.querySelector('blockquote')).toHaveTextContent('My goal is to make every client feel confident, pampered, and beautiful')
     })
 
-    it('shows the labelled sample story until Leah writes hers, with no unconfirmed year', () => {
+    it('shows the sample story, with no label, until Leah writes hers, with no unconfirmed year', () => {
       renderApp('/')
       const about = screen.getByRole('region', { name: 'Meet Leyah' })
-      expect(within(about).getByText('Sample story · details to be confirmed')).toBeInTheDocument()
+      expect(within(about).queryByText(/Sample story/)).toBeNull()
       expect(about).toHaveTextContent("Hi, I'm Leyah!")
       expect(about.textContent).not.toMatch(/20\d\d/)
     })

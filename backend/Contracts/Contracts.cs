@@ -163,8 +163,8 @@ public sealed record CreateBookingRequest(
     int? RemovalServiceId = null, // a removal before the main service, in the same appointment
     string? NailColor = null, // required for a new set (unless ColorRequest is given), from the catalog's list
     string? TermsVersion = null, // the Terms version the client read and agreed to; must be the current one
-    NailColorsRequest? PerNailColors = null, // optional: a different listed colour on each nail, five per hand
-    string? ColorRequest = null, // "Can't find your colour?": the client's description of a shade not on the chart
+    NailColorsRequest? PerNailColors = null, // optional: a different listed color on each nail, five per hand
+    string? ColorRequest = null, // "Can't find your color?": the client's description of a shade not on the chart
     int? ColorRequestImageId = null); // an optional photo of that shade, uploaded like a design photo
 
 /// <summary>
@@ -187,10 +187,10 @@ public sealed record AdminCreateBookingRequest(
     PaymentMethod PaymentMethod = PaymentMethod.Cash,
     string? PaymentReference = null);
 
-/// <summary>A colour for each nail, thumb to little finger; a null nail has the set's main colour.</summary>
+/// <summary>A color for each nail, thumb to little finger; a null nail has the set's main color.</summary>
 public sealed record NailColorsRequest(IReadOnlyList<string?>? Left, IReadOnlyList<string?>? Right);
 
-/// <summary>Leyah's answer to a colour request: whether she has that shade.</summary>
+/// <summary>Leyah's answer to a color request: whether she has that shade.</summary>
 public sealed record ColorRequestDecision(bool Available);
 
 public sealed record RescheduleRequest(DateOnly BookingDate, TimeOnly StartTime);
@@ -220,7 +220,7 @@ public sealed record UpdateSalonSettingsRequest(
 /// <summary>Changing a password while signed in asks for the current one first.</summary>
 public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
-/// <summary>The sign-in before this one, so the user can spot one they don't recognise.</summary>
+/// <summary>The sign-in before this one, so the user can spot one they don't recognize.</summary>
 public sealed record AccountSecurityResponse(DateTime? PreviousSignInAt, string? PreviousSignInFrom);
 
 /// <summary>Leyah sent a refund by GCash or Maya; the reference is optional.</summary>
@@ -428,7 +428,7 @@ public sealed record DashboardResponse(
 /// <summary>
 /// Something Leyah has to act on. Kind is CheckPayment (paid, not confirmed yet), DatePassed (the appointment is over but the
 /// booking is still Pending or Confirmed), BalanceNotRecorded (completed in the last 30 days with money still owing) or
-/// RefundDue (cancelled or a no-show, with money to send back) or ColorRequest (a shade the client asked for, not checked yet).
+/// RefundDue (canceled or a no-show, with money to send back) or ColorRequest (a shade the client asked for, not checked yet).
 /// </summary>
 public sealed record DashboardAttentionItem(string Kind, BookingResponse Booking);
 
