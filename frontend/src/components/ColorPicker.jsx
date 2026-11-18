@@ -104,22 +104,11 @@ export const EMPTY_NAILS = { left: [null, null, null, null, null], right: [null,
 export const nailsStarted = (nails) => Boolean(nails && [...nails.left, ...nails.right].some(Boolean))
 export const nailsComplete = (nails) => Boolean(nails && [...nails.left, ...nails.right].every(Boolean))
 
-/** The next nail without a colour: the left hand first, then the right. */
-function nextEmptyNail(nails) {
-  for (const [hand] of HAND_COLUMNS) {
-    const index = nails[hand].findIndex((c) => !c)
-    if (index >= 0) return { hand, index }
-  }
-  return null
-}
-
 /**
- * "Colour for each nail" (optional), inside the chart window: tap a nail, then a shade on the chart. The next empty nail
- * is chosen for you, left hand first; the right hand opens once all five left nails have a colour. A colour can be used
- * on as many nails as the client likes.
+ * "Colour for each nail" (optional), inside the chart window: tap any nail on either hand, then a shade on the chart.
+ * The client can give as few as one nail its own colour; nails left empty get the main colour.
  */
 function NailSlots({ nails, target, onTarget, onClear, off = false }) {
-  const leftDone = nails.left.every(Boolean)
   const targetLabel = target && `${target.hand} ${FINGERS[target.index].toLowerCase()}`
   return (
     <div className={off ? 'cp-nails is-off' : 'cp-nails'} role="group" aria-label="Colour for each nail">
@@ -128,11 +117,11 @@ function NailSlots({ nails, target, onTarget, onClear, off = false }) {
         {nailsStarted(nails) && !off && <button type="button" className="link-button" onClick={onClear}>Clear all</button>}
       </div>
       <p className="cp-nails-hint" aria-live="polite">
-        {off ? 'Not needed: Leyah helps you choose at the salon.' : target ? <>Now tap a shade for your <strong>{targetLabel}</strong>.</> : 'Tap a nail, then a shade. Left hand first.'}
+        {off ? 'Not needed: Leyah helps you choose at the salon.' : target ? <>Now tap a shade for your <strong>{targetLabel}</strong>.</>
+          : 'Tap any nail, then a shade. Nails you leave empty get your main colour.'}
       </p>
       {HAND_COLUMNS.map(([hand, label]) => {
-        const locked = off || (hand === 'right' && !leftDone)
-        const waiting = !off && hand === 'right' && !leftDone // the right hand opens once the left is done
+        const locked = off
         return (
           <div key={hand} className={locked ? 'cp-hand is-locked' : 'cp-hand'} role="group" aria-label={label}>
             <span className="cp-hand-label">{label.split(' ')[0]}</span>
@@ -150,7 +139,6 @@ function NailSlots({ nails, target, onTarget, onClear, off = false }) {
                 )
               })}
             </div>
-            {waiting && <span className="cp-hand-wait">Opens after all 5 left nails</span>}
           </div>
         )
       })}
@@ -192,9 +180,8 @@ export function ColorPickerModal({ value, onChoose, onClose, nails: savedNails, 
   const tapShade = (n) => {
     setShown(n)
     if (!target) { choose({ shade: n }); return }
-    const next = { ...nails, [target.hand]: nails[target.hand].map((c, i) => (i === target.index ? `#${n}` : c)) }
-    setNails(next)
-    setTarget(nextEmptyNail(next))
+    setNails({ ...nails, [target.hand]: nails[target.hand].map((c, i) => (i === target.index ? `#${n}` : c)) })
+    setTarget(null) // the next tap on a shade sets the main colour again, unless another nail is tapped first
   }
   const checked = target ? shadeNumber(nails[target.hand][target.index]) : picked
   const use = () => {
@@ -205,7 +192,9 @@ export function ColorPickerModal({ value, onChoose, onClose, nails: savedNails, 
     onClose()
   }
   const hasChoice = Boolean(picked || other || asking || started || nailsStarted(savedNails))
-  const blocked = !hasChoice || (asking && !requestText.trim()) || (started && !complete)
+  // Some nails with their own colour and some without: the others need the main colour.
+  const needsMain = started && !complete && !picked
+  const blocked = !hasChoice || (asking && !requestText.trim()) || needsMain
   const useLabel = asking ? 'Ask Leyah for This Colour' : started ? 'Use These Colours' : other ? 'Use This Choice' : 'Use This Colour'
 
   useEffect(() => {
@@ -393,7 +382,7 @@ export function ColorPickerModal({ value, onChoose, onClose, nails: savedNails, 
 
         {/* The Use button in its own bar: on phones it stays at the bottom of the screen while the chart scrolls. */}
         <div className="cp-usebar">
-          {started && !complete && <p className="cp-use-note">Choose all 10 nails to use these colours, or Clear all.</p>}
+          {needsMain && <p className="cp-use-note">Tap a shade for your other nails (your main colour), or give all 10 nails a colour.</p>}
           {asking && !requestText.trim() && <p className="cp-use-note">Describe the colour you&apos;re looking for.</p>}
           <button type="button" className="cp-use" onClick={use} disabled={blocked}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
@@ -436,7 +425,7 @@ export function ColorChooser({ colors, value, onChange, request = null, onReques
         </span>
         <span className="cc-action">{chosen ? 'Change' : 'Choose colour'}<span aria-hidden="true"> ›</span></span>
       </button>
-      {nailsComplete(nails) && <p className="cc-nails-text muted small">Each nail: {perNailText(nails)}</p>}
+      {nailsStarted(nails) && <p className="cc-nails-text muted small">Each nail: {perNailText(nails)}</p>}
       {open && (
         <ColorPickerModal value={value} onChoose={onChange} onClose={() => setOpen(false)} nails={nails} onNails={onNails} outOfStock={outOfStock}
           others={others} request={request} onRequest={onRequest} />

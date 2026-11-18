@@ -202,7 +202,7 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
   // How the colour reads in the total and the summary: the chart shade, the request, or "one per nail".
   const colorText = colorRequest !== null
     ? (colorRequest.trim() ? `Colour request: ${colorRequest.trim()}` : null)
-    : [color && colorLabel(color), nailsComplete(perNail) && `Each nail: ${perNailText(perNail)}`].filter(Boolean).join(' · ') || null
+    : [color && colorLabel(color), nailsStarted(perNail) && `Each nail: ${perNailText(perNail)}`].filter(Boolean).join(' · ') || null
 
   // One key per set of booking details: repeated or retried Pay clicks for the same booking are
   // recognised by the server and never charged twice (Ref 12.4).
@@ -267,7 +267,7 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
   const colorProblem = () => {
     if (!needsColor) return null
     if (colorRequest !== null) return colorRequest.trim() ? null : "Describe the colour you're looking for, or pick one from the chart."
-    if (nailsStarted(perNail) && !nailsComplete(perNail)) return 'Choose a colour for all 10 nails, or clear the colours for each nail.'
+    if (nailsStarted(perNail) && !nailsComplete(perNail) && !color) return 'Choose a main colour for the nails without their own colour.'
     return color || nailsComplete(perNail) ? null : 'Choose a nail colour to continue.'
   }
 
@@ -291,7 +291,7 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
     try {
       const response = await api.bookings.create({
         serviceId: service.id, removalServiceId: removalFirst?.id ?? null, nailColor: needsColor && colorRequest === null && color ? color : null,
-        perNailColors: needsColor && nailsComplete(perNail) ? perNail : null,
+        perNailColors: needsColor && nailsStarted(perNail) ? perNail : null,
         colorRequest: needsColor && colorRequest !== null ? colorRequest.trim() : null,
         colorRequestImageId: needsColor && colorRequest !== null ? colorImages[0]?.id ?? null : null,
         termsVersion: catalog.termsVersion,

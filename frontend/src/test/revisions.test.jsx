@@ -85,7 +85,7 @@ describe('Booking revisions', () => {
     expect(getDb().bookings.at(-1)).toMatchObject({ nailColor: null, colorRequest: 'Dusty sage green', colorRequestStatus: 'Pending' })
   })
 
-  it('takes a colour for each nail in the chart window, left hand first, and needs all ten once started', async () => {
+  it('takes a colour for as few nails as the client likes, on either hand, with the main colour for the rest', async () => {
     const user = userEvent.setup()
     await signIn(CLIENT)
     renderApp('/book')
@@ -93,22 +93,20 @@ describe('Booking revisions', () => {
     await user.click(await screen.findByRole('checkbox', { name: /^Plain/ }))
     await user.click(screen.getByRole('button', { name: 'Open the colour chart' }))
     const chart = screen.getByRole('dialog', { name: 'Choose Nail Colour' })
-    const right = within(chart).getByRole('group', { name: 'Right hand' })
-    expect(within(right).getAllByRole('button')[0]).toBeDisabled() // the right hand waits for the left
 
-    // Tap a nail, then shades: each shade goes on the next empty nail.
-    await user.click(within(chart).getByRole('button', { name: /^Left hand, thumb/ }))
-    for (let i = 0; i < 5; i += 1) await user.click(shade(chart, '06'))
-    expect(within(right).getAllByRole('button')[0]).toBeEnabled()
+    // One nail on the right hand, straight away: tap the nail, then a shade.
+    await user.click(within(chart).getByRole('button', { name: /^Right hand, ring/ }))
     await user.click(shade(chart, '30'))
     expect(within(chart).getByRole('button', { name: 'Use These Colours' })).toBeDisabled()
-    expect(within(chart).getByText(/Choose all 10 nails/)).toBeInTheDocument()
+    expect(within(chart).getByText(/Tap a shade for your other nails/)).toBeInTheDocument()
 
-    for (let i = 0; i < 4; i += 1) await user.click(shade(chart, '30'))
+    // A shade with no nail tapped is the main colour for the other nine.
+    await user.click(shade(chart, '06'))
     await user.click(within(chart).getByRole('button', { name: 'Use These Colours' }))
-    expect(screen.getByRole('button', { name: 'A colour for each nail. Change colours' })).toBeInTheDocument()
     await payFromServiceStep(user)
 
-    expect(getDb().bookings.at(-1).perNailColors).toEqual({ left: ['#06', '#06', '#06', '#06', '#06'], right: ['#30', '#30', '#30', '#30', '#30'] })
+    const booking = getDb().bookings.at(-1)
+    expect(booking.nailColor).toBe('#06')
+    expect(booking.perNailColors).toEqual({ left: [null, null, null, null, null], right: [null, null, null, '#30', null] })
   })
 })

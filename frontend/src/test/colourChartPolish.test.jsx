@@ -72,10 +72,12 @@ describe('Colour chart polish', () => {
     expect(shade('01').tabIndex).toBe(0)
   })
 
-  it('says why the right hand is locked', async () => {
+  it('opens every nail on both hands, and says empty nails get the main colour', async () => {
     const user = userEvent.setup()
     await openChart(user)
-    expect(within(chart()).getByText('Opens after all 5 left nails')).toBeInTheDocument()
+    expect(within(chart()).getByRole('button', { name: /^Right hand, little/ })).toBeEnabled()
+    expect(within(chart()).queryByText('Opens after all 5 left nails')).toBeNull()
+    expect(within(chart()).getByText(/Nails you leave empty get your main colour/)).toBeInTheDocument()
     expect(within(chart()).getByText('Other options')).toBeInTheDocument()
   })
 
