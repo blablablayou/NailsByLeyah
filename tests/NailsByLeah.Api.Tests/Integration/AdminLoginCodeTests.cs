@@ -4,10 +4,74 @@ using NailsByLeah.Api.Contracts;
 
 namespace NailsByLeah.Api.Tests.Integration;
 
-/// <summary>The site with Leyah's login code switched on (it is off for every other test class).</summary>
+/// <summary>
+/// The site with Leyah's login code switched on (it is off for every other test class). The overall hourly limits are
+/// raised here, since this class signs her in many times; AdminLoginCodeLimitTests checks them.
+/// </summary>
 public sealed class AdminCodeApiFactory : ApiFactory
 {
+    protected override void ConfigureSettings(IWebHostBuilder builder)
+    {
+        builder.UseSetting("Auth:AdminLoginCode", "true");
+        builder.UseSetting("Auth:LoginCodesPerHour", "1000");
+        builder.UseSetting("Auth:LoginCodeFailuresPerHour", "1000");
+    }
+}
+
+/// <summary>Leyah's login code with the real hourly limits (5 codes, 10 wrong codes).</summary>
+public class AdminCodeLimitApiFactory : ApiFactory
+{
     protected override void ConfigureSettings(IWebHostBuilder builder) => builder.UseSetting("Auth:AdminLoginCode", "true");
+}
+
+/// <summary>A second copy, so each limit test starts its hour with no codes sent.</summary>
+public sealed class AdminCodeLimitApiFactory2 : AdminCodeLimitApiFactory;
+
+/// <summary>At most 5 sign-in codes an hour, however they are asked for.</summary>
+public sealed class AdminLoginCodeSendLimitTests(AdminCodeLimitApiFactory factory) : IClassFixture<AdminCodeLimitApiFactory>
+{
+    [Fact]
+    public async Task A_sixth_code_within_an_hour_is_refused_and_allowed_again_after_the_hour()
+    {
+        var client = factory.NewClient();
+        var login = () => client.PostJsonAsync("/api/auth/login", new LoginRequest(ApiFactory.AdminUsername, ApiFactory.AdminPassword));
+
+        for (var i = 0; i < 5; i++)
+            await (await login()).ShouldHaveStatus(HttpStatusCode.Accepted);
+        var sixth = await login();
+
+        await sixth.ShouldHaveStatus(HttpStatusCode.Conflict);
+        Assert.Equal("login_code_limit", (await sixth.ReadProblemAsync()).ProblemCode());
+
+        factory.Clock.Advance(TimeSpan.FromMinutes(61));
+        await (await login()).ShouldHaveStatus(HttpStatusCode.Accepted);
+    }
+}
+
+/// <summary>10 wrong codes in an hour, across new codes, pause the code step for the hour.</summary>
+public sealed class AdminLoginCodeFailureLimitTests(AdminCodeLimitApiFactory2 factory) : IClassFixture<AdminCodeLimitApiFactory2>
+{
+    [Fact]
+    public async Task Ten_wrong_codes_across_two_codes_pause_the_code_step_even_for_the_right_code()
+    {
+        var client = factory.NewClient();
+        var login = () => client.PostJsonAsync("/api/auth/login", new LoginRequest(ApiFactory.AdminUsername, ApiFactory.AdminPassword));
+        var code = (string c) => client.PostJsonAsync("/api/auth/login/code", new LoginCodeRequest(c, false));
+        string Wrong() { var real = factory.Notifications.LoginCodeFor("admin@test.local"); return real == "000000" ? "111111" : "000000"; }
+
+        await login();
+        for (var i = 0; i < 5; i++) await code(Wrong());
+        await login(); // a fresh code does not start the count again
+        HttpResponseMessage last = null!;
+        for (var i = 0; i < 5; i++) last = await code(Wrong());
+
+        Assert.Equal("login_code_locked", (await last.ReadProblemAsync()).ProblemCode());
+        var right = await code(factory.Notifications.LoginCodeFor("admin@test.local"));
+        Assert.Equal("login_code_locked", (await right.ReadProblemAsync()).ProblemCode());
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/auth/me")).StatusCode);
+        Assert.Equal("login_code_locked", (await (await login()).ReadProblemAsync()).ProblemCode());
+        Assert.True(factory.WithDb(db => db.AuditLogs.Any(a => a.Action == "AccountLocked" && a.Details!.Contains("wrong sign-in codes"))));
+    }
 }
 
 /// <summary>Leyah signs in with her password, then a 6-digit code from her email; clients sign in as before.</summary>

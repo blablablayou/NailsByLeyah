@@ -31,6 +31,8 @@ public interface IUserTokenRepository
     Task<UserToken?> FindByHashAsync(UserTokenPurpose purpose, string tokenHash, CancellationToken ct = default);
     Task<UserToken?> GetLatestUnconsumedAsync(int userId, UserTokenPurpose purpose, CancellationToken ct = default);
     Task<List<UserToken>> GetUnconsumedAsync(int userId, UserTokenPurpose purpose, CancellationToken ct = default);
+    /// <summary>Every code of this kind made for the account since the time given, used or not.</summary>
+    Task<List<UserToken>> GetCreatedSinceAsync(int userId, UserTokenPurpose purpose, DateTime sinceUtc, CancellationToken ct = default);
     void Add(UserToken token);
 }
 
@@ -241,6 +243,9 @@ internal sealed class UserTokenRepository(AppDbContext db) : IUserTokenRepositor
 
     public Task<List<UserToken>> GetUnconsumedAsync(int userId, UserTokenPurpose purpose, CancellationToken ct) =>
         db.UserTokens.Where(t => t.UserId == userId && t.Purpose == purpose && t.ConsumedAt == null).ToListAsync(ct);
+
+    public Task<List<UserToken>> GetCreatedSinceAsync(int userId, UserTokenPurpose purpose, DateTime sinceUtc, CancellationToken ct) =>
+        db.UserTokens.Where(t => t.UserId == userId && t.Purpose == purpose && t.CreatedAt >= sinceUtc).ToListAsync(ct);
 
     public void Add(UserToken token) => db.UserTokens.Add(token);
 }

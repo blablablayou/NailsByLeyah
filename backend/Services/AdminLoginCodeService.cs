@@ -58,6 +58,8 @@ public sealed class AdminLoginCodeService(
     ResendCooldown resendCooldown) : IAdminLoginCodeService
 {
     private const string InvalidMessage = "That code isn't right. Check the email and try again.";
+    private const string LockedMessage = "Too many wrong codes. For your security, signing in is paused for an hour.";
+    private static readonly TimeSpan LimitWindow = TimeSpan.FromHours(1);
     private readonly AuthOptions _auth = authOptions.Value;
     private readonly IDataProtector _pending = dataProtection.CreateProtector("NailsByLeah.AdminLogin.Pending");
     private readonly IDataProtector _remembered = dataProtection.CreateProtector("NailsByLeah.AdminLogin.Remembered");
@@ -91,6 +93,9 @@ public sealed class AdminLoginCodeService(
     public async Task<User> VerifyAsync(PendingLogin pending, string code, CancellationToken ct = default)
     {
         var user = await PendingUserAsync(pending, ct);
+        // The overall limit: however many new codes were asked for, only so many wrong ones in an hour.
+        if (await FailuresThisHourAsync(user, ct) >= _auth.LoginCodeFailuresPerHour)
+            throw new ValidationAppException("code", LockedMessage, "login_code_locked");
         var token = await tokens.GetLatestUnconsumedAsync(user.Id, UserTokenPurpose.AdminLoginCode, ct)
                     ?? throw new ValidationAppException("code", InvalidMessage, "token_invalid");
 
@@ -105,6 +110,13 @@ public sealed class AdminLoginCodeService(
             token.FailedAttempts++;
             audit.Record(AuditActions.LoginCodeFailed, nameof(User), user.Id, $"Wrong login code ({token.FailedAttempts} of {_auth.MaxVerificationAttempts})", user.Id);
             await unitOfWork.SaveChangesAsync(ct);
+            if (await FailuresThisHourAsync(user, ct) >= _auth.LoginCodeFailuresPerHour)
+            {
+                audit.Record(AuditActions.AccountLocked, nameof(User), user.Id,
+                    $"{_auth.LoginCodeFailuresPerHour} wrong sign-in codes within an hour: the code step is paused for an hour", user.Id);
+                await unitOfWork.SaveChangesAsync(ct);
+                throw new ValidationAppException("code", LockedMessage, "login_code_locked");
+            }
             throw new ValidationAppException("code", InvalidMessage, "token_invalid");
         }
 
@@ -132,6 +144,12 @@ public sealed class AdminLoginCodeService(
     private async Task IssueAsync(User user, CancellationToken ct)
     {
         var now = clock.UtcNow;
+        // The overall limit: a new code doesn't start the count again.
+        var recent = await tokens.GetCreatedSinceAsync(user.Id, UserTokenPurpose.AdminLoginCode, now - LimitWindow, ct);
+        if (recent.Sum(t => t.FailedAttempts) >= _auth.LoginCodeFailuresPerHour)
+            throw new ConflictException(LockedMessage, "login_code_locked");
+        if (recent.Count >= _auth.LoginCodesPerHour)
+            throw new ConflictException("Too many sign-in codes have been sent. Please try again in an hour.", "login_code_limit");
         foreach (var old in await tokens.GetUnconsumedAsync(user.Id, UserTokenPurpose.AdminLoginCode, ct))
             old.ConsumedAt = now;
         var code = SecureTokens.NewNumericCode();
@@ -158,6 +176,9 @@ public sealed class AdminLoginCodeService(
     }
 
     private static string CooldownKey(int userId) => $"login-code:{userId}";
+
+    private async Task<int> FailuresThisHourAsync(User user, CancellationToken ct) =>
+        (await tokens.GetCreatedSinceAsync(user.Id, UserTokenPurpose.AdminLoginCode, clock.UtcNow - LimitWindow, ct)).Sum(t => t.FailedAttempts);
 
     private static bool Matches((int UserId, string Stamp)? read, User user) =>
         read is { } r && r.UserId == user.Id && r.Stamp == user.SecurityStamp;

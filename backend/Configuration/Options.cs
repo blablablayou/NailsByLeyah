@@ -25,6 +25,13 @@ public sealed class AuthOptions
     public bool AdminLoginCode { get; set; } = true;
     public int LoginCodeMinutes { get; set; } = 10;
 
+    /// <summary>
+    /// The overall limit on Leyah's sign-in codes, on top of the 5 tries per code: in any hour at most this many codes
+    /// are sent, and after this many wrong codes in all, the code step stops for the rest of the hour.
+    /// </summary>
+    public int LoginCodesPerHour { get; set; } = 5;
+    public int LoginCodeFailuresPerHour { get; set; } = 10;
+
     /// <summary>"Remember this device": how long a browser skips the code after one right code.</summary>
     public int RememberDeviceDays { get; set; } = 30;
 }
