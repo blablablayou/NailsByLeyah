@@ -45,6 +45,13 @@ const FALLBACK_CARDS = [
   { id: 'removal', icon: 'removal', name: 'Removal', blurb: DEFAULT_LINES.removal },
 ].map((c) => ({ ...c, price: null }))
 
+/** "1 hr" when every removal takes the same time, else the range ("1 hr – 1 hr 30 min"); added before the new set. */
+function removalTime(removals) {
+  const minutes = [...new Set(removals.map((r) => r.durationMinutes).filter(Boolean))].sort((a, b) => a - b)
+  if (minutes.length === 0) return null
+  return minutes.length === 1 ? hours(minutes[0]) : `${hours(minutes[0])} – ${hours(minutes.at(-1))}`
+}
+
 /** One card per offered set, then add-ons and removal, all from the live price list. */
 function serviceCards({ services, addOns }) {
   const active = (items) => items.filter((i) => i.isActive !== false)
@@ -77,6 +84,7 @@ function serviceCards({ services, addOns }) {
     blurb: removals.find((r) => r.description)?.description || DEFAULT_LINES.removal,
     price: lowest(removals), from: true,
     note: removals.map((r) => <span key={r.id}>{sentence(r.name)} · {peso(r.price)}</span>),
+    duration: removalTime(removals),
   })
   return cards
 }

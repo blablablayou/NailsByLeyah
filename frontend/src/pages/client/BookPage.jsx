@@ -91,6 +91,10 @@ function listedNails(catalog, nails) {
   return { left: hand(nails.left), right: hand(nails.right) }
 }
 
+/** Whether the chosen service can carry design photos: any set that has a design version (not Plain), or a removal only. */
+const takesDesignPhotos = (catalog, service) => !service || service.category !== 'SoftGel' || Boolean(service.designOptionOfId)
+  || catalog.services.some((s) => s.designOptionOfId === service.id)
+
 export default function BookPage() {
   // "Book again" arrives with the earlier booking; it is used once, so a reload continues the saved draft instead.
   const location = useLocation()
@@ -297,7 +301,8 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
         termsVersion: catalog.termsVersion,
         addOns: selectedAddOns.map((a) => ({ addOnId: a.addOn.id, nailCount: a.nailCount, hand: hands[a.addOn.id] ?? 'Both' })),
         bookingDate: date, startTime: time, note: note.trim() || null, paymentMethod, paymentOption, depositAcknowledged: true, idempotencyKey,
-        referenceImageIds: referenceImages.map((r) => r.id),
+        // A set that takes no design (Plain) sends no design photos.
+        referenceImageIds: takesDesignPhotos(catalog, service) ? referenceImages.map((r) => r.id) : [],
       })
       // The server deleted the draft together with creating the booking.
       if (response.checkoutUrl) {
@@ -394,7 +399,7 @@ function BookingWizard({ catalog, lookups, draft, onStartOver }) {
                 <h2 className="pick-title">Booking summary</h2>
                 <Review quote={shownQuote} option={paymentOption} hands={hands} durationMinutes={durationMinutes} color={needsColor ? colorText : null}
                   date={date} time={time} note={note.trim()}
-                  referenceImages={referenceImages} onEdit={(target) => { setStepError(null); setStep(target) }} />
+                  referenceImages={takesDesignPhotos(catalog, service) ? referenceImages : []} onEdit={(target) => { setStepError(null); setStep(target) }} />
               </div>
               <div className="pick-column">
                 <h2 className="pick-title">Payment</h2>
@@ -470,22 +475,22 @@ function DesignOption({ cards, chosen, baseOf, designOf, onService, children }) 
     <div className="service-group">
       <h3 className="group-title">Design <span className="group-optional">(optional)</span></h3>
       {/* Full width, so a long set name never wraps and pushes the card down. */}
-      <p className={design ? 'muted small design-hint' : 'book-folded'}>{hint}</p>
-      {/* The With Design card, with the design photos beside it. When the chosen set has no design (Plain), only the line
-          above says so and the photos stay (they help Leyah with any set). */}
-      <div className={design ? 'design-row' : 'design-row is-folded'}>
-        {design && <div className="pick-column design-card">
+      <p className="muted small design-hint">{hint}</p>
+      {/* The With Design card, with the design photos under it. A set without a design (Plain) keeps both in place,
+          grayed out and not clickable. */}
+      <div className="design-row">
+        <div className="pick-column design-card">
           <label className={`choice has-photo${on ? ' selected' : ''}${design ? '' : ' is-disabled'}`}>
           <img className="choice-photo" src={DESIGN_PHOTO} alt="" width="640" height="640" loading="lazy" />
           <input type="checkbox" name="design" checked={on} disabled={!design}
-            onChange={() => onService(on ? base.id : design.id)} />
+            onChange={() => design && onService(on ? base.id : design.id)} />
           <span className="choice-name">With Design</span>
           <span className="choice-facts">
             <span className="choice-price">+<Money amount={extraPrice} /></span>
             {extraMinutes > 0 && <span className="choice-meta muted">+{formatDuration(extraMinutes)}</span>}
           </span>
           </label>
-        </div>}
+        </div>
         {children}
       </div>
     </div>
@@ -544,7 +549,8 @@ function ServiceStep({
           </div>
         </div>
         <DesignOption cards={cards} chosen={softGel} baseOf={baseOf} designOf={designOf} onService={onService}>
-          <ReferenceImagePicker images={referenceImages} onChange={onReferenceImages} optional={false} />
+          <ReferenceImagePicker images={referenceImages} onChange={onReferenceImages} optional={false}
+            locked={softGel && !designOf(baseOf(softGel)) ? `Design photos are for sets with a design. ${baseOf(softGel).name} is one plain color.` : null} />
         </DesignOption>
         {removals.length > 0 && (
           <div className="service-group">

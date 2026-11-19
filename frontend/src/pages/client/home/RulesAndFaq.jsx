@@ -60,7 +60,7 @@ export function FaqSection({ deposit, hours }) {
   const open = { has: (i) => openIndex === i }
   const toggle = (i) => setOpenIndex((current) => (current === i ? null : i))
   const faq = [
-    ['Is the reservation deposit refundable?', `No. The ${deposit} deposit is non-refundable because it secures your slot: once your booking is confirmed, that time is reserved only for you and can no longer be offered to other clients. It also covers the time spent preparing for your appointment.`],
+    ['Is the reservation deposit refundable?', `No. The ${deposit} deposit is non-refundable because it secures your slot: once your booking is confirmed, that time is reserved only for you and can no longer be offered to other clients. It also covers the time spent preparing for your appointment. The one exception: if the salon cancels your booking, you get everything back, the deposit included.`],
     ['Do you accept walk-ins?', 'Yes, but every visit still needs a booking. You can book online yourself, or Leyah can book the time for you when you come by or message us. Nails by Leyah is home-based and takes one client at a time, so we can only fit you in if a time is free.'],
     ['What are your opening hours?', `${hours}, by appointment only. Each appointment is followed by a 30-minute break, so the times you can book depend on how long your service takes.`],
     ['How much is the deposit?', `The deposit is ${deposit}. It secures your slot and is deducted from your total on the day.`],

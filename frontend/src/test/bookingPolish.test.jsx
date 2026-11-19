@@ -66,7 +66,7 @@ describe('Booking page polish', () => {
 
     await user.click(screen.getByRole('checkbox', { name: /^Plain/ }))
     expect(screen.getByText("Designs aren't available with Plain.")).toBeInTheDocument()
-    expect(screen.queryByRole('checkbox', { name: /^With Design/ })).toBeNull()
+    expect(screen.getByRole('checkbox', { name: /^With Design/ })).toBeDisabled()
     expect(screen.getByText("Nail art isn't available with Plain. Choose another service to add it.")).toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: /Chrome/ })).toBeNull()
     // The design photos stay: they help Leyah with any set.

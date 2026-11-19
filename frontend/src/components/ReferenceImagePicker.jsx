@@ -15,7 +15,7 @@ import { Button, Spinner } from './ui'
  */
 export function ReferenceImagePicker({ images, onChange, max = LIMITS.referenceImagesPerBooking, title = 'Design reference photos',
   hint = 'Show Leyah the look you want · JPG, PNG or WebP · Large photos are shrunk for you', photoName = 'design reference',
-  compact = false, optional = true }) {
+  compact = false, optional = true, locked = null }) {
   const inputId = useId()
   const [uploading, setUploading] = useState([]) // { key, name, previewUrl }
   const [error, setError] = useState(null)
@@ -73,7 +73,7 @@ export function ReferenceImagePicker({ images, onChange, max = LIMITS.referenceI
   }
 
   const fileInput = (
-    <input id={inputId} className="sr-only" type="file" accept={REFERENCE_IMAGE_ACCEPT} multiple={max > 1}
+    <input id={inputId} className="sr-only" type="file" accept={REFERENCE_IMAGE_ACCEPT} multiple={max > 1} disabled={Boolean(locked)}
       aria-labelledby={`${inputId}-label`} aria-describedby={error ? `${inputId}-error` : undefined}
       onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
   )
@@ -121,8 +121,10 @@ export function ReferenceImagePicker({ images, onChange, max = LIMITS.referenceI
     )
   }
 
+  // Locked (a set that takes no design, like Plain): everything stays in place, grayed out and not clickable, with why.
   return (
-    <div className="pick-column reference-picker">
+    <div className={locked ? 'pick-column reference-picker is-locked' : 'pick-column reference-picker'} aria-disabled={locked ? true : undefined}
+      inert={locked ? true : undefined}>
       <div className="pick-title-row">
         <span className="field-label pick-title" id={`${inputId}-label`}>{title}{optional && <> <span className="pick-optional">(optional)</span></>}</span>
         <span className="field-counter">{images.length + uploading.length}/{max}</span>
@@ -149,7 +151,7 @@ export function ReferenceImagePicker({ images, onChange, max = LIMITS.referenceI
             <label htmlFor={inputId} className={dragging ? 'reference-drop dragging' : 'reference-drop'}
               onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
               onDragLeave={() => setDragging(false)}
-              onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files) }}>
+              onDrop={(e) => { e.preventDefault(); setDragging(false); if (!locked) addFiles(e.dataTransfer.files) }}>
               <span className="reference-plus" aria-hidden="true">+</span>
               <span>Add photo</span>
             </label>
@@ -160,9 +162,10 @@ export function ReferenceImagePicker({ images, onChange, max = LIMITS.referenceI
       </ul>
       {fileInput}
       {errorLine}
-      <p className="pick-hint">{hint}</p>
+      <p className="pick-hint">{locked ?? hint}</p>
       </div>
       {viewer}
     </div>
   )
 }
+

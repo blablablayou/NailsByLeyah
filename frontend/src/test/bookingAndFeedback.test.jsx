@@ -167,7 +167,7 @@ describe('Hands for Stone add-ons', () => {
     await user.click(screen.getByRole('checkbox', { name: /^Plain/ }))
     expect(screen.getByRole('checkbox', { name: /^Plain/ })).toBeChecked()
     // What doesn't apply folds into one line (2026-11-16 polish), so nothing can be chosen.
-    expect(screen.queryByRole('checkbox', { name: /^With Design/ })).toBeNull()
+    expect(screen.getByRole('checkbox', { name: /^With Design/ })).toBeDisabled() // grayed out, not clickable
 
     expect(screen.getByText("Nail art isn't available with Plain. Choose another service to add it.")).toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: /Chrome/ })).toBeNull()
