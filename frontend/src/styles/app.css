@@ -1909,6 +1909,16 @@ select.input { appearance: auto; }
 .cp-slot-nails { width: 30px; height: 34px; }
 .cp-slot-empty { display: grid; place-items: center; width: 30px; height: 30px; margin: 2px 0; border: 1.5px dashed var(--nude-200); border-radius: 50%; color: var(--muted); }
 .cp-slot-name { font-size: var(--fs-caption); color: var(--muted); line-height: 1.1; }
+.cp-slot-wrap { position: relative; display: grid; }
+/* The × on a nail with its own color: a small badge on the corner, with a larger invisible area to tap. */
+.cp-slot-remove { position: absolute; top: -7px; right: -7px; display: grid; place-items: center; width: 22px; height: 22px; padding: 0;
+  border: 1px solid var(--white); border-radius: 50%; background: var(--burgundy); color: var(--white); cursor: pointer;
+  box-shadow: 0 1px 3px rgb(48 37 42 / .25); transition: background-color .15s ease, transform .15s ease; }
+.cp-slot-remove::before { content: ''; position: absolute; inset: -6px; }
+.cp-slot-remove:hover { background: var(--rose-500); }
+.cp-slot-remove:active { transform: scale(.92); }
+.cp-slot-remove:focus-visible { outline: 0; box-shadow: var(--focus); }
+.cp-slot-remove svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; }
 .cp-others { display: flex; flex-direction: column; gap: 10px; }
 .cp-others .chips { margin: 0; flex-wrap: nowrap; gap: 8px; }
 .cp-others .chip { padding: 6px 12px; font-size: var(--fs-small); white-space: nowrap; }

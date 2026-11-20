@@ -108,7 +108,7 @@ export const nailsComplete = (nails) => Boolean(nails && [...nails.left, ...nail
  * "Color for each nail" (optional), inside the chart window: tap any nail on either hand, then a shade on the chart.
  * The client can give as few as one nail its own color; nails left empty get the main color.
  */
-function NailSlots({ nails, target, onTarget, onClear, off = false }) {
+function NailSlots({ nails, target, onTarget, onClear, onRemove, off = false }) {
   const targetLabel = target && `${target.hand} ${FINGERS[target.index].toLowerCase()}`
   return (
     <div className={off ? 'cp-nails is-off' : 'cp-nails'} role="group" aria-label="Color for each nail">
@@ -130,12 +130,21 @@ function NailSlots({ nails, target, onTarget, onClear, off = false }) {
                 const c = nails[hand][i]
                 const on = target?.hand === hand && target.index === i
                 return (
-                  <button key={finger} type="button" disabled={locked} aria-pressed={on} title={c ? `${finger}: ${colorLabel(c)}` : finger}
-                    className={['cp-slot', c && 'chosen', on && 'on'].filter(Boolean).join(' ')} onClick={() => onTarget(on ? null : { hand, index: i })}
-                    aria-label={`${label}, ${finger.toLowerCase()}: ${c ? `${colorLabel(c)}. Change color` : 'choose a color'}`}>
-                    {c ? <NailPair color={colorFor(c)} className="cp-slot-nails" /> : <span className="cp-slot-empty" aria-hidden="true">+</span>}
-                    <span className="cp-slot-name" aria-hidden="true">{finger}</span>
-                  </button>
+                  <div key={finger} className="cp-slot-wrap">
+                    <button type="button" disabled={locked} aria-pressed={on} title={c ? `${finger}: ${colorLabel(c)}` : finger}
+                      className={['cp-slot', c && 'chosen', on && 'on'].filter(Boolean).join(' ')} onClick={() => onTarget(on ? null : { hand, index: i })}
+                      aria-label={`${label}, ${finger.toLowerCase()}: ${c ? `${colorLabel(c)}. Change color` : 'choose a color'}`}>
+                      {c ? <NailPair color={colorFor(c)} className="cp-slot-nails" /> : <span className="cp-slot-empty" aria-hidden="true">+</span>}
+                      <span className="cp-slot-name" aria-hidden="true">{finger}</span>
+                    </button>
+                    {/* Takes this one nail's color off; it gets the main color again. */}
+                    {c && !locked && (
+                      <button type="button" className="cp-slot-remove" onClick={() => onRemove(hand, i)}
+                        aria-label={`Remove color from ${label.split(' ')[0].toLowerCase()} ${finger.toLowerCase()}`} title="Remove this color">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" /></svg>
+                      </button>
+                    )}
+                  </div>
                 )
               })}
             </div>
@@ -349,7 +358,11 @@ export function ColorPickerModal({ value, onChoose, onClose, nails: savedNails, 
 
           {onNails && (
             <NailSlots nails={nails} target={target} onTarget={setTarget} off={undecided}
-              onClear={() => { setNails(EMPTY_NAILS); setTarget(null) }} />
+              onClear={() => { setNails(EMPTY_NAILS); setTarget(null) }}
+              onRemove={(hand, index) => {
+                setNails({ ...nails, [hand]: nails[hand].map((c, i) => (i === index ? null : c)) })
+                if (target?.hand === hand && target.index === index) setTarget(null)
+              }} />
           )}
 
           {(others.length > 0 || onRequest) && (

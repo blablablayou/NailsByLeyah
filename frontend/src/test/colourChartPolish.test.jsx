@@ -155,4 +155,21 @@ describe('Color chart polish', () => {
     expect(within(chart()).getByRole('button', { name: 'Ask Leyah for This Color' })).toBeInTheDocument()
     expect(chart().querySelector('.cp-now')).toHaveTextContent('Selected: Color request')
   })
+
+  it('takes the color off one nail with its ×, leaving the others', async () => {
+    const user = userEvent.setup()
+    await openChart(user)
+    await user.click(within(chart()).getByRole('button', { name: /^Left hand, thumb/ }))
+    await user.click(shade('06'))
+    await user.click(within(chart()).getByRole('button', { name: /^Right hand, ring/ }))
+    await user.click(shade('41'))
+    // Only nails with their own color get an ×.
+    expect(within(chart()).getAllByRole('button', { name: /^Remove color from / })).toHaveLength(2)
+
+    await user.click(within(chart()).getByRole('button', { name: 'Remove color from left thumb' }))
+    expect(within(chart()).getByRole('button', { name: 'Left hand, thumb: choose a color' })).toBeInTheDocument()
+    expect(within(chart()).getByRole('button', { name: /^Right hand, ring: .*Change color$/ })).toBeInTheDocument()
+    expect(within(chart()).queryByRole('button', { name: 'Remove color from left thumb' })).toBeNull()
+    expect(within(chart()).getByRole('button', { name: 'Clear all' })).toBeInTheDocument()
+  })
 })
