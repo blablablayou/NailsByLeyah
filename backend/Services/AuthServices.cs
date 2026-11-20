@@ -371,7 +371,16 @@ public sealed class PasswordResetService(
 /// <summary>Password change and session control for a signed-in user, plus their previous sign-in.</summary>
 public interface IAccountSecurityService
 {
-    /// <summary>Checks the current password, sets the new one and signs out every other session. Returns the user with the new stamp.</summary>
+    /// <summary>
+    /// First step: checks the current and new password, then sends a 6-digit code to the account's email (earlier
+    /// ones stop working). Nothing changes yet.
+    /// </summary>
+    Task<PasswordChangeCodeResponse> SendPasswordChangeCodeAsync(int userId, ChangePasswordRequest request, CancellationToken ct = default);
+
+    /// <summary>
+    /// Second step: checks both passwords again and the code from email, sets the new password and signs out every
+    /// other session. Returns the user with the new stamp.
+    /// </summary>
     Task<User> ChangePasswordAsync(int userId, ChangePasswordRequest request, CancellationToken ct = default);
 
     /// <summary>Signs out every session, this one included; the caller signs this browser back in with the new stamp.</summary>
@@ -386,23 +395,95 @@ public sealed class AccountSecurityService(
     IUnitOfWork unitOfWork,
     IPasswordHasher hasher,
     IAuditLogger audit,
-    ISalonClock clock) : IAccountSecurityService
+    ISalonClock clock,
+    IUserTokenRepository tokens,
+    IBackgroundNotifications background,
+    ResendCooldown resendCooldown,
+    IOptions<AuthOptions> authOptions) : IAccountSecurityService
 {
     public const string WrongPasswordMessage = "That isn't your current password.";
+    private const string InvalidCodeMessage = "That code isn't right. Check the email and try again.";
+    private const string LockedMessage = "Too many wrong codes. For your security, changing your password is paused for an hour.";
+    private static readonly TimeSpan LimitWindow = TimeSpan.FromHours(1);
+    private readonly AuthOptions _auth = authOptions.Value;
+
+    public async Task<PasswordChangeCodeResponse> SendPasswordChangeCodeAsync(int userId, ChangePasswordRequest request, CancellationToken ct = default)
+    {
+        var user = await GetUserAsync(userId, ct);
+        CheckPasswords(user, request);
+
+        var now = clock.UtcNow;
+        // The same hourly limits as Leyah's sign-in code: a new code doesn't start the count again.
+        var recent = await tokens.GetCreatedSinceAsync(user.Id, UserTokenPurpose.PasswordChangeCode, now - LimitWindow, ct);
+        if (recent.Sum(t => t.FailedAttempts) >= _auth.LoginCodeFailuresPerHour)
+            throw new ConflictException(LockedMessage, "password_code_locked");
+        if (recent.Count >= _auth.LoginCodesPerHour)
+            throw new ConflictException("Too many codes have been sent. Please try again in an hour.", "password_code_limit");
+        resendCooldown.Start(CooldownKey(user.Id)); // one code a minute
+
+        foreach (var old in await tokens.GetUnconsumedAsync(user.Id, UserTokenPurpose.PasswordChangeCode, ct))
+            old.ConsumedAt = now;
+        var code = SecureTokens.NewNumericCode();
+        tokens.Add(new UserToken
+        {
+            UserId = user.Id,
+            Purpose = UserTokenPurpose.PasswordChangeCode,
+            TokenHash = SecureTokens.Hash(code),
+            ExpiresAt = now.AddMinutes(_auth.LoginCodeMinutes),
+            CreatedAt = now,
+        });
+        audit.Record(AuditActions.PasswordChangeCodeSent, nameof(User), user.Id, "Code to change the password sent to email", user.Id);
+        await unitOfWork.SaveChangesAsync(ct);
+        await background.EnqueueAsync((n, stop) => n.SendPasswordChangeCodeAsync(user, code, _auth.LoginCodeMinutes, stop), "password change code email");
+        return new PasswordChangeCodeResponse(AdminLoginCodeService.EmailHint(user.Email), _auth.LoginCodeMinutes);
+    }
 
     public async Task<User> ChangePasswordAsync(int userId, ChangePasswordRequest request, CancellationToken ct = default)
     {
         var user = await GetUserAsync(userId, ct);
+        CheckPasswords(user, request);
+        if (string.IsNullOrWhiteSpace(request.Code))
+            throw new ValidationAppException("code", "Enter the 6-digit code from your email.", "code_required");
+
+        var now = clock.UtcNow;
+        var recent = await tokens.GetCreatedSinceAsync(user.Id, UserTokenPurpose.PasswordChangeCode, now - LimitWindow, ct);
+        if (recent.Sum(t => t.FailedAttempts) >= _auth.LoginCodeFailuresPerHour)
+            throw new ValidationAppException("code", LockedMessage, "password_code_locked");
+        var token = await tokens.GetLatestUnconsumedAsync(user.Id, UserTokenPurpose.PasswordChangeCode, ct)
+                    ?? throw new ValidationAppException("code", InvalidCodeMessage, "token_invalid");
+        if (token.IsExpired(now))
+            throw new ValidationAppException("code", "This code has expired. Send a new one.", "token_expired");
+        if (token.FailedAttempts >= _auth.MaxVerificationAttempts)
+            throw new ValidationAppException("code", "Too many wrong tries. Send a new code.", "token_locked");
+
+        if (!SecureTokens.HashMatches(InputNormalizer.Text(request.Code), token.TokenHash))
+        {
+            token.FailedAttempts++;
+            audit.Record(AuditActions.PasswordChangeCodeFailed, nameof(User), user.Id,
+                $"Wrong password change code ({token.FailedAttempts} of {_auth.MaxVerificationAttempts})", user.Id);
+            await unitOfWork.SaveChangesAsync(ct);
+            if (recent.Sum(t => t.FailedAttempts) >= _auth.LoginCodeFailuresPerHour)
+                throw new ValidationAppException("code", LockedMessage, "password_code_locked");
+            throw new ValidationAppException("code", InvalidCodeMessage, "token_invalid");
+        }
+
+        token.ConsumedAt = now;
+        user.ChangePassword(hasher.Hash(request.NewPassword));
+        user.UpdatedAt = now;
+        audit.Record(AuditActions.PasswordChanged, nameof(User), user.Id, "Confirmed with the code from email", user.Id);
+        await unitOfWork.SaveChangesAsync(ct);
+        return user;
+    }
+
+    private void CheckPasswords(User user, ChangePasswordRequest request)
+    {
         if (!hasher.Verify(request.CurrentPassword ?? "", user.PasswordHash))
             throw new ValidationAppException("currentPassword", WrongPasswordMessage, "wrong_password");
         if (hasher.Verify(request.NewPassword, user.PasswordHash))
             throw new ValidationAppException("newPassword", PasswordResetService.SamePasswordMessage, "password_reused");
-        user.ChangePassword(hasher.Hash(request.NewPassword));
-        user.UpdatedAt = clock.UtcNow;
-        audit.Record(AuditActions.PasswordChanged, nameof(User), user.Id, userId: user.Id);
-        await unitOfWork.SaveChangesAsync(ct);
-        return user;
     }
+
+    private static string CooldownKey(int userId) => $"password-code:{userId}";
 
     public async Task<User> SignOutEverywhereAsync(int userId, CancellationToken ct = default)
     {

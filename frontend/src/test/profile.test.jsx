@@ -130,7 +130,7 @@ describe('Leyah\'s profile reaches the rest of the site', () => {
     expect(document.querySelector('.nav-avatar img')).toBeNull()
   })
 
-  it('changes the password only with the current one, and stays signed in', async () => {
+  it('changes the password only with the current one and the code from email, and stays signed in', async () => {
     const user = userEvent.setup()
     await signIn(CLIENT)
     renderApp('/profile')
@@ -143,9 +143,40 @@ describe('Leyah\'s profile reaches the rest of the site', () => {
     await user.clear(screen.getByLabelText(/^Current password/))
     await user.type(screen.getByLabelText(/^Current password/), CLIENT.password)
     await user.click(screen.getByRole('button', { name: 'Change password' }))
+
+    // Nothing changes until the code from the email is entered.
+    const codeBox = await screen.findByLabelText('6-digit code')
+    expect(me().password).toBe(CLIENT.password)
+    const sent = getDb().outbox.find((m) => m.subject.startsWith('Your Nails by Leyah password change code'))
+    expect(sent.to).toBe(me().email)
+    await user.type(codeBox, sent.code === '000000' ? '111111' : '000000')
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+    expect(await screen.findByText("That code isn't right. Check the email and try again.")).toBeInTheDocument()
+    expect(me().password).toBe(CLIENT.password)
+
+    await user.clear(codeBox)
+    await user.type(codeBox, sent.code)
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
     expect(await screen.findByText(/Your password has been changed/)).toBeInTheDocument()
     expect(me().password).toBe('Fresh123pass')
     expect(screen.getByRole('heading', { name: 'My profile' })).toBeInTheDocument() // still signed in
+    expect(screen.getByLabelText(/^Current password/)).toHaveValue('') // back to the password form, emptied
+  })
+
+  it('goes back to the password form when the code step is canceled, and changes nothing', async () => {
+    const user = userEvent.setup()
+    await signIn(CLIENT)
+    renderApp('/profile')
+
+    await user.type(await screen.findByLabelText(/^Current password/), CLIENT.password)
+    await user.type(screen.getByLabelText(/^New password/), 'Fresh123pass')
+    await user.click(screen.getByRole('button', { name: 'Change password' }))
+    expect(await screen.findByText(/enter the 6-digit code we sent to/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Send a new code in \d+s/ })).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByLabelText(/^Current password/)).toBeInTheDocument()
+    expect(me().password).toBe(CLIENT.password)
   })
 })
 

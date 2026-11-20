@@ -218,7 +218,11 @@ public sealed record UpdateSalonSettingsRequest(
     bool AlertNewBooking = true, bool AlertCancellation = true, bool AlertReschedule = true);
 
 /// <summary>Changing a password while signed in asks for the current one first.</summary>
-public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+/// <summary>Both passwords, plus the code from email on the second step (the first step sends it).</summary>
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword, string? Code = null);
+
+/// <summary>Where the password change code went and how long it lasts.</summary>
+public sealed record PasswordChangeCodeResponse(string EmailHint, int ExpiresInMinutes);
 
 /// <summary>The sign-in before this one, so the user can spot one they don't recognize.</summary>
 public sealed record AccountSecurityResponse(DateTime? PreviousSignInAt, string? PreviousSignInFrom);

@@ -238,6 +238,20 @@ public sealed class CapturingNotificationService : INotificationService
         return Task.CompletedTask;
     }
 
+    private readonly ConcurrentDictionary<string, string> _passwordChangeCodes = new(StringComparer.Ordinal);
+    private int _passwordChangeCodesSent;
+
+    /// <summary>How many password change codes have been sent, and the latest one for an address.</summary>
+    public int PasswordChangeCodesSent => Volatile.Read(ref _passwordChangeCodesSent);
+    public string PasswordChangeCodeFor(string email) => _passwordChangeCodes[email];
+
+    public Task SendPasswordChangeCodeAsync(User user, string code, int validMinutes, CancellationToken ct = default)
+    {
+        _passwordChangeCodes[user.Email] = code;
+        Interlocked.Increment(ref _passwordChangeCodesSent);
+        return Task.CompletedTask;
+    }
+
     public Task SendEmailVerificationAsync(User user, string code, CancellationToken ct = default)
     {
         ThrowIfFailing();

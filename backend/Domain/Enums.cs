@@ -103,4 +103,6 @@ public enum UserTokenPurpose
     PasswordReset,
     /// <summary>The 6-digit code Leyah enters after her password.</summary>
     AdminLoginCode,
+    /// <summary>The 6-digit code that confirms a password change from the account page.</summary>
+    PasswordChangeCode,
 }

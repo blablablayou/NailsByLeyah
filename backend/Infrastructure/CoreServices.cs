@@ -147,6 +147,8 @@ public static class AuditActions
     public const string SalonDetailsChanged = "SalonDetailsChanged";
     public const string SalonPhotoChanged = "SalonPhotoChanged";
     public const string PasswordChanged = "PasswordChanged";
+    public const string PasswordChangeCodeSent = "PasswordChangeCodeSent";
+    public const string PasswordChangeCodeFailed = "PasswordChangeCodeFailed";
     public const string SignedOutEverywhere = "SignedOutEverywhere";
     public const string PaymentSucceeded = "PaymentSucceeded";
     public const string PaymentFailed = "PaymentFailed";

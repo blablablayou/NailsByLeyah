@@ -18,7 +18,7 @@ const ACTIONS = [
   'BookingRulesChanged', 'ColorStockChanged', 'SalonDetailsChanged', 'SalonPhotoChanged', 'GalleryPhotoAdded', 'GalleryPhotoRemoved', 'GalleryCaptionChanged',
   'FeedbackSubmitted', 'FeedbackReplied', 'FeedbackShownOnHome', 'ReferenceImageUploaded', 'ReferenceImageRemoved', 'ClientNoteChanged',
   'UserRegistered', 'EmailVerified', 'LoginSucceeded', 'LoginFailed', 'LoginCodeSent', 'LoginCodeFailed', 'AccountLocked',
-  'PasswordResetRequested', 'PasswordReset', 'PasswordChanged', 'SignedOutEverywhere', 'ProfileUpdated', 'ClientDataDeleted',
+  'PasswordResetRequested', 'PasswordReset', 'PasswordChangeCodeSent', 'PasswordChangeCodeFailed', 'PasswordChanged', 'SignedOutEverywhere', 'ProfileUpdated', 'ClientDataDeleted',
 ].map((a) => ({ value: a, label: humanize(a) }))
 
 

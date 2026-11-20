@@ -39,6 +39,9 @@ public interface INotificationService
     /// <summary>Leyah's sign-in code, sent after her password.</summary>
     Task SendAdminLoginCodeAsync(User user, string code, int validMinutes, CancellationToken ct = default);
 
+    /// <summary>The code that confirms a password change from the account page.</summary>
+    Task SendPasswordChangeCodeAsync(User user, string code, int validMinutes, CancellationToken ct = default);
+
     /// <summary>Tells Leyah a client paid the rest of their booking online before the appointment.</summary>
     Task SendSalonBalancePaidAsync(Booking booking, Payment payment, CancellationToken ct = default);
 
@@ -179,6 +182,19 @@ public sealed class EmailNotificationService(
             Enter it on the sign-in page to finish signing in. It expires in {validMinutes} minutes.
 
             If you didn't just sign in, someone may know your password: change it from your account page.
+            """, ct);
+
+    public Task SendPasswordChangeCodeAsync(User user, string code, int validMinutes, CancellationToken ct = default) =>
+        email.SendAsync(user.Email, FullName(user), $"Your Nails by Leyah password change code: {code}",
+            $"""
+            Hi {user.FirstName},
+
+            Your code to change your password is: {code}
+
+            Enter it on your account page to finish changing your password. It expires in {validMinutes} minutes.
+
+            If you didn't ask to change your password, someone may be signed in to your account: don't share this code,
+            and change your password or use "Sign out other devices" on your account page.
             """, ct);
 
     public Task SendPasswordResetAsync(User user, string resetLink, CancellationToken ct = default) =>

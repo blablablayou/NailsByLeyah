@@ -50,6 +50,7 @@ export const api = {
     list: () => get('/gallery'),
   },
   auth: {
+    sendPasswordChangeCode: (body) => post('/auth/change-password/code', body),
     changePassword: (body) => post('/auth/change-password', body),
     signOutOtherDevices: () => post('/auth/sign-out-other-devices'),
     security: () => get('/auth/security'),

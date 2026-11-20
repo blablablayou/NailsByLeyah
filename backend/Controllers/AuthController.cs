@@ -124,7 +124,17 @@ public sealed class AuthController(
         Expires = lifetime > TimeSpan.Zero ? DateTimeOffset.UtcNow.Add(lifetime) : null,
     };
 
-    /// <summary>Asks for the current password; every other signed-in device is signed out, this browser stays signed in.</summary>
+    /// <summary>First step of a password change: checks both passwords and emails a 6-digit code. Nothing changes yet.</summary>
+    [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.Email)]
+    [HttpPost("change-password/code")]
+    public Task<PasswordChangeCodeResponse> SendPasswordChangeCode(ChangePasswordRequest request, CancellationToken ct) =>
+        security.SendPasswordChangeCodeAsync(User.GetUserId(), request, ct);
+
+    /// <summary>
+    /// Second step: both passwords again plus the code from email. Every other signed-in device is signed out, this
+    /// browser stays signed in.
+    /// </summary>
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.Login)]
     [HttpPost("change-password")]

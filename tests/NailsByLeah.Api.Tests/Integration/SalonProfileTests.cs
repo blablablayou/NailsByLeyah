@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using NailsByLeah.Api.Contracts;
 using NailsByLeah.Api.Domain;
 
@@ -95,18 +96,55 @@ public sealed class SalonProfileTests(ApiFactory factory) : IClassFixture<ApiFac
         var otherDevice = factory.NewClient();
         await (await otherDevice.PostJsonAsync("/api/auth/login", new LoginRequest(user.Username, ApiFactory.DefaultPassword))).ShouldHaveStatus(HttpStatusCode.OK);
 
-        var wrong = await user.Client.PostJsonAsync("/api/auth/change-password", new ChangePasswordRequest("Nope12345", "Brand3New"));
+        var wrong = await user.Client.PostJsonAsync("/api/auth/change-password/code", new ChangePasswordRequest("Nope12345", "Brand3New"));
         await wrong.ShouldHaveStatus(HttpStatusCode.BadRequest);
         Assert.NotEmpty((await wrong.ReadProblemAsync()).ErrorsFor("currentPassword"));
-        var same = await user.Client.PostJsonAsync("/api/auth/change-password", new ChangePasswordRequest(ApiFactory.DefaultPassword, ApiFactory.DefaultPassword));
+        var same = await user.Client.PostJsonAsync("/api/auth/change-password/code", new ChangePasswordRequest(ApiFactory.DefaultPassword, ApiFactory.DefaultPassword));
         await same.ShouldHaveStatus(HttpStatusCode.BadRequest);
 
-        await (await user.Client.PostJsonAsync("/api/auth/change-password", new ChangePasswordRequest(ApiFactory.DefaultPassword, "Brand3New")))
+        await (await user.Client.PostJsonAsync("/api/auth/change-password/code", new ChangePasswordRequest(ApiFactory.DefaultPassword, "Brand3New")))
+            .ShouldHaveStatus(HttpStatusCode.OK);
+        var code = factory.Notifications.PasswordChangeCodeFor(user.Email);
+        await (await user.Client.PostJsonAsync("/api/auth/change-password", new ChangePasswordRequest(ApiFactory.DefaultPassword, "Brand3New", code)))
             .ShouldHaveStatus(HttpStatusCode.OK);
 
         await (await user.Client.GetAsync("/api/auth/me")).ShouldHaveStatus(HttpStatusCode.OK); // still signed in here
         await (await otherDevice.GetAsync("/api/auth/me")).ShouldHaveStatus(HttpStatusCode.Unauthorized);
         await (await factory.NewClient().PostJsonAsync("/api/auth/login", new LoginRequest(user.Username, "Brand3New"))).ShouldHaveStatus(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task A_password_change_waits_for_the_code_from_email_and_a_wrong_or_used_code_changes_nothing()
+    {
+        var user = await factory.CreateClientAsync();
+
+        // No code yet: nothing changes.
+        var noCode = await user.Client.PostJsonAsync("/api/auth/change-password", new ChangePasswordRequest(ApiFactory.DefaultPassword, "Brand3New"));
+        await noCode.ShouldHaveStatus(HttpStatusCode.BadRequest);
+        Assert.NotEmpty((await noCode.ReadProblemAsync()).ErrorsFor("code"));
+
+        var sent = await user.Client.PostJsonAsync("/api/auth/change-password/code", new ChangePasswordRequest(ApiFactory.DefaultPassword, "Brand3New"));
+        await sent.ShouldHaveStatus(HttpStatusCode.OK);
+        var hint = await sent.Content.ReadFromJsonAsync<PasswordChangeCodeResponse>();
+        Assert.Contains("•••", hint!.EmailHint);
+        var code = factory.Notifications.PasswordChangeCodeFor(user.Email);
+        var wrongCode = code == "000000" ? "111111" : "000000";
+
+        var wrong = await user.Client.PostJsonAsync("/api/auth/change-password", new ChangePasswordRequest(ApiFactory.DefaultPassword, "Brand3New", wrongCode));
+        await wrong.ShouldHaveStatus(HttpStatusCode.BadRequest);
+        Assert.NotEmpty((await wrong.ReadProblemAsync()).ErrorsFor("code"));
+        await (await factory.NewClient().PostJsonAsync("/api/auth/login", new LoginRequest(user.Username, ApiFactory.DefaultPassword)))
+            .ShouldHaveStatus(HttpStatusCode.OK); // the old password still works
+
+        // Another code straight away has to wait a minute.
+        await (await user.Client.PostJsonAsync("/api/auth/change-password/code", new ChangePasswordRequest(ApiFactory.DefaultPassword, "Brand3New")))
+            .ShouldHaveStatus(HttpStatusCode.TooManyRequests);
+
+        await (await user.Client.PostJsonAsync("/api/auth/change-password", new ChangePasswordRequest(ApiFactory.DefaultPassword, "Brand3New", code)))
+            .ShouldHaveStatus(HttpStatusCode.OK);
+        // The code works once.
+        await (await user.Client.PostJsonAsync("/api/auth/change-password", new ChangePasswordRequest("Brand3New", "Other4Pass", code)))
+            .ShouldHaveStatus(HttpStatusCode.BadRequest);
     }
 
     [Fact]

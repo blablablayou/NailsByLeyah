@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
-import { errorMessage, fieldErrors } from '../api/errors'
+import { ApiError, errorMessage, fieldErrors } from '../api/errors'
 import { useAuth } from '../auth/AuthContext'
 import { useAsync } from '../hooks/useAsync'
 import { NameField, PasswordField, PasswordRules, PhoneField } from '../components/FormFields'
@@ -12,6 +12,8 @@ import { Link, useNavigate } from 'react-router'
 import { colorFor, colorLabel } from '../lib/shades'
 import { apiPhotoSrc } from '../lib/photos'
 import { normalizePhone, validateName, validatePhone, validateResetPassword } from '../validation/rules'
+
+const CODE_RESEND_SECONDS = 60
 
 const firstError = (err) => Object.fromEntries(Object.entries(fieldErrors(err)).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]))
 
@@ -360,7 +362,20 @@ function SecurityCard({ onDone, canSignOutOthers }) {
   const [saving, setSaving] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [failure, setFailure] = useState(null)
+  // The code step: where the code went, the code typed, and the wait before another can be sent.
+  const [challenge, setChallenge] = useState(null)
+  const [code, setCode] = useState('')
+  const [codeError, setCodeError] = useState(null)
+  const [codeNotice, setCodeNotice] = useState(null)
+  const [wait, setWait] = useState(0)
+  const [busy, setBusy] = useState(null) // 'confirm' | 'resend'
   const previous = security.data?.previousSignInAt
+
+  useEffect(() => {
+    if (wait <= 0) return undefined
+    const timer = setTimeout(() => setWait((w) => w - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [wait])
 
   const set = (field) => (value) => {
     setValues((v) => ({ ...v, [field]: value }))
@@ -378,15 +393,70 @@ function SecurityCard({ onDone, canSignOutOthers }) {
     if (Object.keys(found).length) return
     setSaving(true)
     try {
-      const { message } = await api.auth.changePassword(values)
-      setValues({ currentPassword: '', newPassword: '' })
-      onDone(message)
+      // Nothing changes yet: the server checks both passwords and emails a code.
+      setChallenge(await api.auth.sendPasswordChangeCode(values))
+      setCode('')
+      setCodeError(null)
+      setCodeNotice(null)
+      setWait(CODE_RESEND_SECONDS)
     } catch (err) {
       const fields = firstError(err)
       setErrors(fields)
       if (!Object.keys(fields).length) setFailure(errorMessage(err))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const backToPasswords = () => {
+    setChallenge(null)
+    setCode('')
+    setCodeError(null)
+    setCodeNotice(null)
+  }
+
+  const confirm = async (e) => {
+    e.preventDefault()
+    if (!/^\d{6}$/.test(code)) {
+      setCodeError('Enter the 6-digit code from the email.')
+      return
+    }
+    setBusy('confirm')
+    setCodeError(null)
+    setCodeNotice(null)
+    try {
+      const { message } = await api.auth.changePassword({ ...values, code })
+      setValues({ currentPassword: '', newPassword: '' })
+      backToPasswords()
+      onDone(message)
+    } catch (err) {
+      const fields = firstError(err)
+      if (fields.currentPassword || fields.newPassword) {
+        // The password itself was turned down (it changed meanwhile): back to the passwords, with the reason.
+        setErrors(fields)
+        backToPasswords()
+      } else {
+        setCodeError(fields.code ?? errorMessage(err))
+      }
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const resend = async () => {
+    setBusy('resend')
+    setCodeError(null)
+    setCodeNotice(null)
+    try {
+      setChallenge(await api.auth.sendPasswordChangeCode(values))
+      setCode('')
+      setCodeNotice('A new code is on its way. The earlier one no longer works.')
+      setWait(CODE_RESEND_SECONDS)
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'resend_cooldown') setWait(err.retryAfterSeconds ?? CODE_RESEND_SECONDS)
+      setCodeError(firstError(err).code ?? errorMessage(err))
+    } finally {
+      setBusy(null)
     }
   }
 
@@ -408,14 +478,40 @@ function SecurityCard({ onDone, canSignOutOthers }) {
         {previous ? <>Previous sign-in: {formatDateTime(previous)}. Not you? Change your password.</> : 'This is your first sign-in on record.'}
       </p>
       {failure && <Alert kind="error">{failure}</Alert>}
-      <form onSubmit={change} noValidate className="stack">
-        <PasswordField label="Current password" value={values.currentPassword} onChange={set('currentPassword')} error={errors.currentPassword} />
-        <PasswordField label="New password" autoComplete="new-password" value={values.newPassword} onChange={set('newPassword')} error={errors.newPassword} />
-        <PasswordRules password={values.newPassword} />
-        <div className="row">
-          <Button type="submit" variant="secondary" loading={saving}>Change password</Button>
-        </div>
-      </form>
+      {challenge ? (
+        <form onSubmit={confirm} noValidate className="stack profile-code-step">
+          <p className="small">
+            To finish changing your password, enter the 6-digit code we sent to <strong>{challenge.emailHint}</strong>.
+            It expires in {challenge.expiresInMinutes} minutes.
+          </p>
+          {codeNotice && <Alert kind="success">{codeNotice}</Alert>}
+          <div className="field">
+            <label className="field-label" htmlFor="password-change-code">6-digit code</label>
+            <input id="password-change-code" className={codeError ? 'input login-code-input field-invalid' : 'input login-code-input'}
+              inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus value={code}
+              aria-invalid={Boolean(codeError)} aria-describedby={codeError ? 'password-change-code-error' : undefined}
+              onChange={(e) => { setCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setCodeError(null) }} />
+            {codeError && <div id="password-change-code-error" className="field-error" role="alert">{codeError}</div>}
+          </div>
+          <div className="row">
+            <Button type="submit" variant="secondary" loading={busy === 'confirm'} disabled={busy !== null}>Confirm</Button>
+            <Button variant="ghost" onClick={backToPasswords} disabled={busy !== null}>Cancel</Button>
+          </div>
+          <button type="button" className="link-button profile-code-resend" onClick={resend} disabled={wait > 0 || busy !== null}>
+            {wait > 0 ? `Send a new code in ${wait}s` : 'Send a new code'}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={change} noValidate className="stack">
+          <PasswordField label="Current password" value={values.currentPassword} onChange={set('currentPassword')} error={errors.currentPassword} />
+          <PasswordField label="New password" autoComplete="new-password" value={values.newPassword} onChange={set('newPassword')} error={errors.newPassword} />
+          <PasswordRules password={values.newPassword} />
+          <p className="muted small">We&apos;ll email you a code to confirm it&apos;s you.</p>
+          <div className="row">
+            <Button type="submit" variant="secondary" loading={saving}>Change password</Button>
+          </div>
+        </form>
+      )}
       {canSignOutOthers && (
         <div className="profile-signout">
           <p className="muted small">Signed in on a shared or lost phone? Sign it out. You stay signed in here.</p>

@@ -45,6 +45,15 @@ function sendEmail(db, to, subject, body, extra = {}) {
   db.outbox.unshift({ id: nextId('outbox'), to, subject, body, createdAt: nowIso(), ...extra })
 }
 
+/** The password checks both steps of a password change make. */
+function checkNewPassword(user, body) {
+  if (!body.currentPassword) invalid('currentPassword', 'Enter your current password.')
+  if (body.currentPassword !== user.password) invalid('currentPassword', "That isn't your current password.", 'wrong_password')
+  const problem = rules.validateResetPassword({ newPassword: body.newPassword }).newPassword
+  if (problem) invalid('newPassword', problem)
+  if (body.newPassword === user.password) invalid('newPassword', 'Your new password must be different from your current password.', 'password_reused')
+}
+
 /** Leyah's sign-in code: a fresh one replaces the last, valid 10 minutes, 5 wrong tries. */
 function sendLoginCode(db, user) {
   const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')
@@ -894,13 +903,34 @@ const routes = [
     saveDb()
     return profile(user)
   }],
+  // First step: both passwords are checked, then a code goes to the account's email. Nothing changes yet.
+  ['POST', '/auth/change-password/code', (db, { body }) => {
+    const user = requireUser(db)
+    checkNewPassword(user, body)
+    const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')
+    db.passwordChangeCode = { userId: user.id, code, failedAttempts: 0, expiresAt: new Date(Date.now() + 10 * MINUTE).toISOString() }
+    audit(db, user.id, 'PasswordChangeCodeSent', 'User', user.id)
+    sendEmail(db, user.email, `Your Nails by Leyah password change code: ${code}`,
+      `Hi ${user.firstName},\n\nYour code to change your password is: ${code}\n\nEnter it on your account page to finish changing your password. It expires in 10 minutes.`, { code })
+    saveDb()
+    const at = user.email.indexOf('@')
+    return { emailHint: `${user.email[0]}•••${user.email.slice(at)}`, expiresInMinutes: 10 }
+  }],
   ['POST', '/auth/change-password', (db, { body }) => {
     const user = requireUser(db)
-    if (!body.currentPassword) invalid('currentPassword', 'Enter your current password.')
-    if (body.currentPassword !== user.password) invalid('currentPassword', "That isn't your current password.", 'wrong_password')
-    const problem = rules.validateResetPassword({ newPassword: body.newPassword }).newPassword
-    if (problem) invalid('newPassword', problem)
-    if (body.newPassword === user.password) invalid('newPassword', 'Your new password must be different from your current password.', 'password_reused')
+    checkNewPassword(user, body)
+    if (!String(body.code ?? '').trim()) invalid('code', 'Enter the 6-digit code from your email.', 'code_required')
+    const pending = db.passwordChangeCode?.userId === user.id ? db.passwordChangeCode : null
+    if (!pending) invalid('code', "That code isn't right. Check the email and try again.", 'token_invalid')
+    if (new Date(pending.expiresAt) <= new Date()) invalid('code', 'This code has expired. Send a new one.', 'token_expired')
+    if (pending.failedAttempts >= 5) invalid('code', 'Too many wrong tries. Send a new code.', 'token_locked')
+    if (String(body.code).trim() !== pending.code) {
+      pending.failedAttempts++
+      audit(db, user.id, 'PasswordChangeCodeFailed', 'User', user.id)
+      saveDb()
+      invalid('code', "That code isn't right. Check the email and try again.", 'token_invalid')
+    }
+    db.passwordChangeCode = null
     Object.assign(user, { password: body.newPassword, securityStamp: randomHex(8), updatedAt: nowIso() })
     audit(db, user.id, 'PasswordChanged', 'User', user.id)
     saveDb()
