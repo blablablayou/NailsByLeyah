@@ -51,6 +51,9 @@ public interface INotificationService
     /// <summary>Money arrived online that couldn't go on the booking (wrong amount, paid twice, or too late): Leyah checks it and sends it back.</summary>
     Task SendSalonPaymentProblemAsync(Booking booking, string problem, CancellationToken ct = default);
 
+    /// <summary>A client asked for their account and personal data to be deleted (Data Privacy Act).</summary>
+    Task SendSalonDeletionRequestAsync(User client, string? reason, CancellationToken ct = default);
+
     /// <summary>A client moved their booking; <paramref name="fromDate"/> and <paramref name="fromTime"/> are the old slot.</summary>
     Task SendSalonRescheduleAsync(Booking booking, DateOnly fromDate, TimeOnly fromTime, CancellationToken ct = default);
 }
@@ -132,6 +135,19 @@ public sealed class EmailNotificationService(
             {AppointmentLines(booking)}
 
             Bookings that day: {AdminLink(booking, pendingOnly: false)}
+            """, ct);
+
+    public Task SendSalonDeletionRequestAsync(User client, string? reason, CancellationToken ct = default) =>
+        ToSalon($"Data deletion request: {client.FirstName} {client.LastName}",
+            $"""
+            A client asked for their account and personal data to be deleted, under the Data Privacy Act of 2012.
+
+            Client: {client.FirstName} {client.LastName} (@{client.Username})
+            Email: {client.Email}
+            Reason: {reason ?? "None given"}
+
+            Open their client record and use Erase personal data once any open booking or refund is settled:
+            {frontendOptions.Value.BaseUrl.TrimEnd('/')}/admin/clients?id={client.Id}
             """, ct);
 
     /// <summary>Sends to the salon's address, or does nothing when none is configured.</summary>

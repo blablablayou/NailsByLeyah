@@ -38,6 +38,7 @@ export default function ProfilePage() {
         <div className="stack-lg">
           {isAdmin ? <PhotoCard onDone={done} /> : <ClientPhotoCard onDone={done} />}
           <SecurityCard onDone={done} canSignOutOthers={isAdmin} />
+          {!isAdmin && <DeleteAccountCard onDone={done} />}
         </div>
         <div className="stack-lg">
           <AccountCard />
@@ -46,6 +47,89 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * "Delete my account" (Data Privacy Act of 2012): the client asks with their password, Leyah is told and deletes the
+ * data from Client data. Until she does, the client can keep their account after all.
+ */
+function DeleteAccountCard({ onDone }) {
+  const request = useAsync(() => api.auth.deletionRequest(), [])
+  const [asking, setAsking] = useState(false)
+  const [password, setPassword] = useState('')
+  const [reason, setReason] = useState('')
+  const [errors, setErrors] = useState({})
+  const [busy, setBusy] = useState(false)
+  const [failure, setFailure] = useState(null)
+  const requestedAt = request.data?.requestedAt
+
+  const close = () => { setAsking(false); setPassword(''); setReason(''); setErrors({}); setFailure(null) }
+
+  const send = async (e) => {
+    e.preventDefault()
+    if (!password) { setErrors({ password: 'Enter your password to confirm.' }); return }
+    setBusy(true)
+    setFailure(null)
+    try {
+      request.setData(await api.auth.requestDeletion({ password, reason: reason.trim() || null }))
+      close()
+      onDone('Your request was sent. Leyah will delete your account and personal details.')
+    } catch (err) {
+      const fields = firstError(err)
+      setErrors(fields)
+      if (!Object.keys(fields).length) setFailure(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const keep = async () => {
+    setBusy(true)
+    setFailure(null)
+    try {
+      request.setData(await api.auth.cancelDeletionRequest())
+      onDone('Your request was canceled. Your account stays as it is.')
+    } catch (err) {
+      setFailure(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card title="Delete my account">
+      {failure && <Alert kind="error">{failure}</Alert>}
+      {request.loading && !request.data ? <p className="muted small">Loading…</p> : requestedAt ? (
+        <div className="stack">
+          <p className="small">
+            You asked for your account to be deleted on <strong>{formatDateTime(requestedAt)}</strong>. Leyah will delete it once any
+            open booking or refund is settled.
+          </p>
+          <div className="row"><Button variant="secondary" loading={busy} onClick={keep}>Keep my account</Button></div>
+        </div>
+      ) : asking ? (
+        <form onSubmit={send} noValidate className="stack">
+          <p className="small">Leyah will delete your account and personal details. This can&apos;t be undone once she does.</p>
+          <PasswordField label="Password" autoComplete="current-password" value={password}
+            onChange={(v) => { setPassword(v); setErrors((x) => ({ ...x, password: undefined })) }} error={errors.password} />
+          <TextField label="Reason (optional)" value={reason} maxLength={500} error={errors.reason}
+            onChange={(e) => setReason(e.target.value)} />
+          <div className="row">
+            <Button type="submit" variant="danger" loading={busy}>Send request</Button>
+            <Button variant="ghost" onClick={close} disabled={busy}>Cancel</Button>
+          </div>
+        </form>
+      ) : (
+        <div className="stack">
+          <p className="muted small">
+            Ask Leyah to delete your account and personal details. Your past bookings stay in the salon&apos;s sales records,
+            with no name attached.
+          </p>
+          <div className="row"><Button variant="danger-ghost" onClick={() => setAsking(true)}>Request deletion</Button></div>
+        </div>
+      )}
+    </Card>
   )
 }
 

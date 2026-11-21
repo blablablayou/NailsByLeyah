@@ -165,6 +165,8 @@ public static class AuditActions
     public const string ReferenceImageRemoved = "ReferenceImageRemoved";
     public const string FeedbackSubmitted = "FeedbackSubmitted";
     public const string ClientDataDeleted = "ClientDataDeleted";
+    public const string DataDeletionRequested = "DataDeletionRequested";
+    public const string DataDeletionRequestCanceled = "DataDeletionRequestCanceled";
     public const string ProfileUpdated = "ProfileUpdated";
     public const string BookingRulesChanged = "BookingRulesChanged";
     public const string ColorStockChanged = "ColorStockChanged";

@@ -245,6 +245,14 @@ public sealed class CapturingNotificationService : INotificationService
     public int PasswordChangeCodesSent => Volatile.Read(ref _passwordChangeCodesSent);
     public string PasswordChangeCodeFor(string email) => _passwordChangeCodes[email];
 
+    public ConcurrentBag<int> DeletionRequestClientIds { get; } = [];
+
+    public Task SendSalonDeletionRequestAsync(User client, string? reason, CancellationToken ct = default)
+    {
+        DeletionRequestClientIds.Add(client.Id);
+        return Task.CompletedTask;
+    }
+
     public Task SendPasswordChangeCodeAsync(User user, string code, int validMinutes, CancellationToken ct = default)
     {
         _passwordChangeCodes[user.Email] = code;

@@ -46,6 +46,7 @@ public static class ServiceRegistration
         services.AddSingleton<ISalonClock, SalonClock>();
         services.AddSingleton<ResendCooldown>();
         services.AddSingleton<AdminSignInGuard>();
+        services.AddScoped<IDataDeletionRequestService, DataDeletionRequestService>();
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, HttpCurrentUser>();
 

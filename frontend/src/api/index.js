@@ -54,6 +54,9 @@ export const api = {
     changePassword: (body) => post('/auth/change-password', body),
     signOutOtherDevices: () => post('/auth/sign-out-other-devices'),
     security: () => get('/auth/security'),
+    deletionRequest: () => get('/auth/me/deletion-request'),
+    requestDeletion: (body) => post('/auth/me/deletion-request', body),
+    cancelDeletionRequest: () => del('/auth/me/deletion-request'),
     register: (body) => post('/auth/register', body),
     usernameAvailability: (username) => get('/auth/username-availability', { username }),
     verifyEmail: (body) => post('/auth/verify-email', body),
@@ -157,6 +160,7 @@ export const api = {
     findClient: (email) => post('/admin/clients/find', { email }),
     searchClients: (body) => post('/admin/clients/search', body),
     client: (id) => get(`/admin/clients/${id}`),
+    deletionRequests: () => get('/admin/clients/deletion-requests'),
     updateBlockedSlot: (id, body) => put(`/admin/blocked-slots/${id}`, body),
     deleteClientData: (id) => post(`/admin/clients/${id}/delete-data`),
     /** Leyah's private note about a client; never shown to the client. */

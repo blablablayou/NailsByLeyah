@@ -43,8 +43,8 @@ describe('Registration', () => {
     const submit = await screen.findByRole('button', { name: 'Create account' })
     expect(submit).toBeEnabled() // nothing to tick first
     expect(screen.queryByRole('checkbox')).toBeNull()
-    expect(screen.getByText(/By creating an account, you agree to Nails by Leyah/)).toHaveTextContent(
-      'By creating an account, you agree to Nails by Leyah’s Terms & Conditions and Privacy Policy.')
+    expect(screen.getByText(/By creating an account, you confirm you are 18 or older/)).toHaveTextContent(
+      'By creating an account, you confirm you are 18 or older (or have a parent’s or guardian’s permission) and agree to Nails by Leyah’s Terms & Conditions and Privacy Policy.')
   })
 
   it('opens each document from its link, to read', async () => {
@@ -54,12 +54,12 @@ describe('Registration', () => {
 
     await user.click(within(line).getByRole('button', { name: 'Terms & Conditions' }))
     const terms = await screen.findByRole('dialog', { name: 'Terms & Conditions' })
-    expect(terms).toHaveTextContent('Version 2.6')
+    expect(terms).toHaveTextContent('Version 2.7')
     expect(within(terms).queryByRole('button', { name: 'Agree and continue' })).toBeNull() // only to read
     await user.keyboard('{Escape}')
 
     await user.click(within(line).getByRole('button', { name: 'Privacy Policy' }))
-    expect(await screen.findByRole('dialog', { name: 'Privacy Policy' })).toHaveTextContent('Version 2.4')
+    expect(await screen.findByRole('dialog', { name: 'Privacy Policy' })).toHaveTextContent('Version 2.5')
   })
 
   it('the footer opens the Terms & Conditions and Privacy Policy on every page', async () => {

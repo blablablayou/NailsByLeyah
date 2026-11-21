@@ -116,7 +116,7 @@ export default function RegisterPage() {
           <Button type="submit" loading={submitting} className="btn-block">Create account</Button>
           {/* Agreement by continuing, as on Amazon: no checkbox (chosen 2026-11-15 over requirement 1.8's checkbox). */}
           <p className="su-agree" id="su-agree">
-            By creating an account, you agree to Nails by Leyah&rsquo;s{' '}
+            By creating an account, you confirm you are 18 or older (or have a parent&rsquo;s or guardian&rsquo;s permission) and agree to Nails by Leyah&rsquo;s{' '}
             <button type="button" className="su-agree-link" onClick={() => setLegalDocument('terms')}>Terms &amp; Conditions</button>
             {' '}and{' '}
             <button type="button" className="su-agree-link" onClick={() => setLegalDocument('privacy')}>Privacy Policy</button>.

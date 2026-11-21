@@ -22,7 +22,8 @@ public sealed class AuthController(
     IAccountSecurityService security,
     IClientProfileService clientProfile,
     IAdminLoginCodeService loginCodes,
-    IUserRepository users) : ControllerBase
+    IUserRepository users,
+    IDataDeletionRequestService deletionRequests) : ControllerBase
 {
     /// <summary>Between Leyah's password and her email code (encrypted, short-lived).</summary>
     private const string PendingCookie = "nbl_login_pending";
@@ -143,6 +144,23 @@ public sealed class AuthController(
         await SignInAsync(await security.ChangePasswordAsync(User.GetUserId(), request, ct));
         return new MessageResponse("Your password has been changed. Other devices have been signed out.");
     }
+
+    /// <summary>The client's own request to have their account deleted, if they made one.</summary>
+    [Authorize]
+    [HttpGet("me/deletion-request")]
+    public Task<DeletionRequestResponse> DeletionRequest(CancellationToken ct) => deletionRequests.GetMineAsync(User.GetUserId(), ct);
+
+    /// <summary>"Delete my account": asks Leyah to erase the client's personal data (password to confirm).</summary>
+    [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.Login)]
+    [HttpPost("me/deletion-request")]
+    public Task<DeletionRequestResponse> RequestDeletion(DeletionRequestRequest request, CancellationToken ct) =>
+        deletionRequests.RequestAsync(User.GetUserId(), request, ct);
+
+    /// <summary>The client changed their mind before Leyah erased the data.</summary>
+    [Authorize]
+    [HttpDelete("me/deletion-request")]
+    public Task<DeletionRequestResponse> CancelDeletionRequest(CancellationToken ct) => deletionRequests.CancelAsync(User.GetUserId(), ct);
 
     [Authorize]
     [HttpPost("sign-out-other-devices")]

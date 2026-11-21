@@ -45,7 +45,16 @@ public sealed record TokenRequest(string Token);
 public sealed record ClientDataResponse(
     int Id, string FirstName, string LastName, string Username, string Email, string PhoneNumber,
     int BookingCount, int ActiveBookingCount, int PhotoCount, int FeedbackCount,
-    string? AdminNote = null, int NoShowCount = 0, int CancelledCount = 0);
+    string? AdminNote = null, int NoShowCount = 0, int CancelledCount = 0, DateTime? DeletionRequestedAt = null);
+
+/// <summary>A client asks Leyah to delete their account: their password to confirm, and an optional reason.</summary>
+public sealed record DeletionRequestRequest(string Password, string? Reason = null);
+
+/// <summary>The client's own open request, if any.</summary>
+public sealed record DeletionRequestResponse(DateTime? RequestedAt);
+
+/// <summary>An open request, for Leyah's Client data page.</summary>
+public sealed record DeletionRequestItem(int ClientId, string FirstName, string LastName, string Username, string Email, DateTime RequestedAt, string? Reason);
 
 /// <summary>Leyah's private note about a client; empty clears it.</summary>
 public sealed record UpdateClientNoteRequest(string? Note);

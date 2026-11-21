@@ -2708,3 +2708,10 @@ td .color-request-badge { margin: 2px 0 0; align-self: flex-start; }
 .reference-picker.is-locked .pick-card { opacity: .5; filter: grayscale(1); pointer-events: none; }
 .reference-picker.is-locked .pick-title-row { opacity: .6; }
 .reference-picker.is-locked .reference-drop { cursor: not-allowed; }
+
+/* Client data: the clients who asked for their account to be deleted. */
+.deletion-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.deletion-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--nude-200); }
+.deletion-list li:first-child { border-top: 0; }
+.deletion-list li > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.deletion-reason { overflow-wrap: anywhere; }

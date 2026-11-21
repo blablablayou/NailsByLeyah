@@ -87,7 +87,7 @@ describe('Payment step', () => {
     await openPaymentTerms(user)
     const dialog = screen.getByRole('dialog', { name: 'Booking & Payment Policy' })
     // The booking sections of the Terms & Conditions (3–9), with the same version the booking records.
-    expect(dialog).toHaveTextContent('Version 2.6')
+    expect(dialog).toHaveTextContent('Version 2.7')
     expect(within(dialog).getByRole('heading', { name: '5. Payment and the booking deposit' })).toBeInTheDocument()
     expect(within(dialog).queryByRole('heading', { name: '2. Your account' })).toBeNull()
     expect(within(dialog).queryByRole('button', { name: 'Agree and continue' })).toBeNull() // only to read

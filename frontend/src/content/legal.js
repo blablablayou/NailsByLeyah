@@ -12,8 +12,8 @@ const EMAIL = 'nailsbyleyah.bookings@gmail.com'
 
 export const termsAndConditions = {
   title: 'Terms & Conditions',
-  version: '2.6',
-  updated: 'November 20, 2026',
+  version: '2.7',
+  updated: 'November 21, 2026',
   // The key points, shown above the full text. They only summarise it; the full text below is what applies.
   reminders: [
     'Every visit needs a booking, walk-ins included: book online yourself, or Leyah books it for you.',
@@ -37,6 +37,7 @@ export const termsAndConditions = {
     {
       heading: '2. Your account',
       points: [
+        'You must be 18 or older to create an account, or have the permission of a parent or guardian, who is then responsible for the bookings made with it.',
         'Give your real name, a working email address and a mobile number we can reach you on. You must confirm your email address with the code we send before you can sign in.',
         'Keep your password private. You are responsible for bookings made with your account.',
         'For your security, your account is locked for 15 minutes after 5 wrong password attempts, and you are signed out after 30 minutes without activity.',
@@ -119,8 +120,8 @@ export const termsAndConditions = {
 
 export const privacyPolicy = {
   title: 'Privacy Policy',
-  version: '2.4',
-  updated: 'November 18, 2026',
+  version: '2.5',
+  updated: 'November 21, 2026',
   reminders: [
     'We collect only what we need to run your account and bookings: your name, contact details, bookings, payments and design photos.',
     'We follow the Data Privacy Act of 2012 (Republic Act No. 10173).',
@@ -190,13 +191,13 @@ export const privacyPolicy = {
     {
       heading: '8. Deleting your information',
       body: [
-        'You can ask us to delete your information by contacting us. Please complete or cancel any open booking first, and any refund owed to you is sent before we delete. We remove your name, username, email address, mobile number, design photos, notes, feedback comments and security records, and you can no longer sign in. This cannot be undone.',
+        'You can ask us to delete your information from "Delete my account" on your Profile page, or by contacting us. Leyah is told of your request and deletes it. Please complete or cancel any open booking first, and any refund owed to you is sent before we delete. We remove your name, username, email address, mobile number, design photos, notes, feedback comments and security records, and you can no longer sign in. This cannot be undone.',
         'We keep your bookings, payment amounts and reference numbers, and star ratings, with no name attached, because they are needed for accurate sales and tax records. Emails already sent to you or to the salon may remain in those inboxes until they are deleted.',
       ],
     },
     {
       heading: '9. Your rights',
-      body: 'Under the Data Privacy Act of 2012 you have the right to be informed, to access your information, to correct it, to object to its use, to ask us to delete or block it, to receive a copy of it, and to complain to the National Privacy Commission (privacy.gov.ph). To make a request, contact us. We may need to confirm your identity first.',
+      body: 'Under the Data Privacy Act of 2012 you have the right to be informed, to access your information, to correct it, to object to its use, to ask us to delete or block it, to receive a copy of it, and to complain to the National Privacy Commission (privacy.gov.ph). To make a request, contact us, or for deletion use "Delete my account" on your Profile page. We may need to confirm your identity first.',
     },
     {
       heading: '10. Changes to this policy',

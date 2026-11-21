@@ -177,6 +177,9 @@ public interface IAuditLogRepository
 
     /// <summary>Whether an entry with this action, about this record, whose details start with this text, was already written.</summary>
     Task<bool> ExistsAsync(string action, string entityType, string entityId, string detailsStart, CancellationToken ct = default);
+
+    /// <summary>Every entry with one of these actions, oldest first (the deletion requests and what became of them).</summary>
+    Task<List<AuditLog>> GetByActionsAsync(IReadOnlyCollection<string> actions, string entityType, string? entityId = null, CancellationToken ct = default);
 }
 
 internal sealed class UserRepository(AppDbContext db) : IUserRepository
@@ -497,6 +500,10 @@ internal sealed class BlockedSlotRepository(AppDbContext db) : IBlockedSlotRepos
 internal sealed class AuditLogRepository(AppDbContext db) : IAuditLogRepository
 {
     public void Add(AuditLog entry) => db.AuditLogs.Add(entry);
+
+    public Task<List<AuditLog>> GetByActionsAsync(IReadOnlyCollection<string> actions, string entityType, string? entityId, CancellationToken ct) =>
+        db.AuditLogs.Where(a => actions.Contains(a.Action) && a.EntityType == entityType && (entityId == null || a.EntityId == entityId))
+            .OrderBy(a => a.CreatedAt).ThenBy(a => a.Id).ToListAsync(ct);
 
     public Task<bool> ExistsAsync(string action, string entityType, string entityId, string detailsStart, CancellationToken ct) =>
         db.AuditLogs.AnyAsync(a => a.Action == action && a.EntityType == entityType && a.EntityId == entityId

@@ -115,6 +115,10 @@ public sealed class AdminClientDataController(IClientDataService clients, IClien
     [HttpGet("{id:int}")]
     public Task<ClientDataResponse> Get(int id, CancellationToken ct) => clients.GetAsync(id, ct);
 
+    /// <summary>Clients who asked from their Profile page for their data to be deleted.</summary>
+    [HttpGet("deletion-requests")]
+    public Task<List<DeletionRequestItem>> DeletionRequests(CancellationToken ct) => clients.GetDeletionRequestsAsync(ct);
+
     /// <summary>Leyah's private note about the client; never shown to the client.</summary>
     [HttpPut("{id:int}/note")]
     public Task<ClientDataResponse> UpdateNote(int id, UpdateClientNoteRequest request, CancellationToken ct) => clients.UpdateNoteAsync(id, request, ct);

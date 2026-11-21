@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { api } from '../../api'
 import { errorMessage } from '../../api/errors'
 import { useAsync, useDebouncedValue } from '../../hooks/useAsync'
@@ -26,6 +27,9 @@ export default function ClientDataPage() {
   const [deleted, setDeleted] = useState(false)
   const [opening, setOpening] = useState(null)
   const [confirming, setConfirming] = useState(false)
+  const requests = useAsync(() => api.admin.deletionRequests(), [])
+  const [params] = useSearchParams()
+  const linkedId = Number(params.get('id')) || null
 
   const open = async (id) => {
     setOpening(id)
@@ -40,11 +44,18 @@ export default function ClientDataPage() {
     }
   }
 
+  // The link in a deletion request email (?id=…) opens that client straight away.
+  useEffect(() => {
+    if (linkedId) open(linkedId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedId])
+
   const onDeleted = () => {
     setConfirming(false)
     setClient(null)
     setDeleted(true)
     list.reload()
+    requests.reload()
   }
 
   const total = list.data?.totalCount ?? 0
@@ -58,6 +69,24 @@ export default function ClientDataPage() {
         </Alert>
       )}
       {error && <Alert kind="error" onClose={() => setError(null)}>{error}</Alert>}
+
+      {requests.data?.length > 0 && (
+        <Card title="Deletion requests" className="deletion-requests">
+          <p className="muted small">These clients asked from their Profile page for their account to be deleted. Open one to delete their data.</p>
+          <ul className="deletion-list">
+            {requests.data.map((r) => (
+              <li key={r.clientId}>
+                <span>
+                  <strong>{r.firstName} {r.lastName}</strong> <span className="muted">@{r.username} · asked {formatDateTime(r.requestedAt)}</span>
+                  {r.reason && <span className="muted small deletion-reason">Reason: {r.reason}</span>}
+                </span>
+                <Button variant="secondary" size="sm" loading={opening === r.clientId} onClick={() => open(r.clientId)}
+                  aria-label={`Open deletion request from @${r.username}`}>Open</Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <Card className="clients-card" title="All clients" actions={
         <span className="results-count">
@@ -110,6 +139,11 @@ export default function ClientDataPage() {
 
       {client && (
         <Card title={`${client.firstName} ${client.lastName}`}>
+          {client.deletionRequestedAt && (
+            <Alert kind="warning" title="This client asked for their data to be deleted.">
+              Requested on {formatDateTime(client.deletionRequestedAt)}, from their Profile page.
+            </Alert>
+          )}
           <dl className="detail-list">
             <dt>Username</dt><dd>@{client.username}</dd>
             <dt>Email</dt><dd>{client.email}</dd>

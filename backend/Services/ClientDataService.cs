@@ -3,6 +3,7 @@ using NailsByLeah.Api.Data;
 using NailsByLeah.Api.Domain;
 using NailsByLeah.Api.Errors;
 using NailsByLeah.Api.Infrastructure;
+using NailsByLeah.Api.Notifications;
 using NailsByLeah.Api.Validation;
 
 namespace NailsByLeah.Api.Services;
@@ -16,6 +17,88 @@ public interface IClientDataService
 
     /// <summary>Leyah's private note about a client; empty clears it.</summary>
     Task<ClientDataResponse> UpdateNoteAsync(int clientId, UpdateClientNoteRequest request, CancellationToken ct = default);
+
+    /// <summary>Clients who asked for their data to be deleted and haven't been erased yet, oldest request first.</summary>
+    Task<List<DeletionRequestItem>> GetDeletionRequestsAsync(CancellationToken ct = default);
+}
+
+/// <summary>
+/// A client asks for their account to be deleted from their Profile page; Leyah is emailed and sees it on Client data,
+/// and erases it there. The request, a change of mind and the erasure are kept in the activity log, which is also how an
+/// open request is found (no table of its own).
+/// </summary>
+public interface IDataDeletionRequestService
+{
+    Task<DeletionRequestResponse> GetMineAsync(int clientId, CancellationToken ct = default);
+    Task<DeletionRequestResponse> RequestAsync(int clientId, DeletionRequestRequest request, CancellationToken ct = default);
+    Task<DeletionRequestResponse> CancelAsync(int clientId, CancellationToken ct = default);
+}
+
+/// <summary>Reads the activity log for open deletion requests.</summary>
+public static class DeletionRequests
+{
+    public static readonly string[] Actions =
+        [AuditActions.DataDeletionRequested, AuditActions.DataDeletionRequestCanceled, AuditActions.ClientDataDeleted];
+
+    /// <summary>The open request in one client's entries (oldest first): the last one is a request.</summary>
+    public static AuditLog? Open(IEnumerable<AuditLog> entries) =>
+        entries.LastOrDefault() is { Action: AuditActions.DataDeletionRequested } last ? last : null;
+
+    public static async Task<AuditLog?> OpenForAsync(IAuditLogRepository auditLogs, int clientId, CancellationToken ct) =>
+        Open(await auditLogs.GetByActionsAsync(Actions, nameof(User), clientId.ToString(System.Globalization.CultureInfo.InvariantCulture), ct));
+}
+
+public sealed class DataDeletionRequestService(
+    IUserRepository users,
+    IAuditLogRepository auditLogs,
+    IUnitOfWork unitOfWork,
+    IPasswordHasher hasher,
+    IAuditLogger audit,
+    IBackgroundNotifications background) : IDataDeletionRequestService
+{
+    public const int ReasonMaxLength = 500;
+
+    public async Task<DeletionRequestResponse> GetMineAsync(int clientId, CancellationToken ct = default)
+    {
+        await ClientAsync(clientId, ct);
+        return new DeletionRequestResponse((await DeletionRequests.OpenForAsync(auditLogs, clientId, ct))?.CreatedAt);
+    }
+
+    public async Task<DeletionRequestResponse> RequestAsync(int clientId, DeletionRequestRequest request, CancellationToken ct = default)
+    {
+        var client = await ClientAsync(clientId, ct);
+        if (!hasher.Verify(request.Password ?? "", client.PasswordHash))
+            throw new ValidationAppException("password", AccountSecurityService.WrongPasswordMessage, "wrong_password");
+        if (await DeletionRequests.OpenForAsync(auditLogs, clientId, ct) is { } open)
+            return new DeletionRequestResponse(open.CreatedAt); // already asked: no second email
+
+        var reason = string.IsNullOrWhiteSpace(request.Reason) ? null : InputNormalizer.Text(request.Reason);
+        if (reason?.Length > ReasonMaxLength)
+            throw new ValidationAppException("reason", $"The reason must be {ReasonMaxLength} characters or fewer.");
+        audit.Record(AuditActions.DataDeletionRequested, nameof(User), clientId, reason, clientId);
+        await unitOfWork.SaveChangesAsync(ct);
+        await background.EnqueueAsync((n, stop) => n.SendSalonDeletionRequestAsync(client, reason, stop), $"deletion request email for client {clientId}");
+        return new DeletionRequestResponse((await DeletionRequests.OpenForAsync(auditLogs, clientId, ct))?.CreatedAt);
+    }
+
+    public async Task<DeletionRequestResponse> CancelAsync(int clientId, CancellationToken ct = default)
+    {
+        await ClientAsync(clientId, ct);
+        if (await DeletionRequests.OpenForAsync(auditLogs, clientId, ct) is not null)
+        {
+            audit.Record(AuditActions.DataDeletionRequestCanceled, nameof(User), clientId, "The client kept their account", clientId);
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        return new DeletionRequestResponse(null);
+    }
+
+    private async Task<User> ClientAsync(int clientId, CancellationToken ct)
+    {
+        var user = await users.GetByIdAsync(clientId, ct) ?? throw new UnauthorizedAppException("Please log in again.");
+        return user.Role == UserRole.Client
+            ? user
+            : throw new ForbiddenException("Only client accounts can ask for their data to be deleted.", "not_a_client");
+    }
 }
 
 /// <summary>
@@ -32,7 +115,8 @@ public sealed class ClientDataService(
     IUnitOfWork unitOfWork,
     IAuditLogger audit,
     ISalonClock clock,
-    ILogger<ClientDataService> logger) : IClientDataService
+    ILogger<ClientDataService> logger,
+    IAuditLogRepository auditLogs) : IClientDataService
 {
     public const string NotFoundMessage = "No client account was found with that email address.";
 
@@ -68,7 +152,22 @@ public sealed class ClientDataService(
         var feedback = await clientData.GetFeedbackAsync(client.Id, ct);
         return new ClientDataResponse(client.Id, client.FirstName, client.LastName, client.Username, client.Email, client.PhoneNumber,
             bookings.Count, bookings.Count(b => b.IsActive), photos.Count(p => !p.IsDeleted), feedback.Count,
-            client.AdminNote, bookings.Count(b => b.Status == BookingStatus.NoShow), bookings.Count(b => b.Status == BookingStatus.Cancelled));
+            client.AdminNote, bookings.Count(b => b.Status == BookingStatus.NoShow), bookings.Count(b => b.Status == BookingStatus.Cancelled),
+            (await DeletionRequests.OpenForAsync(auditLogs, client.Id, ct))?.CreatedAt);
+    }
+
+    public async Task<List<DeletionRequestItem>> GetDeletionRequestsAsync(CancellationToken ct = default)
+    {
+        var items = new List<DeletionRequestItem>();
+        var byClient = (await auditLogs.GetByActionsAsync(DeletionRequests.Actions, nameof(User), null, ct)).GroupBy(a => a.EntityId);
+        foreach (var entries in byClient)
+        {
+            if (DeletionRequests.Open(entries) is not { } open || !int.TryParse(open.EntityId, out var id))
+                continue;
+            if (await users.GetByIdAsync(id, ct) is { Role: UserRole.Client } client)
+                items.Add(new DeletionRequestItem(client.Id, client.FirstName, client.LastName, client.Username, client.Email, open.CreatedAt, open.Details));
+        }
+        return items.OrderBy(i => i.RequestedAt).ToList();
     }
 
     public async Task<ClientDataResponse> UpdateNoteAsync(int clientId, UpdateClientNoteRequest request, CancellationToken ct = default)

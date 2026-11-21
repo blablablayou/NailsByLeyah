@@ -397,6 +397,13 @@ function checkedBlock(db, admin, body, ignoreId) {
 const galleryResponse = (p) => ({ id: p.id, url: `/api/gallery/${p.id}/photo`, caption: p.caption, createdAt: p.createdAt, dataUrl: p.dataUrl })
 
 /** Same shape as the backend ClientDataResponse. */
+/** The client's open "Delete my account" request: their latest request entry, unless canceled or erased since. */
+function openDeletionRequest(db, clientId) {
+  const last = db.auditLogs.filter((a) => a.entityType === 'User' && a.entityId === String(clientId)
+    && ['DataDeletionRequested', 'DataDeletionRequestCanceled', 'ClientDataDeleted'].includes(a.action)).at(-1)
+  return last?.action === 'DataDeletionRequested' ? last : null
+}
+
 function clientSummary(db, client) {
   if (!client) notFound('No client account was found with that email address.')
   const bookings = db.bookings.filter((b) => b.clientId === client.id)
@@ -406,7 +413,8 @@ function clientSummary(db, client) {
     photoCount: db.referenceImages.filter((r) => r.clientId === client.id && !r.isDeleted).length,
     feedbackCount: db.feedback.filter((f) => f.clientId === client.id).length,
     adminNote: client.adminNote ?? null, noShowCount: bookings.filter((b) => b.status === 'NoShow').length,
-    cancelledCount: bookings.filter((b) => b.status === 'Cancelled').length }
+    cancelledCount: bookings.filter((b) => b.status === 'Cancelled').length,
+    deletionRequestedAt: openDeletionRequest(db, client.id)?.createdAt ?? null }
 }
 
 // Same shape as the backend BookingPaymentResponse.
@@ -945,6 +953,28 @@ const routes = [
     writeSession({ userId: user.id, securityStamp: user.securityStamp, lastActivityAt: Date.now() })
     return { message: 'Every other device has been signed out.' }
   }],
+  ['GET', '/auth/me/deletion-request', (db) => {
+    const user = requireUser(db, 'Client')
+    return { requestedAt: openDeletionRequest(db, user.id)?.createdAt ?? null }
+  }],
+  ['POST', '/auth/me/deletion-request', (db, { body }) => {
+    const user = requireUser(db, 'Client')
+    if (body.password !== user.password) invalid('password', "That isn't your current password.", 'wrong_password')
+    if (!openDeletionRequest(db, user.id)) {
+      audit(db, user.id, 'DataDeletionRequested', 'User', user.id, String(body.reason ?? '').trim() || null)
+      sendEmail(db, 'salon@example.test', `Data deletion request: ${user.firstName} ${user.lastName}`, 'A client asked for their data to be deleted.')
+      saveDb()
+    }
+    return { requestedAt: openDeletionRequest(db, user.id).createdAt }
+  }],
+  ['DELETE', '/auth/me/deletion-request', (db) => {
+    const user = requireUser(db, 'Client')
+    if (openDeletionRequest(db, user.id)) {
+      audit(db, user.id, 'DataDeletionRequestCanceled', 'User', user.id, 'The client kept their account')
+      saveDb()
+    }
+    return { requestedAt: null }
+  }],
   ['GET', '/auth/security', (db) => {
     const user = requireUser(db)
     const logins = db.auditLogs.filter((a) => a.userId === user.id && a.action === 'LoginSucceeded').sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -1169,6 +1199,13 @@ const routes = [
       lastName: u.lastName, email: u.email, phoneNumber: u.phoneNumber, emailVerified: u.emailVerified, createdAt: u.createdAt,
       photoUrl: u.photoDataUrl ? `/api/admin/clients/${u.id}/photo` : null, photoDataUrl: u.photoDataUrl ?? null })),
       page, pageSize, totalCount: matches.length }
+  }],
+  ['GET', '/admin/clients/deletion-requests', (db) => {
+    requireUser(db, 'Administrator')
+    return db.users.filter((u) => u.role === 'Client' && !u.isDeleted)
+      .map((u) => [u, openDeletionRequest(db, u.id)]).filter(([, r]) => r)
+      .map(([u, r]) => ({ clientId: u.id, firstName: u.firstName, lastName: u.lastName, username: u.username, email: u.email,
+        requestedAt: r.createdAt, reason: r.details }))
   }],
   ['GET', '/admin/clients/:id', (db, { params }) => {
     requireUser(db, 'Administrator')
