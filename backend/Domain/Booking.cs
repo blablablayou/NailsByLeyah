@@ -204,6 +204,17 @@ public class Booking : IPayable, ICancellable, ISoftDeletable
         UpdatedAt = utcNow;
     }
 
+    /// <summary>Paid online and left unconfirmed too long: the system confirms it (no administrator named).</summary>
+    public void ConfirmAutomatically(DateTime utcNow)
+    {
+        if (Status != BookingStatus.Pending)
+            throw new ConflictException($"A {Status} booking cannot be confirmed.", "invalid_status");
+        Status = BookingStatus.Confirmed;
+        ConfirmedAt = utcNow;
+        ConfirmedByUserId = null;
+        UpdatedAt = utcNow;
+    }
+
     /// <summary>The deposit is kept from what was paid; the rest goes back.</summary>
     public decimal AmountAboveDeposit => Math.Max(0, AmountPaid - DepositAmount);
 

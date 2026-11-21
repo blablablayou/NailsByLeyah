@@ -54,7 +54,7 @@ describe('Registration', () => {
 
     await user.click(within(line).getByRole('button', { name: 'Terms & Conditions' }))
     const terms = await screen.findByRole('dialog', { name: 'Terms & Conditions' })
-    expect(terms).toHaveTextContent('Version 2.5')
+    expect(terms).toHaveTextContent('Version 2.6')
     expect(within(terms).queryByRole('button', { name: 'Agree and continue' })).toBeNull() // only to read
     await user.keyboard('{Escape}')
 

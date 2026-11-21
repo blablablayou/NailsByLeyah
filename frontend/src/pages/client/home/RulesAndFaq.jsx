@@ -10,7 +10,7 @@ export function RulesSection({ deposit }) {
     ['Deposit is required', `A ${deposit} deposit, paid by GCash or Maya when you book, secures your appointment. It counts toward your total and is non-refundable.`],
     ['Be on time', 'Please arrive on time. Late arrivals may result in a shorter service or rescheduling.'],
     ['Cancellations', 'Kindly let us know at least 24 hours in advance if you need to cancel or reschedule. You can do both yourself in My bookings.'],
-    ['Cancellation fee', `Late cancellations (less than 24 hours before) and no-shows keep the ${deposit} deposit as the fee. This protects the time reserved for you.`],
+    ['Cancellation fee', `If you cancel or don't show up, the ${deposit} deposit is kept as the fee, however early you cancel. This protects the time reserved for you. If the salon cancels, you get everything back.`],
     ['3-day repair', 'We repair any lifting or chipping. Let us know within 3 days after your appointment.', 'Valid for repairs only.'],
     ['Payment policy', 'Pay the balance at the salon after your service, or online by GCash or Maya before your appointment once Leyah confirms your booking.'],
   ]
@@ -64,7 +64,7 @@ export function FaqSection({ deposit, hours }) {
     ['Do you accept walk-ins?', 'Yes, but every visit still needs a booking. You can book online yourself, or Leyah can book the time for you when you come by or message us. Nails by Leyah is home-based and takes one client at a time, so we can only fit you in if a time is free.'],
     ['What are your opening hours?', `${hours}, by appointment only. Each appointment is followed by a 30-minute break, so the times you can book depend on how long your service takes.`],
     ['How much is the deposit?', `The deposit is ${deposit}. It secures your slot and is deducted from your total on the day.`],
-    ['What is your cancellation policy?', 'Please let us know at least 24 hours in advance if you need to cancel or reschedule. Late cancellations and no-shows incur a fee, and the deposit is not refunded.'],
+    ['What is your cancellation policy?', `Please let us know at least 24 hours in advance if you need to cancel or reschedule. Whenever you cancel, and if you don't show up, the ${deposit} deposit is kept; anything you paid above it is refunded. If the salon cancels, you get everything back.`],
     ["What happens if I'm late for my appointment?", "Please arrive on time. Late arrivals may get a shorter service or need to reschedule, so the next client isn't kept waiting."],
     ['How should I prepare for my appointment?', 'Come with clean, bare nails: no polish, gel or acrylic, unless you booked a removal.'],
     ['Can I bring a friend or my kids?', 'Sorry, no extra guests or kids. Space is limited and it keeps things calm and focused for both of us.'],

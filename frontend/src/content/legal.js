@@ -12,16 +12,16 @@ const EMAIL = 'nailsbyleyah.bookings@gmail.com'
 
 export const termsAndConditions = {
   title: 'Terms & Conditions',
-  version: '2.5',
-  updated: 'November 18, 2026',
+  version: '2.6',
+  updated: 'November 20, 2026',
   // The key points, shown above the full text. They only summarise it; the full text below is what applies.
   reminders: [
     'Every visit needs a booking, walk-ins included: book online yourself, or Leyah books it for you.',
     'Every booking needs a ₱150 deposit, paid by GCash or Maya when you book. It counts toward your total.',
     'Pay the rest at the salon, or online by GCash or Maya before your appointment once it is confirmed.',
-    'The deposit is non-refundable if you cancel late or do not show up, unless the salon cancels.',
+    'The deposit is non-refundable whenever you cancel or do not show up, however early you cancel, unless the salon cancels.',
     'You can reschedule online up to 24 hours before your appointment.',
-    'Please cancel at least 24 hours ahead. A late cancellation or no-show keeps the ₱150 deposit as the fee.',
+    'Please cancel at least 24 hours ahead. A cancellation or no-show keeps the ₱150 deposit as the fee.',
     'Your booking stays "Pending" until Leyah checks your payment and confirms it.',
     'Arrive on time, come alone, and come with clean, bare nails unless you booked a removal.',
     'If your nails lift or chip, message us within 3 days for a free repair.',
@@ -85,9 +85,9 @@ export const termsAndConditions = {
       heading: '7. Cancellations and no-shows',
       points: [
         'Please tell us at least 24 hours ahead if you need to cancel. You can cancel online from "My bookings" until your appointment starts.',
-        'The fee for a late cancellation (less than 24 hours before) or a no-show is ₱150. It is the deposit we keep, not an extra charge.',
+        'The fee for a cancellation, however early, or a no-show is ₱150. It is the deposit we keep, not an extra charge.',
         'If you paid more than the deposit (in full, or the balance online) and cancel, or do not show up, the ₱150 deposit is kept and the rest of your payment is refunded to the GCash or Maya account you paid from.',
-        'The salon may cancel a booking for reasons such as Leyah not being available or an emergency (for example, if Leyah is sick). If this happens, we will tell you the reason and refund your whole payment, the ₱150 deposit included.',
+        'The salon may cancel a booking for reasons such as Leyah not being available or an emergency (for example, if Leyah is sick). If this happens, we will tell you the reason and refund your whole payment, the ₱150 deposit included. The one exception: if we cancel because you did not reply to our messages about your booking, the ₱150 deposit is kept, as if you had canceled.',
       ],
     },
     {

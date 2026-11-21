@@ -106,7 +106,7 @@ public sealed class SupabaseOptions
 public sealed class LegalOptions
 {
     public const string Section = "Legal";
-    public string TermsVersion { get; set; } = "2.5";
+    public string TermsVersion { get; set; } = "2.6";
 }
 
 public sealed class FrontendOptions
@@ -173,6 +173,13 @@ public sealed class PaymentOptions
 
     /// <summary>How often holds whose time ran out are released (seconds); 0 turns the job off.</summary>
     public int HoldCheckIntervalSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// A booking paid online that Leyah hasn't confirmed is confirmed automatically this many hours after the payment
+    /// (0 turns it off), or this many minutes before the appointment, whichever comes first.
+    /// </summary>
+    public int AutoConfirmAfterHours { get; set; } = 12;
+    public int AutoConfirmBeforeStartMinutes { get; set; } = 60;
 }
 
 /// <summary>Xendit (test mode). Both values only in user secrets or the host's settings.</summary>

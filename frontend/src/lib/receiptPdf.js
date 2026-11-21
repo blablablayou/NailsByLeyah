@@ -128,6 +128,9 @@ export function buildReceiptPdf(JsPdf, receipt, generatedAt = new Date()) {
     { size: 8.5, color: MUTED, maxWidth: RIGHT - LEFT })
   y += 14
   text(`Issued ${when(generatedAt.toISOString())} from the Nails by Leyah booking system.`, LEFT, { size: 8.5, color: MUTED })
+  y += 12
+  // An acknowledgement of payment for the client's records, not a BIR official receipt.
+  text('This is not an official receipt.', LEFT, { size: 8.5, bold: true, color: INK })
   return doc
 }
 

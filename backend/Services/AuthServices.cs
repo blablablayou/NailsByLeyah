@@ -226,7 +226,9 @@ public sealed class AuthService(
     IPasswordHasher hasher,
     IAuditLogger audit,
     ISalonClock clock,
-    IOptions<AuthOptions> authOptions) : IAuthService
+    IOptions<AuthOptions> authOptions,
+    ICurrentUser currentUser,
+    AdminSignInGuard adminGuard) : IAuthService
 {
     private const string InvalidCredentials = "Invalid username or password.";
 
@@ -248,8 +250,25 @@ public sealed class AuthService(
 
         IAuthenticatable account = user;
         var now = clock.UtcNow;
+        // Leyah (with her email code on) is never locked out by wrong passwords: the address that keeps guessing is.
+        var guardedAdmin = _options.AdminLoginCode && user.Role == UserRole.Administrator;
+        var address = currentUser.IpAddress ?? "unknown";
+        if (guardedAdmin && adminGuard.BlockedUntil(address, now) is { } blockedUntil)
+            throw new AccountLockedException(blockedUntil);
         if (account.IsLockedOut(now))
             throw new AccountLockedException(account.LockoutEndUtc!.Value);
+
+        if (guardedAdmin && !hasher.Verify(request.Password, account.PasswordHash))
+        {
+            var blocked = adminGuard.RegisterFailure(address, now, _options.MaxFailedLoginAttempts, TimeSpan.FromMinutes(_options.LockoutMinutes));
+            audit.Record(blocked is null ? AuditActions.LoginFailed : AuditActions.AccountLocked, nameof(User), user.Id,
+                blocked is null ? null : $"{_options.MaxFailedLoginAttempts} wrong passwords from {address}: that address is blocked for {_options.LockoutMinutes} minutes (the account itself stays open)",
+                user.Id);
+            await unitOfWork.SaveChangesAsync(ct);
+            if (blocked is { } until)
+                throw new AccountLockedException(until);
+            throw new UnauthorizedAppException(InvalidCredentials, "invalid_credentials");
+        }
 
         if (!hasher.Verify(request.Password, account.PasswordHash))
         {
@@ -266,6 +285,8 @@ public sealed class AuthService(
             throw new ForbiddenException("Please verify your email address before logging in.", "email_not_verified");
 
         account.RegisterSuccessfulLogin();
+        if (guardedAdmin)
+            adminGuard.Clear(address);
         // Leyah's sign-in is only complete after her email code (or on a remembered device); that step records it.
         if (!(_options.AdminLoginCode && user.Role == UserRole.Administrator))
             audit.Record(AuditActions.LoginSucceeded, nameof(User), user.Id, userId: user.Id);

@@ -45,6 +45,7 @@ public static class ServiceRegistration
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<ISalonClock, SalonClock>();
         services.AddSingleton<ResendCooldown>();
+        services.AddSingleton<AdminSignInGuard>();
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
@@ -148,6 +149,7 @@ public static class ServiceRegistration
         services.AddScoped<IAppointmentReminderJob, AppointmentReminderJob>();
         services.AddHostedService<AppointmentReminderWorker>();
         services.AddScoped<IPaymentHoldExpiryJob, PaymentHoldExpiryJob>();
+        services.AddScoped<IPendingAutoConfirmJob, PendingAutoConfirmJob>();
         services.AddHostedService<PaymentHoldExpiryWorker>();
         services.AddSingleton<ErrorAlertQueue>();
         services.AddSingleton<ILoggerProvider, ErrorAlertLoggerProvider>();

@@ -178,6 +178,43 @@ public static class AuditActions
 }
 
 /// <summary>
+/// Wrong passwords on Leyah's account, counted per visitor address instead of on her account. Locking her account would
+/// let anyone who knows her username keep her out by typing wrong passwords; with the email code also needed, it is
+/// enough to stop the address that keeps guessing. Kept in memory (the API runs as one instance).
+/// </summary>
+public sealed class AdminSignInGuard
+{
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (int Failures, DateTime FirstAt, DateTime? BlockedUntil)> _byAddress =
+        new(StringComparer.Ordinal);
+
+    /// <summary>When this address may try again, or null when it isn't blocked.</summary>
+    public DateTime? BlockedUntil(string address, DateTime nowUtc) =>
+        _byAddress.TryGetValue(address, out var entry) && entry.BlockedUntil > nowUtc ? entry.BlockedUntil : null;
+
+    /// <summary>Counts a wrong password; returns the end of the block when this one reaches the limit.</summary>
+    public DateTime? RegisterFailure(string address, DateTime nowUtc, int maxFailures, TimeSpan blockFor)
+    {
+        var updated = _byAddress.AddOrUpdate(address,
+            _ => (1, nowUtc, maxFailures <= 1 ? nowUtc + blockFor : null),
+            (_, old) =>
+            {
+                // A new count starts once the last block, or the window of the earlier tries, is over.
+                var fresh = old.BlockedUntil is { } until ? until <= nowUtc : old.FirstAt + blockFor <= nowUtc;
+                var failures = fresh ? 1 : old.Failures + 1;
+                return (failures, fresh ? nowUtc : old.FirstAt, failures >= maxFailures ? nowUtc + blockFor : null);
+            });
+
+        if (_byAddress.Count > 1000) // forget addresses whose tries are long over
+            foreach (var (key, entry) in _byAddress)
+                if ((entry.BlockedUntil ?? entry.FirstAt + blockFor) < nowUtc)
+                    _byAddress.TryRemove(key, out _);
+        return updated.BlockedUntil;
+    }
+
+    public void Clear(string address) => _byAddress.TryRemove(address, out _);
+}
+
+/// <summary>
 /// The wait between verification emails, kept per email address in memory (the API runs as one instance). Kept for
 /// addresses with no account too, so the wait itself can't reveal which emails are registered.
 /// </summary>

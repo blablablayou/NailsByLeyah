@@ -843,7 +843,7 @@ function Review({ quote, option, hands, durationMinutes, color, date, time, note
         <div className="review-head"><h3>Booking policy</h3></div>
         <ul className="policy-list">
           <li>You can reschedule online up to 24 hours before your appointment.</li>
-          <li>Canceling less than 24 hours before, or not showing up, may incur a fee.</li>
+          <li>If you cancel or don&apos;t show up, the deposit is kept, however early you cancel. If the salon cancels, you get everything back.</li>
           <li>Please arrive on time and come alone, with clean, bare nails unless you booked a removal.</li>
         </ul>
       </section>

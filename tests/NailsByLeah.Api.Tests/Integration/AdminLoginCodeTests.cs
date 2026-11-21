@@ -27,6 +27,32 @@ public class AdminCodeLimitApiFactory : ApiFactory
 /// <summary>A second copy, so each limit test starts its hour with no codes sent.</summary>
 public sealed class AdminCodeLimitApiFactory2 : AdminCodeLimitApiFactory;
 
+/// <summary>A third copy, so blocking this test's address can't affect the others.</summary>
+public sealed class AdminCodeLimitApiFactory3 : AdminCodeLimitApiFactory;
+
+/// <summary>Wrong passwords block the guessing address, never Leyah's account itself.</summary>
+public sealed class AdminWrongPasswordTests(AdminCodeLimitApiFactory3 factory) : IClassFixture<AdminCodeLimitApiFactory3>
+{
+    [Fact]
+    public async Task Five_wrong_passwords_block_the_address_for_15_minutes_but_never_lock_Leyahs_account()
+    {
+        var client = factory.NewClient();
+        var login = (string password) => client.PostJsonAsync("/api/auth/login", new LoginRequest(ApiFactory.AdminUsername, password));
+
+        for (var i = 0; i < 4; i++)
+            await (await login("Wrong12345")).ShouldHaveStatus(HttpStatusCode.Unauthorized);
+        await (await login("Wrong12345")).ShouldHaveStatus(HttpStatusCode.Locked);
+        await (await login(ApiFactory.AdminPassword)).ShouldHaveStatus(HttpStatusCode.Locked); // this address waits
+
+        // The account itself was never locked.
+        Assert.True(factory.WithDb(db => db.Users.Single(u => u.Username == ApiFactory.AdminUsername).LockoutEndUtc == null));
+        Assert.True(factory.WithDb(db => db.AuditLogs.Any(a => a.Action == "AccountLocked" && a.Details!.Contains("the account itself stays open"))));
+
+        factory.Clock.Advance(TimeSpan.FromMinutes(15) + TimeSpan.FromSeconds(1));
+        await (await login(ApiFactory.AdminPassword)).ShouldHaveStatus(HttpStatusCode.Accepted); // on to the email code
+    }
+}
+
 /// <summary>At most 5 sign-in codes an hour, however they are asked for.</summary>
 public sealed class AdminLoginCodeSendLimitTests(AdminCodeLimitApiFactory factory) : IClassFixture<AdminCodeLimitApiFactory>
 {

@@ -91,7 +91,10 @@ public sealed class PaymentHoldExpiryJob(
     }
 }
 
-/// <summary>Runs <see cref="IPaymentHoldExpiryJob"/> every Payments:HoldCheckIntervalSeconds (0 turns it off, as tests do).</summary>
+/// <summary>
+/// Runs <see cref="IPaymentHoldExpiryJob"/>, then <see cref="IPendingAutoConfirmJob"/>, every Payments:HoldCheckIntervalSeconds
+/// (0 turns them off, as tests do).
+/// </summary>
 public sealed class PaymentHoldExpiryWorker(
     IServiceScopeFactory scopes,
     IOptions<PaymentOptions> options,
@@ -112,6 +115,7 @@ public sealed class PaymentHoldExpiryWorker(
                 var released = await scope.ServiceProvider.GetRequiredService<IPaymentHoldExpiryJob>().RunOnceAsync(stoppingToken);
                 if (released > 0)
                     logger.LogInformation("Released {Count} unpaid payment hold(s)", released);
+                await scope.ServiceProvider.GetRequiredService<IPendingAutoConfirmJob>().RunOnceAsync(stoppingToken);
             }
             // An exception leaving this loop would stop the whole API, so only a real shutdown may pass through.
             catch (Exception ex) when (ex is not OperationCanceledException || !stoppingToken.IsCancellationRequested)
